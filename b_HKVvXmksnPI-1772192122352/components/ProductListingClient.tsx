@@ -1,0 +1,385 @@
+'use client'
+
+import { useState, useMemo, useCallback } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Product data
+// ──────────────────────────────────────────────────────────────────────────────
+
+const mockProducts = {
+  pendientes: [
+    {
+      id: 1,
+      name: 'Pendientes Lágrima de Coral',
+      collection: 'Isabelita',
+      price: 35,
+      size: null,
+      images: [
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.03-xc6rqiEEQMufTwrn7e79sUQXfR8Gev.png',
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.11.56-zUBf6AVI60OR1IP9eKrL6OssGO6rBG.png',
+      ],
+    },
+    {
+      id: 2,
+      name: 'Pendientes Ecos de Coral',
+      collection: 'Isabelita',
+      price: 42,
+      size: null,
+      images: [
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.13-VNCBE2d9HXZVxGPLSx6geOrLtPpMvV.png',
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.20-cRopWnepHqb9VHcOac4FBhlylj8kRM.png',
+      ],
+    },
+    {
+      id: 3,
+      name: 'Pendientes Aura Coralina',
+      collection: 'Vintage',
+      price: 38,
+      size: null,
+      images: [
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.29-luRtneHGJ1h9y812DbZhnYUB38ZBJe.png',
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.36-jaaMU2a9rSJZQeTG3pZJfyeJjKoAq8.png',
+      ],
+    },
+    {
+      id: 4,
+      name: 'Pendientes Lágrimas Coralinas',
+      collection: 'Esencial',
+      price: 32,
+      size: null,
+      images: [
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.42-enCDb88evdf3gttzdniN8r7Cl0ce9e.png',
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.48-gIbpgLH2xr5vmaScX2HS0V8yLl8zyB.png',
+      ],
+    },
+    {
+      id: 5,
+      name: 'Pendientes Pastora',
+      collection: 'Vintage',
+      price: 45,
+      size: null,
+      images: [
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.53-OQ3u5pZHceI43oILO79fkVgeHPSO8M.png',
+        'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.36-jaaMU2a9rSJZQeTG3pZJfyeJjKoAq8.png',
+      ],
+    },
+  ],
+  mantones: [
+    { id: 10, name: 'Mantón Seda Negro', collection: 'Esencial', price: 250, size: 'Único', images: ['/images/manton-seda-negro.jpg'] },
+    { id: 11, name: 'Mantón Bordado Crema', collection: 'Isabelita', price: 280, size: 'Único', images: ['/images/manton-seda-negro.jpg'] },
+  ],
+  trajes: [
+    { id: 20, name: 'Traje Lino Beige', collection: 'Esencial', price: 180, size: 'S-XL', images: ['/images/traje-lino-beige.jpg'] },
+    { id: 21, name: 'Vestido Invitada', collection: 'Isabelita', price: 150, size: 'S-XL', images: ['/images/vestido-invitada.jpg'] },
+  ],
+  accesorios: [
+    { id: 30, name: 'Choker Dorado', collection: 'Esencial', price: 18, size: null, images: ['/images/choker-dorado.jpg'] },
+  ],
+  cinturones: [],
+  chokers: [
+    { id: 30, name: 'Choker Dorado', collection: 'Esencial', price: 18, size: null, images: ['/images/choker-dorado.jpg'] },
+  ],
+  peinecillos: [],
+  isabelita: [
+    { id: 1, name: 'Pendientes Lágrima de Coral', collection: 'Isabelita', price: 35, size: null, images: ['https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.03-xc6rqiEEQMufTwrn7e79sUQXfR8Gev.png', 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.11.56-zUBf6AVI60OR1IP9eKrL6OssGO6rBG.png'] },
+    { id: 2, name: 'Pendientes Ecos de Coral', collection: 'Isabelita', price: 42, size: null, images: ['https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.13-VNCBE2d9HXZVxGPLSx6geOrLtPpMvV.png'] },
+  ],
+  vintage: [
+    { id: 3, name: 'Pendientes Aura Coralina', collection: 'Vintage', price: 38, size: null, images: ['https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.29-luRtneHGJ1h9y812DbZhnYUB38ZBJe.png'] },
+    { id: 5, name: 'Pendientes Pastora', collection: 'Vintage', price: 45, size: null, images: ['https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.53-OQ3u5pZHceI43oILO79fkVgeHPSO8M.png'] },
+  ],
+  esencial: [
+    { id: 4, name: 'Pendientes Lágrimas Coralinas', collection: 'Esencial', price: 32, size: null, images: ['https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.42-enCDb88evdf3gttzdniN8r7Cl0ce9e.png'] },
+    { id: 30, name: 'Choker Dorado', collection: 'Esencial', price: 18, size: null, images: ['/images/choker-dorado.jpg'] },
+  ],
+  'lost-in-jaipur': [
+    { id: 2, name: 'Pendientes Ecos de Coral', collection: 'Lost in Jaipur', price: 42, size: null, images: ['https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Captura%20de%20pantalla%202026-02-26%20a%20las%2019.12.20-cRopWnepHqb9VHcOac4FBhlylj8kRM.png'] },
+  ],
+}
+
+type Product = {
+  id: number
+  name: string
+  collection: string
+  price: number
+  size: string | null
+  images: string[]
+}
+
+const categoryTitles: Record<string, string> = {
+  pendientes: 'Pendientes',
+  mantones: 'Mantones',
+  trajes: 'Trajes',
+  accesorios: 'Accesorios',
+  cinturones: 'Cinturones',
+  chokers: 'Chokers',
+  peinecillos: 'Peinecillos',
+  isabelita: 'Colección Isabelita',
+  vintage: 'Colección Vintage',
+  esencial: 'Colección Esencial',
+  'lost-in-jaipur': 'Lost in Jaipur',
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ProductCard with image carousel
+// ──────────────────────────────────────────────────────────────────────────────
+
+function ProductCard({ product }: { product: Product }) {
+  const [currentImage, setCurrentImage] = useState(0)
+  const [showArrows, setShowArrows] = useState(false)
+  const hasMultiple = product.images.length > 1
+
+  const prev = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setCurrentImage(i => (i === 0 ? product.images.length - 1 : i - 1))
+  }, [product.images.length])
+
+  const next = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setCurrentImage(i => (i === product.images.length - 1 ? 0 : i + 1))
+  }, [product.images.length])
+
+  return (
+    <div className="break-inside-avoid mb-6 group">
+      <Link href={`/producto/${product.id}`} suppressHydrationWarning>
+        {/* Image container */}
+        <div
+          className="relative overflow-hidden bg-secondary/20 aspect-[3/4]"
+          onMouseEnter={() => setShowArrows(true)}
+          onMouseLeave={() => setShowArrows(false)}
+        >
+          <Image
+            src={product.images[currentImage]}
+            alt={product.name}
+            fill
+            loading="lazy"
+            className="object-cover transition-opacity duration-500"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          />
+
+          {/* Carousel arrows — visible on hover (desktop) */}
+          {hasMultiple && (
+            <>
+              <button
+                onClick={prev}
+                aria-label="Imagen anterior"
+                className={`absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background p-1.5 transition-all duration-200 ${showArrows ? 'opacity-100' : 'opacity-0'}`}
+                suppressHydrationWarning
+              >
+                <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={next}
+                aria-label="Imagen siguiente"
+                className={`absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background p-1.5 transition-all duration-200 ${showArrows ? 'opacity-100' : 'opacity-0'}`}
+                suppressHydrationWarning
+              >
+                <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+            </>
+          )}
+
+          {/* Dot indicators */}
+          {hasMultiple && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+              {product.images.map((_, i) => (
+                <span
+                  key={i}
+                  className={`block h-1.5 w-1.5 rounded-full transition-colors ${i === currentImage ? 'bg-background' : 'bg-background/50'}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="pt-3 space-y-0.5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">{product.collection}</p>
+          <h3 className="font-serif text-base leading-snug">{product.name}</h3>
+          <p className="text-sm">{product.price}€</p>
+        </div>
+      </Link>
+
+      <button
+        className="w-full border border-border py-2 text-xs uppercase tracking-wider hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors mt-3"
+        suppressHydrationWarning
+      >
+        Añadir al carrito
+      </button>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Main component
+// ──────────────────────────────────────────────────────────────────────────────
+
+export default function ProductListingClient({ category }: { category: string }) {
+  const [selectedCollections, setSelectedCollections] = useState<string[]>([])
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500])
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+
+  const products = (mockProducts[category as keyof typeof mockProducts] || []) as Product[]
+  const title = categoryTitles[category] || category.charAt(0).toUpperCase() + category.slice(1)
+
+  const collections = useMemo(() => Array.from(new Set(products.map(p => p.collection))), [products])
+  const sizes = useMemo(() => {
+    const all = products.map(p => p.size).filter(Boolean) as string[]
+    return Array.from(new Set(all))
+  }, [products])
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      if (selectedCollections.length > 0 && !selectedCollections.includes(p.collection)) return false
+      if (p.price < priceRange[0] || p.price > priceRange[1]) return false
+      if (selectedSizes.length > 0 && p.size && !selectedSizes.includes(p.size)) return false
+      return true
+    })
+  }, [products, selectedCollections, priceRange, selectedSizes])
+
+  const toggleCollection = (c: string) =>
+    setSelectedCollections(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+  const toggleSize = (s: string) =>
+    setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+
+  const FilterContent = () => (
+    <div className="space-y-8">
+      {collections.length > 0 && (
+        <div>
+          <h3 className="font-serif text-sm mb-4 tracking-[0.15em] uppercase">Colección</h3>
+          <div className="space-y-2.5">
+            {collections.map(col => (
+              <label key={col} className="flex items-center gap-2.5 cursor-pointer group/label">
+                <input
+                  type="checkbox"
+                  checked={selectedCollections.includes(col)}
+                  onChange={() => toggleCollection(col)}
+                  className="w-3.5 h-3.5 accent-foreground"
+                  suppressHydrationWarning
+                />
+                <span className="text-sm text-muted-foreground group-hover/label:text-foreground transition-colors">{col}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h3 className="font-serif text-sm mb-4 tracking-[0.15em] uppercase">Precio</h3>
+        <div className="space-y-2.5">
+          {[
+            { label: 'Todos los precios', min: 0, max: 500 },
+            { label: 'Menos de 50€', min: 0, max: 49 },
+            { label: '50€ – 150€', min: 50, max: 150 },
+            { label: 'Más de 150€', min: 151, max: 500 },
+          ].map(opt => (
+            <label key={opt.label} className="flex items-center gap-2.5 cursor-pointer group/label">
+              <input
+                type="radio"
+                name="price"
+                checked={priceRange[0] === opt.min && priceRange[1] === opt.max}
+                onChange={() => setPriceRange([opt.min, opt.max])}
+                className="w-3.5 h-3.5 accent-foreground"
+                suppressHydrationWarning
+              />
+              <span className="text-sm text-muted-foreground group-hover/label:text-foreground transition-colors">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {sizes.length > 0 && (
+        <div>
+          <h3 className="font-serif text-sm mb-4 tracking-[0.15em] uppercase">Talla</h3>
+          <div className="space-y-2.5">
+            {sizes.map(size => (
+              <label key={size} className="flex items-center gap-2.5 cursor-pointer group/label">
+                <input
+                  type="checkbox"
+                  checked={selectedSizes.includes(size)}
+                  onChange={() => toggleSize(size)}
+                  className="w-3.5 h-3.5 accent-foreground"
+                  suppressHydrationWarning
+                />
+                <span className="text-sm text-muted-foreground group-hover/label:text-foreground transition-colors">{size}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(selectedCollections.length > 0 || selectedSizes.length > 0 || priceRange[0] !== 0 || priceRange[1] !== 500) && (
+        <button
+          onClick={() => { setSelectedCollections([]); setSelectedSizes([]); setPriceRange([0, 500]) }}
+          className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          suppressHydrationWarning
+        >
+          Limpiar filtros
+        </button>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen bg-background" suppressHydrationWarning>
+      {/* Page header */}
+      <div className="border-b border-border py-8 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="font-serif text-3xl md:text-4xl tracking-wide">{title}</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">{filteredProducts.length} productos</p>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
+        <div className="flex gap-12">
+
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:block w-52 flex-shrink-0">
+            <div className="sticky top-24">
+              <FilterContent />
+            </div>
+          </aside>
+
+          {/* Mobile filter FAB */}
+          <div className="lg:hidden fixed bottom-6 right-6 z-40">
+            <Sheet>
+              <SheetTrigger asChild>
+                <button
+                  className="bg-foreground text-background px-5 py-3 text-xs uppercase tracking-wider shadow-lg flex items-center gap-2"
+                  suppressHydrationWarning
+                >
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-6">
+                <SheetTitle className="font-serif text-xl tracking-wide mb-8">Filtros</SheetTitle>
+                <FilterContent />
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Product grid */}
+          <div className="flex-1">
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-24">
+                <p className="text-muted-foreground text-sm">No se encontraron productos con estos filtros.</p>
+              </div>
+            ) : (
+              <div className="columns-2 md:columns-3 gap-5">
+                {filteredProducts.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  )
+}
