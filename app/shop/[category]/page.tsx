@@ -1,34 +1,48 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductCard from '@/components/ProductCard'
 import ProductFilters, { Filters, DEFAULT_FILTERS } from '@/components/ProductFilters'
 import { useProducts } from '@/lib/products-context'
 
-export default function ShopCollectionPage({ params }: { params: { category: string } }) {
+export default function ShopCollectionPage() {
   const { products } = useProducts()
+  const params = useParams()
   
-  // TAREA 1: Safe Guard para params.category
-  const rawCategory = params?.category || ''
-  const safeCategory = String(rawCategory)
+  const rawCategory = Array.isArray(params?.category) ? params.category[0] : params?.category || ''
+  const safeCategory = String(rawCategory).toLowerCase()
   
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
 
-  // Filter products by collection name
   const collectionProducts = useMemo(() => {
     if (!safeCategory) return []
-    const categoryName = safeCategory.charAt(0).toUpperCase() + safeCategory.slice(1)
-    return products.filter(p => p.collection === categoryName || p.collection === safeCategory)
+    
+    // Mapeo de slugs a nombres reales para asegurar el filtrado
+    const slugToCollectionName: Record<string, string> = {
+      'descara': 'Descará',
+      'marebo': 'Marebo',
+      'corales': 'Corales',
+      'filipa': 'Filipa',
+      'jaipur': 'Jaipur'
+    }
+
+    const targetName = slugToCollectionName[safeCategory] || safeCategory
+
+    return products.filter(p => 
+      p.collection.toLowerCase() === targetName.toLowerCase() || 
+      p.collection.toLowerCase() === safeCategory
+    )
   }, [products, safeCategory])
 
   const filtered = useMemo(() => {
     let list = collectionProducts.filter(p => p.status === 'published')
 
     if (filters.types.length > 0) {
-      list = list.filter(p => filters.types.some(t => p.category.toLowerCase().includes(t)))
+      list = list.filter(p => filters.types.some(t => p.category.toLowerCase().includes(t.toLowerCase())))
     }
     if (filters.collections.length > 0) {
       list = list.filter(p => filters.collections.includes(p.collection))
@@ -40,15 +54,22 @@ export default function ShopCollectionPage({ params }: { params: { category: str
 
     if (filters.sort === 'price-asc') list = [...list].sort((a, b) => a.price - b.price)
     else if (filters.sort === 'price-desc') list = [...list].sort((a, b) => b.price - a.price)
-    else if (filters.sort === 'newest') list = [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    else if (filters.sort === 'newest') list = [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     return list
   }, [collectionProducts, filters])
 
-  // TAREA 1: Safe Guard para displayTitle
-  const displayTitle = safeCategory ? safeCategory.split('-').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ') : 'Colección'
+  const displayTitle = useMemo(() => {
+    if (!safeCategory) return 'Colección'
+    const slugToCollectionName: Record<string, string> = {
+      'descara': 'Descará',
+      'marebo': 'Marebo',
+      'corales': 'Corales',
+      'filipa': 'Filipa',
+      'jaipur': 'Jaipur'
+    }
+    return slugToCollectionName[safeCategory] || (safeCategory.charAt(0).toUpperCase() + safeCategory.slice(1))
+  }, [safeCategory])
 
   return (
     <main className="min-h-screen bg-background" suppressHydrationWarning>

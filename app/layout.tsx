@@ -3,6 +3,7 @@ import { Playfair_Display, Lato } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { ProductsProvider } from '@/lib/products-context'
+import { CartProvider } from '@/lib/cart-context'
 import './globals.css'
 
 const playfairDisplay = Playfair_Display({ 
@@ -52,7 +53,9 @@ export default function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         <AuthProvider>
           <ProductsProvider>
-            {children}
+            <CartProvider>
+              {children}
+            </CartProvider>
           </ProductsProvider>
         </AuthProvider>
         <Analytics />

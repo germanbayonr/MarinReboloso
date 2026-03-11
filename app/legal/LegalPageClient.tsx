@@ -147,6 +147,16 @@ const content: Record<Tab, React.ReactNode> = {
         Todos nuestros pendientes son de cierre de presión (clip) o de aguja estándar de 0,8 mm, compatible con la gran mayoría de perforaciones.
       </Body>
 
+      <SubTitle>Peinecillos</SubTitle>
+      <Body>
+        Nuestros peinecillos artesanales tienen una medida estándar de 8-10 cm de ancho para el adorno principal y una púa de sujeción de 5 cm, ideal para fijarse en recogidos y moños flamencos sin dañar el cabello.
+      </Body>
+
+      <SubTitle>Broches</SubTitle>
+      <Body>
+        Los broches de nuestras colecciones varían entre los 4 cm y 7 cm de diámetro. Cuentan con un cierre de seguridad tipo imperdible reforzado para asegurar una sujeción firme tanto en mantones de seda como en tejidos de sastrería.
+      </Body>
+
       <SubTitle>Collares</SubTitle>
       <Body>
         La longitud de cada collar se indica en la ficha de producto. Si necesitas un ajuste personalizado, consúltanos y estudiaremos opciones a medida sin coste adicional.

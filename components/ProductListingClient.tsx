@@ -112,15 +112,15 @@ type Product = {
 const categoryTitles: Record<string, string> = {
   pendientes: 'Pendientes',
   mantones: 'Mantones',
-  trajes: 'Trajes',
   accesorios: 'Accesorios',
-  cinturones: 'Cinturones',
-  chokers: 'Chokers',
   peinecillos: 'Peinecillos',
-  isabelita: 'Colección Isabelita',
-  vintage: 'Colección Vintage',
-  esencial: 'Colección Esencial',
-  'lost-in-jaipur': 'Lost in Jaipur',
+  broches: 'Broches',
+  pulseras: 'Pulseras',
+  'descara': 'Colección Descará',
+  'marebo': 'Colección Marebo',
+  'corales': 'Colección Corales',
+  'filipa': 'Colección Filipa',
+  'jaipur': 'Lost in Jaipur',
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

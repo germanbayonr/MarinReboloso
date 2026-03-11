@@ -6,11 +6,10 @@ import ProductListingClient from '@/components/ProductListingClient'
 const validCategories = [
   'pendientes',
   'mantones',
-  'trajes',
   'accesorios',
-  'cinturones',
-  'chokers',
   'peinecillos',
+  'broches',
+  'pulseras',
 ]
 
 type PageProps = {
@@ -35,11 +34,15 @@ export async function generateMetadata({ params }: PageProps) {
     cinturones: 'Cinturones',
     chokers: 'Chokers',
     peinecillos: 'Peinecillos',
+    broches: 'Broches',
+    pulseras: 'Pulseras',
   }
 
+  const categoryTitle = categoryTitles[categoria] ?? categoria
+
   return {
-    title: `${categoryTitles[categoria]} | MAREBO`,
-    description: `Descubre nuestra colección de ${categoryTitles[categoria].toLowerCase()} artesanales de lujo con estilo andaluz.`,
+    title: `${categoryTitle} | MAREBO`,
+    description: `Descubre nuestra colección de ${categoryTitle.toLowerCase()} artesanales de lujo con estilo andaluz.`,
   }
 }
 
@@ -60,6 +63,8 @@ export default async function ProductCategoryPage({ params }: PageProps) {
     cinturones: 'Cinturones',
     chokers: 'Chokers',
     peinecillos: 'Peinecillos',
+    broches: 'Broches',
+    pulseras: 'Pulseras',
   }
 
   return (

@@ -5,14 +5,25 @@ import { useRouter } from 'next/navigation'
 import { UploadCloud, X, Image as ImageIcon, CheckCircle } from 'lucide-react'
 import { useProducts } from '@/lib/products-context'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
-const CATEGORIES = ['pendientes', 'mantones', 'trajes', 'accesorios', 'cinturones', 'chokers', 'peinecillos']
-const COLLECTIONS = ['Isabelita', 'Vintage', 'Esencial', 'Lost in Jaipur']
+const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras']
+const COLLECTIONS = ['Descará', 'Marebo', 'Corales', 'Filipa', 'Jaipur']
+
+function slugify(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
 
 interface UploadedImage {
   id: string
   url: string
   name: string
+  file?: File
 }
 
 export default function NuevoProductoPage() {
@@ -21,16 +32,18 @@ export default function NuevoProductoPage() {
 
   const [form, setForm] = useState({
     name: '',
+    description: '',
     price: '',
     sku: '',
     stock: '',
     status: 'draft' as 'draft' | 'published',
     category: 'pendientes',
-    collection: 'Isabelita',
+    collection: 'Descará',
   })
 
   const [images, setImages] = useState<UploadedImage[]>([])
   const [dragging, setDragging] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -45,7 +58,7 @@ export default function NuevoProductoPage() {
     Array.from(files).forEach(file => {
       if (!file.type.startsWith('image/')) return
       const url = URL.createObjectURL(file)
-      setImages(prev => [...prev, { id: crypto.randomUUID(), url, name: file.name }])
+      setImages(prev => [...prev, { id: crypto.randomUUID(), url, name: file.name, file }])
     })
   }, [])
 
@@ -69,24 +82,78 @@ export default function NuevoProductoPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) return
-    // Preparado para: supabase.from('products').insert({ ...form, images: images.map(i => i.url) })
-    addProduct({
-      name: form.name,
-      price: Number(form.price),
-      sku: form.sku,
-      stock: Number(form.stock),
-      status: form.status,
-      category: form.category,
-      collection: form.collection,
-      images: images.map(i => i.url),
-    })
-    setSaved(true)
-    setTimeout(() => {
-      router.push('/admin/productos')
-    }, 1500)
+    setIsSaving(true)
+    
+    try {
+      // 1. Upload images to Supabase Storage
+      const imageUrls: string[] = []
+      
+      for (const img of images) {
+        if (img.file) {
+          const fileExt = img.file.name.split('.').pop()
+          const fileName = `${crypto.randomUUID()}.${fileExt}`
+          const filePath = `products/${fileName}`
+
+          const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(filePath, img.file)
+
+          if (uploadError) throw uploadError
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(filePath)
+            
+          imageUrls.push(publicUrl)
+        } else {
+          imageUrls.push(img.url)
+        }
+      }
+
+      // 2. Insert product into Supabase database
+      const { error: insertError } = await supabase
+        .from('products')
+        .insert([{
+          name: form.name,
+          description: form.description,
+          price: Number(form.price),
+          sku: form.sku,
+          stock: Number(form.stock),
+          status: form.status,
+          category: form.category,
+          collection: form.collection,
+          images: imageUrls,
+          created_at: new Date().toISOString()
+        }])
+
+      if (insertError) throw insertError
+
+      // 3. Update local context and navigate
+      addProduct({
+        name: form.name,
+        price: Number(form.price),
+        sku: form.sku,
+        stock: Number(form.stock),
+        status: form.status,
+        category: form.category,
+        collection: form.collection,
+        collectionSlug: slugify(form.collection),
+        variants: [{ colorName: 'Único', images: imageUrls }],
+      })
+      
+      setSaved(true)
+      setTimeout(() => {
+        router.push('/admin/productos')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error al guardar el producto:', error)
+      alert(`Error al guardar el producto: ${error.message || 'Error desconocido'}`)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -322,16 +389,28 @@ export default function NuevoProductoPage() {
           <div className="space-y-2">
             <button
               type="submit"
+              disabled={isSaving}
               suppressHydrationWarning
-              className="w-full bg-foreground text-background py-3 text-sm uppercase tracking-wider hover:bg-foreground/90 transition-colors"
+              className={cn(
+                "w-full bg-foreground text-background py-3 text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2",
+                isSaving ? "opacity-70 cursor-not-allowed" : "hover:bg-foreground/90"
+              )}
             >
-              Guardar producto
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar producto'
+              )}
             </button>
             <button
               type="button"
+              disabled={isSaving}
               onClick={() => router.push('/admin/productos')}
               suppressHydrationWarning
-              className="w-full border border-border py-3 text-sm uppercase tracking-wider text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+              className="w-full border border-border py-3 text-sm uppercase tracking-wider text-muted-foreground hover:border-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
               Cancelar
             </button>

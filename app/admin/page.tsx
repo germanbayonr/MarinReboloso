@@ -101,10 +101,10 @@ export default function AdminDashboardPage() {
           <div className="divide-y divide-border">
             {products.slice(0, 5).map(product => (
               <div key={product.id} className="flex items-center gap-3 px-5 py-3.5">
-                {product.images[0] && (
+                {product.variants[0]?.images?.[0] && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={product.images[0]}
+                    src={product.variants[0].images[0]}
                     alt={product.name}
                     className="w-10 h-10 object-cover flex-shrink-0 bg-secondary"
                   />

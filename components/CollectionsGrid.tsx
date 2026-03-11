@@ -2,69 +2,65 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
 
 const collections = [
   {
     id: 'descara',
     name: 'Descará',
     slug: 'descara',
-    description: 'La nueva colección — audaz y sin complejos',
-    image: '/images/collection-descara.jpg',
-    type: 'image' as const,
+    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Alhambra.PNG',
   },
   {
     id: 'marebo',
     name: 'Marebo',
     slug: 'marebo',
-    description: 'La esencia de la marca, piezas fundacionales',
-    image: '/images/collection-marebo.jpg',
-    type: 'image' as const,
+    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Flor%20MAREBO%20Dore.png',
   },
   {
     id: 'corales',
     name: 'Corales',
     slug: 'corales',
-    description: 'Inspirada en los colores del Mediterráneo',
-    image: '/images/collection-corales.jpg',
-    type: 'image' as const,
+    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20_Lagrimas%20de%20coral_%20.HEIC',
   },
   {
     id: 'filipa',
     name: 'Filipa',
     slug: 'filipa',
-    description: 'Feminidad contemporánea con raíces andaluzas',
-    image: '/images/collection-filipa.jpg',
-    type: 'image' as const,
+    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Filipa.PNG',
   },
   {
     id: 'jaipur',
-    name: 'Lost in Jaipur',
+    name: 'Jaipur',
     slug: 'jaipur',
-    description: 'Un viaje entre dos culturas',
     image: '/images/collection-jaipur.jpg',
-    type: 'image' as const,
   },
 ]
 
 export default function CollectionsGrid() {
   return (
-    <section className="bg-background py-16 md:py-24" suppressHydrationWarning>
-      <div className="max-w-7xl mx-auto px-4 md:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-12">
-          <h2 className="font-serif text-3xl md:text-4xl mb-4 tracking-wide">
+    <section className="bg-background py-20 md:py-32 overflow-hidden" suppressHydrationWarning>
+      <div className="max-w-7xl mx-auto px-6 md:px-12">
+        
+        {/* Section Header - Fixed Stacking Context */}
+        <div className="relative z-10 text-center mb-16 md:mb-24 max-w-3xl mx-auto">
+          <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-foreground mb-6 tracking-tight leading-tight">
             Nuestras Colecciones
           </h2>
-          <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-            Descubre nuestras colecciones exclusivas donde la tradición andaluza se encuentra con el diseño contemporáneo
+          <div className="w-12 h-[1px] bg-foreground/20 mx-auto mb-6" />
+          <p className="text-muted-foreground text-base md:text-lg leading-relaxed px-4">
+            Piezas de alta joyería que celebran la herencia andaluza a través de una mirada contemporánea y sofisticada.
           </p>
         </div>
 
-        {/* Collections Grid - 2x2 Centered */}
-        <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {collections.map((collection) => (
-            <CollectionCard key={collection.id} collection={collection} />
+        {/* Collections Grid - Editorial 1/2/3 Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+          {collections.map((collection, index) => (
+            <div 
+              key={collection.id}
+              className={index >= 3 ? "lg:col-span-1" : ""}
+            >
+              <CollectionCard collection={collection} />
+            </div>
           ))}
         </div>
       </div>
@@ -76,44 +72,33 @@ function CollectionCard({ collection }: { collection: typeof collections[0] }) {
   return (
     <Link 
       href={`/shop/${collection.slug}`}
-      className="group relative overflow-hidden bg-secondary/20 aspect-[4/5]"
+      className="group block relative overflow-hidden bg-stone-100"
       suppressHydrationWarning
     >
-      {/* Image */}
-      <Image
-        src={collection.image}
-        alt={collection.name}
-        fill
-        sizes="(max-width: 768px) 100vw, 50vw"
-        className="object-cover transition-transform duration-700 group-hover:scale-105"
-      />
-
-      {/* Overlay Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-
-      {/* Content */}
-      <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
-        <div className="relative">
-          {/* Ver Colección Button */}
-          <div className="flex items-center gap-2 mb-3 text-white/90 text-xs md:text-sm tracking-wider uppercase">
-            <span className="group-hover:translate-x-1 transition-transform">Ver Colección</span>
-            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-          </div>
-
-          {/* Collection Name */}
-          <h3 className="font-serif text-3xl md:text-4xl lg:text-5xl text-white mb-2 tracking-wide">
-            {collection.name}
-          </h3>
-
-          {/* Description */}
-          <p className="text-white/80 text-sm md:text-base leading-relaxed max-w-md">
-            {collection.description}
-          </p>
-        </div>
+      {/* Editorial Aspect Ratio 3:4 */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden">
+        <Image
+          src={collection.image}
+          alt={`Colección ${collection.name}`}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-105"
+          priority={false}
+        />
+        
+        {/* Subtle overlay for legibility */}
+        <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors duration-500" />
       </div>
 
-      {/* Hover Effect Border */}
-      <div className="absolute inset-0 border-2 border-white/0 group-hover:border-white/20 transition-colors pointer-events-none" />
+      {/* Collection Info - Minimalist Editorial Style */}
+      <div className="mt-6 text-center">
+        <h3 className="font-serif text-2xl md:text-3xl tracking-wide text-foreground group-hover:opacity-60 transition-opacity duration-300">
+          {collection.name}
+        </h3>
+        <span className="inline-block mt-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground border-b border-transparent group-hover:border-muted-foreground/30 transition-all duration-300">
+          Explorar
+        </span>
+      </div>
     </Link>
   )
 }

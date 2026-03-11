@@ -7,20 +7,20 @@ import { Heart, MessageCircle, Play, Instagram, ChevronLeft, ChevronRight } from
 const reviews = [
   {
     id: 1,
-    text: 'El mantón es una joya. La calidad es excepcional y el bordado simplemente perfecto.',
-    author: 'María G.',
+    text: 'El mantón es una auténtica joya artesanal. La caída de la seda y el detalle del enrejado son excepcionales. Superó todas mis expectativas para el evento.',
+    author: 'Elena V.',
     rating: 5,
   },
   {
     id: 2,
-    text: 'Pendientes preciosos que combinan tradición y modernidad. Me encantan.',
-    author: 'Carmen R.',
+    text: 'Los pendientes de la colección Filipa tienen un equilibrio perfecto entre peso y elegancia. No pesan nada y el baño en oro tiene un brillo muy sofisticado.',
+    author: 'Beatriz S.',
     rating: 5,
   },
   {
     id: 3,
-    text: 'Atención al cliente impecable. El traje llegó en perfectas condiciones.',
-    author: 'Isabel M.',
+    text: 'Buscaba algo especial para una boda y el broche de coral fue el toque definitivo. La presentación del envío es puro lujo, se nota el cariño en cada detalle.',
+    author: 'Sofía M.',
     rating: 5,
   },
 ]
@@ -30,10 +30,10 @@ const instagramPosts = [
   { id: 2, image: '/images/collection-vintage.jpg', likes: 538, comments: 31, isVideo: true },
   { id: 3, image: '/images/collection-esencial.jpg', likes: 367, comments: 18, isVideo: false },
   { id: 4, image: '/images/collection-jaipur.jpg', likes: 621, comments: 42, isVideo: false },
-  { id: 5, image: '/images/traje-lino-beige-model.jpg', likes: 489, comments: 27, isVideo: true },
+  { id: 5, image: '/images/pendientes-jaipur-model.jpg', likes: 489, comments: 27, isVideo: true },
   { id: 6, image: '/images/manton-seda-negro-model.jpg', likes: 712, comments: 56, isVideo: false },
   { id: 7, image: '/images/pendientes-giralda-model.jpg', likes: 334, comments: 19, isVideo: false },
-  { id: 8, image: '/images/vestido-invitada-model.jpg', likes: 556, comments: 38, isVideo: false },
+  { id: 8, image: '/images/choker-dorado-model.jpg', likes: 556, comments: 38, isVideo: false },
 ]
 
 export default function SocialProof() {

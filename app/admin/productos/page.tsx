@@ -6,8 +6,8 @@ import { PlusCircle, Pencil, Trash2, Search, X, CheckCircle } from 'lucide-react
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
-const CATEGORIES = ['pendientes', 'mantones', 'trajes', 'accesorios', 'cinturones', 'chokers', 'peinecillos']
-const COLLECTIONS = ['Descará', 'Isabelita', 'Vintage', 'Esencial', 'Lost in Jaipur']
+const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras']
+const COLLECTIONS = ['Descará', 'Marebo', 'Corales', 'Filipa', 'Jaipur']
 
 function EditModal({ product, onClose }: { product: Product; onClose: () => void }) {
   const { updateProduct } = useProducts()
@@ -229,9 +229,9 @@ export default function ProductosPage() {
                 <tr key={product.id} className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      {product.images[0] ? (
+                      {product.variants[0]?.images?.[0] ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={product.images[0]} alt={product.name} className="w-9 h-9 object-cover flex-shrink-0 bg-secondary" />
+                        <img src={product.variants[0].images[0]} alt={product.name} className="w-9 h-9 object-cover flex-shrink-0 bg-secondary" />
                       ) : (
                         <div className="w-9 h-9 bg-secondary flex-shrink-0" />
                       )}

@@ -12,7 +12,8 @@ interface InteractiveCardProps {
     description?: string
     price: number
     priceRange?: { min: number; max: number }
-    images: string[]
+    images?: string[]
+    variants?: { images: string[] }[]
     collection?: string
     status?: string
     stock?: number
@@ -23,17 +24,18 @@ interface InteractiveCardProps {
 export function InteractiveCard({ product, href = `/producto/${product.id}` }: InteractiveCardProps) {
   const [imgIndex, setImgIndex] = useState(0)
   const [hovered, setHovered] = useState(false)
+  const images = product.images?.length ? product.images : (product.variants?.[0]?.images ?? [])
 
   const handlePrev = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setImgIndex(i => (i === 0 ? product.images.length - 1 : i - 1))
+    setImgIndex(i => (i === 0 ? images.length - 1 : i - 1))
   }
 
   const handleNext = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setImgIndex(i => (i === product.images.length - 1 ? 0 : i + 1))
+    setImgIndex(i => (i === images.length - 1 ? 0 : i + 1))
   }
 
   return (
@@ -55,7 +57,7 @@ export function InteractiveCard({ product, href = `/producto/${product.id}` }: I
           suppressHydrationWarning
         >
           <Image
-            src={product.images[imgIndex]}
+            src={images[imgIndex] ?? images[0]}
             alt={product.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -65,7 +67,7 @@ export function InteractiveCard({ product, href = `/producto/${product.id}` }: I
         </Link>
 
         {/* Navigation Arrows - only visible on hover, above link */}
-        {hovered && product.images.length > 1 && (
+        {hovered && images.length > 1 && (
           <>
             {/* Previous Arrow */}
             <button
@@ -89,7 +91,7 @@ export function InteractiveCard({ product, href = `/producto/${product.id}` }: I
 
             {/* Image Indicators */}
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 pointer-events-none">
-              {product.images.map((_, idx) => (
+              {images.map((_, idx) => (
                 <div
                   key={idx}
                   className={`w-1.5 h-1.5 rounded-full transition-all ${

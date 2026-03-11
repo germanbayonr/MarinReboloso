@@ -2,7 +2,7 @@
 
 import { SlidersHorizontal, ChevronDown, X } from 'lucide-react'
 
-export const PRODUCT_TYPES = ['Pendientes', 'Collares', 'Bolsos', 'Mantoncillos', 'Peinecillos', 'Broches', 'Pulseras', 'Accesorios']
+export const PRODUCT_TYPES = ['Pendientes', 'Collares', 'Bolsos', 'Mantones', 'Peinecillos', 'Broches', 'Pulseras', 'Accesorios']
 export const COLLECTIONS = ['Descará', 'Marebo', 'Corales', 'Filipa', 'Jaipur']
 
 export interface Filters {
