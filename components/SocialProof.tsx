@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Heart, MessageCircle, Play, Instagram, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Play, Instagram, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/wayfar_brand/'
 
 const reviews = [
   {
@@ -25,15 +27,15 @@ const reviews = [
   },
 ]
 
-const instagramPosts = [
-  { id: 1, image: '/images/collection-isabelita.jpg', likes: 412, comments: 23, isVideo: false },
-  { id: 2, image: '/images/collection-vintage.jpg', likes: 538, comments: 31, isVideo: true },
-  { id: 3, image: '/images/collection-esencial.jpg', likes: 367, comments: 18, isVideo: false },
-  { id: 4, image: '/images/collection-jaipur.jpg', likes: 621, comments: 42, isVideo: false },
-  { id: 5, image: '/images/pendientes-jaipur-model.jpg', likes: 489, comments: 27, isVideo: true },
-  { id: 6, image: '/images/manton-seda-negro-model.jpg', likes: 712, comments: 56, isVideo: false },
-  { id: 7, image: '/images/pendientes-giralda-model.jpg', likes: 334, comments: 19, isVideo: false },
-  { id: 8, image: '/images/choker-dorado-model.jpg', likes: 556, comments: 38, isVideo: false },
+const INSTAGRAM_POSTS = [
+  { id: 1, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta1.png', isVideo: false },
+  { id: 2, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta2.png', isVideo: false },
+  { id: 3, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.57.jpeg', isVideo: false },
+  { id: 4, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta4.png', isVideo: true },
+  { id: 5, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta5.png', isVideo: false },
+  { id: 6, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta6%20.png', isVideo: false },
+  { id: 7, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta7.png', isVideo: false },
+  { id: 8, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta8.png', isVideo: true },
 ]
 
 export default function SocialProof() {
@@ -113,37 +115,35 @@ export default function SocialProof() {
         <div>
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-2">
+            <a
+              href={INSTAGRAM_PROFILE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-baseline justify-center gap-2 mb-2 hover:opacity-60 transition-opacity duration-300 leading-none"
+            >
               <Instagram className="w-6 h-6 text-foreground" />
-              <h2 className="font-serif text-2xl md:text-3xl">@wayfarbrand</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">Sevilla · Calle Rosario, 16</p>
+              <h2 className="font-serif text-2xl md:text-3xl leading-none">@marebo</h2>
+            </a>
           </div>
 
           {/* Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-8">
-            {instagramPosts.map((post) => (
+            {INSTAGRAM_POSTS.map((post) => (
               <InstagramPost key={post.id} post={post} />
             ))}
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              className="px-8 py-3 bg-[#E5D0B1] text-foreground text-sm uppercase tracking-wider hover:bg-[#D4BFA0] transition-colors"
-              suppressHydrationWarning
-            >
-              Ver más
-            </button>
             <a
-              href="https://instagram.com/wayfarbrand"
+              href={INSTAGRAM_PROFILE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3 bg-primary text-primary-foreground text-sm uppercase tracking-wider hover:bg-primary/90 transition-colors flex items-center gap-2"
               suppressHydrationWarning
             >
               <Instagram className="w-4 h-4" />
-              Follow on Instagram
+              Seguir en Instagram
             </a>
           </div>
         </div>
@@ -152,47 +152,31 @@ export default function SocialProof() {
   )
 }
 
-function InstagramPost({ post }: { post: typeof instagramPosts[0] }) {
-  const [isHovered, setIsHovered] = useState(false)
-
+function InstagramPost({ post }: { post: typeof INSTAGRAM_POSTS[0] }) {
   return (
-    <div
+    <a
+      href={INSTAGRAM_PROFILE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
       className="relative aspect-square overflow-hidden bg-secondary/20 group cursor-pointer"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <Image
-        src={post.image}
+        src={post.imageUrl}
         alt="Instagram post"
         fill
-        className="object-cover"
+        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
         sizes="(max-width: 768px) 50vw, 25vw"
       />
 
-      {/* Video Play Icon (when not hovered) */}
-      {post.isVideo && !isHovered && (
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors duration-300" />
+
+      {post.isVideo && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="bg-white/90 rounded-full p-3">
+          <div className="bg-white/90 rounded-full p-3 transition-transform duration-300 group-hover:scale-105">
             <Play className="w-6 h-6 text-foreground fill-foreground" />
           </div>
         </div>
       )}
-
-      {/* Hover Overlay */}
-      {isHovered && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity">
-          <div className="flex items-center gap-6 text-white">
-            <div className="flex items-center gap-2">
-              <Heart className="w-6 h-6 fill-white" />
-              <span className="font-semibold">{post.likes}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-6 h-6 fill-white" />
-              <span className="font-semibold">{post.comments}</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </a>
   )
 }

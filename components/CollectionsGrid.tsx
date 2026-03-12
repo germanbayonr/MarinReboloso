@@ -20,19 +20,13 @@ const collections = [
     id: 'corales',
     name: 'Corales',
     slug: 'corales',
-    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20_Lagrimas%20de%20coral_%20.HEIC',
+    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.PNG',
   },
   {
     id: 'filipa',
     name: 'Filipa',
     slug: 'filipa',
     image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Filipa.PNG',
-  },
-  {
-    id: 'jaipur',
-    name: 'Jaipur',
-    slug: 'jaipur',
-    image: '/images/collection-jaipur.jpg',
   },
 ]
 

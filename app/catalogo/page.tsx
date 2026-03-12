@@ -41,7 +41,6 @@ export default function CatalogoPage() {
         {/* Page header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">Wayfar Brand</p>
             <h1 className="font-serif text-3xl md:text-4xl tracking-tight">Catálogo</h1>
             <p className="font-sans text-sm text-muted-foreground mt-1">{filtered.length} piezas</p>
           </div>

@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar'
 import HeroSection from '@/components/HeroSection'
-import CollectionsGrid from '@/components/CollectionsGrid'
+import CollectionBanners from '@/components/CollectionBanners'
 import NovedadesCarousel from '@/components/NovedadesCarousel'
 import SocialProof from '@/components/SocialProof'
 import Footer from '@/components/Footer'
@@ -10,7 +10,7 @@ export default function Home() {
     <main className="min-h-screen" suppressHydrationWarning>
       <Navbar />
       <HeroSection />
-      <CollectionsGrid />
+      <CollectionBanners />
       <NovedadesCarousel />
       <SocialProof />
       <Footer />

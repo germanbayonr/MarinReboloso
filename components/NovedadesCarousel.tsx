@@ -30,6 +30,7 @@ export default function NovedadesCarousel() {
   // Show only published products, newest first, max 12
   const featured = products
     .filter(p => p.status === 'published')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 12)
 
   if (featured.length === 0) return null

@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { ProductsProvider } from '@/lib/products-context'
 import { CartProvider } from '@/lib/cart-context'
+import { WishlistProvider } from '@/lib/wishlist-context'
+import Preloader from '@/components/Preloader'
 import './globals.css'
 
 const playfairDisplay = Playfair_Display({ 
@@ -51,11 +53,14 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${playfairDisplay.variable} ${lato.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
+        <Preloader />
         <AuthProvider>
           <ProductsProvider>
-            <CartProvider>
-              {children}
-            </CartProvider>
+            <WishlistProvider>
+              <CartProvider>
+                {children}
+              </CartProvider>
+            </WishlistProvider>
           </ProductsProvider>
         </AuthProvider>
         <Analytics />

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, ArrowLeft } from 'lucide-react'
 import { ProductVariant, useProducts } from '@/lib/products-context'
 import { useCart } from '@/lib/cart-context'
+import { useWishlist } from '@/lib/wishlist-context'
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -22,13 +23,13 @@ export default function ProductDetailPage() {
   const router = useRouter()
   const { products } = useProducts()
   const { addToCart } = useCart()
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
   
   const product = useMemo(() => products.find(p => p.id === id), [products, id])
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState('U')
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [hoveredColor, setHoveredColor] = useState<string | null>(null)
-  const [isWishlisted, setIsWishlisted] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
   const [animationCoords, setAnimationCoords] = useState({ x: 0, y: 0 })
   const imageRef = useRef<HTMLDivElement>(null)
@@ -49,6 +50,7 @@ export default function ProductDetailPage() {
   }, [product])
 
   if (!product || !selectedVariant || !activeImage) return null
+  const wishlisted = isInWishlist(product.id)
 
   const handleAddToCart = () => {
     const cartIcon = document.getElementById('cart-icon-target')
@@ -142,10 +144,22 @@ export default function ProductDetailPage() {
                     {product.name}
                   </h1>
                   <button 
-                    onClick={() => setIsWishlisted(!isWishlisted)}
-                    className="mt-2 text-foreground/40 hover:text-foreground transition-colors"
+                    onClick={() => {
+                      if (wishlisted) {
+                        removeFromWishlist(product.id)
+                        return
+                      }
+                      addToWishlist({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        image: activeImage,
+                        href: `/shop/producto/${product.id}`,
+                      })
+                    }}
+                    className="mt-2 text-foreground/40 hover:text-foreground transition-colors duration-300"
                   >
-                    <Heart className={cn("w-6 h-6", isWishlisted && "fill-foreground text-foreground")} strokeWidth={1.5} />
+                    <Heart className={cn("w-6 h-6 transition-colors duration-300", wishlisted && "fill-foreground text-foreground")} strokeWidth={1.5} />
                   </button>
                 </div>
                 <p className="text-xl font-sans tracking-wider">{product.price}€</p>
