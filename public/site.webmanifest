@@ -7,11 +7,10 @@
   "theme_color": "#111111",
   "icons": [
     {
-      "src": "https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
+      "src": "/icon.svg?v=20260313",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
 }
-

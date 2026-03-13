@@ -8,8 +8,9 @@ const BRAND_NAME = 'Marebo Jewelry'
 const BRAND_TITLE = 'Marebo Jewelry | Joyería Artesanal y Mantones de Diseño'
 const BRAND_DESCRIPTION =
   'Descubre la exclusividad de Marebo Jewelry. Diseños únicos en joyería artesanal y mantones de alta calidad. Elegancia con esencia del Sur.'
+const ICON_VERSION = '20260313'
 const BRAND_LOGO_URL =
-  'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
+  `https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg?v=${ICON_VERSION}`
 
 export const metadata: Metadata = {
   title: {
@@ -49,14 +50,14 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: BRAND_LOGO_URL,
-        type: 'image/jpeg',
+        url: `/icon.svg?v=${ICON_VERSION}`,
+        type: 'image/svg+xml',
       },
     ],
     apple: [
       {
-        url: BRAND_LOGO_URL,
-        type: 'image/jpeg',
+        url: `/icon.svg?v=${ICON_VERSION}`,
+        type: 'image/svg+xml',
       },
     ],
   },
