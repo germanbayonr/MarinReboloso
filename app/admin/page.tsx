@@ -19,14 +19,13 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AdminDashboardPage() {
   const { products } = useProducts()
-  const totalStock = products.reduce((sum, p) => sum + p.stock, 0)
-  const publishedCount = products.filter(p => p.status === 'published').length
+  const syncedCount = products.filter((p) => !!p.stripe_price_id).length
 
   const STATS = [
     { label: 'Ingresos este mes', value: '1.240€', change: '+12%', icon: TrendingUp },
     { label: 'Pedidos totales', value: '41', change: '+5 esta semana', icon: ShoppingCart },
     { label: 'Clientes', value: '38', change: '+3 nuevos', icon: Users },
-    { label: 'Productos activos', value: String(publishedCount), change: `${totalStock} uds. en stock`, icon: Package },
+    { label: 'Productos', value: String(products.length), change: `${syncedCount} con Stripe`, icon: Package },
   ]
 
   return (
@@ -101,20 +100,24 @@ export default function AdminDashboardPage() {
           <div className="divide-y divide-border">
             {products.slice(0, 5).map(product => (
               <div key={product.id} className="flex items-center gap-3 px-5 py-3.5">
-                {product.variants[0]?.images?.[0] && (
+                {product.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={product.variants[0].images[0]}
+                    src={product.image_url}
                     alt={product.name}
                     className="w-10 h-10 object-cover flex-shrink-0 bg-secondary"
                   />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm truncate">{product.name}</p>
-                  <p className="text-xs text-muted-foreground">{product.price}€ · {product.stock} uds.</p>
+                  <p className="text-xs text-muted-foreground">{product.price}€ · {product.category ?? '—'}</p>
                 </div>
-                <span className={`text-[10px] px-2 py-0.5 flex-shrink-0 ${product.status === 'published' ? 'bg-green-50 text-green-700' : 'bg-secondary text-muted-foreground'}`}>
-                  {product.status === 'published' ? 'Activo' : 'Borrador'}
+                <span
+                  className={`text-[10px] px-2 py-0.5 flex-shrink-0 ${
+                    product.stripe_price_id ? 'bg-green-50 text-green-700' : 'bg-secondary text-muted-foreground'
+                  }`}
+                >
+                  {product.stripe_price_id ? 'Stripe OK' : 'Pendiente'}
                 </span>
               </div>
             ))}

@@ -1,29 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-
-// Mock products organized by collection
-const collectionProducts = {
-  'isabelita': [
-    { id: 1, name: 'Pendientes Giralda Oro', category: 'Pendientes', price: 25, image: '/images/pendientes-giralda.jpg', hoverImage: '/images/pendientes-giralda-model.jpg' },
-    { id: 6, name: 'Mantón Bordado Crema', category: 'Mantones', price: 280, image: '/images/manton-seda-negro.jpg', hoverImage: '/images/manton-seda-negro-model.jpg' },
-    { id: 8, name: 'Vestido Invitada', category: 'Trajes', price: 150, image: '/images/vestido-invitada.jpg', hoverImage: '/images/vestido-invitada-model.jpg' },
-  ],
-  'vintage': [
-    { id: 3, name: 'Aros Plata Vintage', category: 'Pendientes', price: 22, image: '/images/pendientes-giralda.jpg', hoverImage: '/images/pendientes-giralda-model.jpg' },
-  ],
-  'esencial': [
-    { id: 4, name: 'Pendientes Esmeralda', category: 'Pendientes', price: 35, image: '/images/pendientes-jaipur.jpg', hoverImage: '/images/pendientes-jaipur-model.jpg' },
-    { id: 5, name: 'Mantón Seda Negro', category: 'Mantones', price: 250, image: '/images/manton-seda-negro.jpg', hoverImage: '/images/manton-seda-negro-model.jpg' },
-    { id: 7, name: 'Traje Lino Beige', category: 'Trajes', price: 180, image: '/images/traje-lino-beige.jpg', hoverImage: '/images/traje-lino-beige-model.jpg' },
-    { id: 9, name: 'Choker Dorado', category: 'Accesorios', price: 18, image: '/images/choker-dorado.jpg', hoverImage: '/images/choker-dorado-model.jpg' },
-  ],
-  'lost-in-jaipur': [
-    { id: 2, name: 'Pendientes Lost in Jaipur', category: 'Pendientes', price: 30, image: '/images/pendientes-jaipur.jpg', hoverImage: '/images/pendientes-jaipur-model.jpg' },
-  ],
-}
+import { useEffect, useMemo, useState } from 'react'
+import ProductCard from '@/components/ProductCard'
+import { supabase } from '@/lib/supabase'
 
 interface CollectionClientProps {
   collectionSlug: string
@@ -32,7 +11,61 @@ interface CollectionClientProps {
 }
 
 export default function CollectionClient({ collectionSlug, title, description }: CollectionClientProps) {
-  const products = collectionProducts[collectionSlug as keyof typeof collectionProducts] || []
+  const [products, setProducts] = useState<
+    Array<{ id: string; name: string; price: number | string; image_url: string | null; category: string | null; is_new_arrival: boolean }>
+  >([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id,name,price,image_url,category,is_new_arrival')
+          .limit(500)
+        if (cancelled) return
+        if (error) {
+          setProducts([])
+          setLoaded(true)
+          return
+        }
+        setProducts(
+          (data ?? []).map((p) => ({
+            id: String((p as any).id),
+            name: String((p as any).name ?? ''),
+            price: (p as any).price,
+            image_url: (p as any).image_url ?? null,
+            category: (p as any).category ?? null,
+            is_new_arrival: Boolean((p as any).is_new_arrival),
+          })),
+        )
+        setLoaded(true)
+      } catch {
+        if (!cancelled) {
+          setProducts([])
+          setLoaded(true)
+        }
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const scopedProducts = useMemo(() => {
+    const slug = collectionSlug.toLowerCase()
+    const knownCategories = new Set(['mantones', 'peinecillos', 'collares', 'bolsos', 'pendientes', 'pulseras', 'accesorios'])
+    if (knownCategories.has(slug)) return products.filter((p) => (p.category ?? '').toLowerCase() === slug)
+    const normalize = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+    const needle = normalize(slug)
+    return products.filter((p) => normalize(p.name).includes(needle))
+  }, [collectionSlug, products])
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,55 +81,26 @@ export default function CollectionClient({ collectionSlug, title, description }:
 
       {/* Products */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
-        {products.length === 0 ? (
+        {loaded && scopedProducts.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-muted-foreground">Próximamente nuevos productos en esta colección.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {(loaded ? scopedProducts : Array.from({ length: 8 })).map((product: any, idx: number) => (
+              loaded ? (
+                <ProductCard key={product.id} product={product} />
+              ) : (
+                <div key={idx} className="space-y-4">
+                  <div className="relative aspect-[3/4] bg-stone-100" />
+                  <div className="h-5 bg-stone-100 w-4/5" />
+                  <div className="h-4 bg-stone-100 w-24" />
+                </div>
+              )
             ))}
           </div>
         )}
       </div>
     </div>
-  )
-}
-
-function ProductCard({ product }: { product: any }) {
-  const [isHovered, setIsHovered] = useState(false)
-
-  return (
-    <Link href={`/producto/${product.id}`} className="group">
-      <div
-        className="relative aspect-[3/4] overflow-hidden bg-secondary/20"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-opacity duration-500"
-          style={{ opacity: isHovered ? 0 : 1 }}
-        />
-        <Image
-          src={product.hoverImage}
-          alt={`${product.name} - modelo`}
-          fill
-          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-opacity duration-500"
-          style={{ opacity: isHovered ? 1 : 0 }}
-        />
-      </div>
-
-      <div className="mt-3 space-y-1">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">{product.category}</p>
-        <h3 className="font-serif text-sm text-foreground">{product.name}</h3>
-        <p className="text-sm text-foreground">{product.price}€</p>
-      </div>
-    </Link>
   )
 }

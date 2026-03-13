@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { checkoutSchema } from '@/lib/validation/checkout'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import Stripe from 'stripe'
 
 const cartItemSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  price: z.number().nonnegative(),
-  image: z.string().min(1),
+  id: z.string().min(1).optional(),
   quantity: z.number().int().positive(),
-  variant: z.string().optional(),
+  stripe_price_id: z.string().min(1),
 })
 
 const requestSchema = z.object({
-  customerData: checkoutSchema,
   cartItems: z.array(cartItemSchema).min(1),
+  customerData: z
+    .object({
+      email: z.string().email().optional(),
+    })
+    .passthrough()
+    .optional(),
 })
 
 export async function POST(req: Request) {
@@ -24,120 +24,57 @@ export async function POST(req: Request) {
     const { customerData, cartItems } = requestSchema.parse(json)
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY || ''
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
-    if (!stripeSecretKey || !siteUrl) {
-      return NextResponse.json({ success: false, error: 'Missing server configuration' }, { status: 500 })
+    if (!stripeSecretKey) {
+      return NextResponse.json({ success: false, error: 'Missing STRIPE_SECRET_KEY' }, { status: 500 })
     }
 
     const stripe = new Stripe(stripeSecretKey)
-    let supabase: ReturnType<typeof createSupabaseServerClient>
-    try {
-      supabase = createSupabaseServerClient()
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Supabase server client not configured'
-      return NextResponse.json({ success: false, error: message }, { status: 500 })
-    }
-
-    const { data: customerRow, error: customerError } = await supabase
-      .from('customers')
-      .insert([
-        {
-          email: customerData.email,
-          phone: customerData.phone,
-          first_name: customerData.firstName,
-          last_name: customerData.lastName,
-          address1: customerData.address1,
-          address2: customerData.address2 || null,
-          city: customerData.city,
-          province: customerData.province,
-          postal_code: customerData.postalCode,
-          country: customerData.country,
-        },
-      ])
-      .select('id')
-      .single()
-
-    if (customerError) {
-      return NextResponse.json({ success: false, error: customerError.message }, { status: 500 })
-    }
-
-    const orderSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
-
-    const { data: orderRow, error: orderError } = await supabase
-      .from('orders')
-      .insert([
-        {
-          customer_id: customerRow.id,
-          status: 'pending',
-          subtotal: orderSubtotal,
-          total: orderSubtotal,
-          currency: 'EUR',
-          email: customerData.email,
-          phone: customerData.phone,
-          shipping_first_name: customerData.firstName,
-          shipping_last_name: customerData.lastName,
-          shipping_address1: customerData.address1,
-          shipping_address2: customerData.address2 || null,
-          shipping_city: customerData.city,
-          shipping_province: customerData.province,
-          shipping_postal_code: customerData.postalCode,
-          shipping_country: customerData.country,
-        },
-      ])
-      .select('id')
-      .single()
-
-    if (orderError) {
-      return NextResponse.json({ success: false, error: orderError.message }, { status: 500 })
-    }
-
-    const orderId = orderRow.id
-
-    const orderItemsPayload = cartItems.map((item) => ({
-      order_id: orderId,
-      product_id: item.id,
-      product_name: item.name,
-      unit_price: item.price,
-      quantity: item.quantity,
-      variant: item.variant || null,
-      image: item.image,
-      line_total: item.price * item.quantity,
-    }))
-
-    const { error: itemsError } = await supabase.from('order_items').insert(orderItemsPayload)
-
-    if (itemsError) {
-      return NextResponse.json({ success: false, error: itemsError.message }, { status: 500 })
-    }
 
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cartItems.map((item) => ({
       quantity: item.quantity,
-      price_data: {
-        currency: 'eur',
-        unit_amount: Math.round(item.price * 100),
-        product_data: {
-          name: item.name,
-          images: [item.image],
-        },
-      },
+      price: item.stripe_price_id,
     }))
+
+    const forwardedHost = req.headers.get('x-forwarded-host')
+    const forwardedProto = req.headers.get('x-forwarded-proto')
+    const origin = forwardedHost
+      ? `${forwardedProto ?? 'https'}://${forwardedHost}`
+      : req.headers.get('origin') || new URL(req.url).origin
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      success_url: `${siteUrl}/checkout/success`,
-      cancel_url: `${siteUrl}/checkout`,
-      customer_email: customerData.email,
+      success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cart`,
+      customer_email: customerData?.email,
+      shipping_address_collection: { allowed_countries: ['ES'] },
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: 500, currency: 'eur' },
+            display_name: 'Envío estándar',
+            delivery_estimate: {
+              minimum: { unit: 'business_day', value: 2 },
+              maximum: { unit: 'business_day', value: 4 },
+            },
+          },
+        },
+      ],
       line_items,
-      metadata: {
-        supabaseOrderId: String(orderId),
-      },
+      metadata: cartItems.reduce(
+        (acc, item, idx) => {
+          if (item.id) acc[`supabase_product_${idx}`] = item.id
+          return acc
+        },
+        {} as Record<string, string>,
+      ),
     })
 
     if (!session.url) {
       return NextResponse.json({ success: false, error: 'Failed to create Stripe session' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, url: session.url })
+    return NextResponse.json({ success: true, url: session.url, session_id: session.id })
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 })

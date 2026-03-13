@@ -1,23 +1,13 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { UploadCloud, X, Image as ImageIcon, CheckCircle } from 'lucide-react'
-import { useProducts } from '@/lib/products-context'
+import { CheckCircle, Image as ImageIcon, UploadCloud, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useProducts } from '@/lib/products-context'
 
-const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras']
-const COLLECTIONS = ['Descará', 'Marebo', 'Corales', 'Filipa', 'Jaipur']
-
-function slugify(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-}
+const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
 interface UploadedImage {
   id: string
@@ -27,18 +17,15 @@ interface UploadedImage {
 }
 
 export default function NuevoProductoPage() {
-  const { addProduct } = useProducts()
+  const { refresh } = useProducts()
   const router = useRouter()
 
   const [form, setForm] = useState({
     name: '',
     description: '',
     price: '',
-    sku: '',
-    stock: '',
-    status: 'draft' as 'draft' | 'published',
     category: 'pendientes',
-    collection: 'Descará',
+    is_new_arrival: false,
   })
 
   const [images, setImages] = useState<UploadedImage[]>([])
@@ -48,109 +35,83 @@ export default function NuevoProductoPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleField = (key: string, value: string) => {
-    setForm(prev => ({ ...prev, [key]: value }))
-    setErrors(prev => ({ ...prev, [key]: '' }))
+  const handleField = (key: string, value: string | boolean) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setErrors((prev) => ({ ...prev, [key]: '' }))
   }
 
   const processFiles = useCallback((files: FileList | null) => {
     if (!files) return
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file) => {
       if (!file.type.startsWith('image/')) return
       const url = URL.createObjectURL(file)
-      setImages(prev => [...prev, { id: crypto.randomUUID(), url, name: file.name, file }])
+      setImages((prev) => [...prev, { id: crypto.randomUUID(), url, name: file.name, file }])
     })
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragging(false)
-    processFiles(e.dataTransfer.files)
-  }, [processFiles])
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragging(false)
+      processFiles(e.dataTransfer.files)
+    },
+    [processFiles],
+  )
 
-  const removeImage = (id: string) => {
-    setImages(prev => prev.filter(img => img.id !== id))
-  }
+  const removeImage = (id: string) => setImages((prev) => prev.filter((img) => img.id !== id))
 
   const validate = () => {
-    const newErrors: Record<string, string> = {}
-    if (!form.name.trim()) newErrors.name = 'El nombre es obligatorio'
-    if (!form.price || isNaN(Number(form.price))) newErrors.price = 'Introduce un precio válido'
-    if (!form.sku.trim()) newErrors.sku = 'El SKU es obligatorio'
-    if (!form.stock || isNaN(Number(form.stock))) newErrors.stock = 'Introduce un stock válido'
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const next: Record<string, string> = {}
+    if (!form.name.trim()) next.name = 'El nombre es obligatorio'
+    if (!form.price || isNaN(Number(form.price))) next.price = 'Introduce un precio válido'
+    if (images.length === 0) next.images = 'Sube al menos una imagen'
+    setErrors(next)
+    return Object.keys(next).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) return
+    if (isSaving) return
     setIsSaving(true)
-    
+
     try {
-      // 1. Upload images to Supabase Storage
       const imageUrls: string[] = []
-      
+
       for (const img of images) {
-        if (img.file) {
-          const fileExt = img.file.name.split('.').pop()
-          const fileName = `${crypto.randomUUID()}.${fileExt}`
-          const filePath = `products/${fileName}`
+        if (!img.file) continue
+        const fileExt = img.file.name.split('.').pop() || 'jpg'
+        const fileName = `${crypto.randomUUID()}.${fileExt}`
+        const filePath = `products/${fileName}`
 
-          const { error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(filePath, img.file)
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, img.file)
+        if (uploadError) throw uploadError
 
-          if (uploadError) throw uploadError
-          
-          const { data: { publicUrl } } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(filePath)
-            
-          imageUrls.push(publicUrl)
-        } else {
-          imageUrls.push(img.url)
-        }
+        const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
+        imageUrls.push(data.publicUrl)
       }
 
-      // 2. Insert product into Supabase database
-      const { error: insertError } = await supabase
-        .from('products')
-        .insert([{
+      const image_url = imageUrls[0] || null
+      const { error: insertError } = await supabase.from('products').insert([
+        {
           name: form.name,
-          description: form.description,
+          description: form.description || null,
           price: Number(form.price),
-          sku: form.sku,
-          stock: Number(form.stock),
-          status: form.status,
+          image_url,
           category: form.category,
-          collection: form.collection,
-          images: imageUrls,
-          created_at: new Date().toISOString()
-        }])
+          is_new_arrival: form.is_new_arrival,
+          stripe_product_id: null,
+          stripe_price_id: null,
+        },
+      ])
 
       if (insertError) throw insertError
 
-      // 3. Update local context and navigate
-      addProduct({
-        name: form.name,
-        price: Number(form.price),
-        sku: form.sku,
-        stock: Number(form.stock),
-        status: form.status,
-        category: form.category,
-        collection: form.collection,
-        collectionSlug: slugify(form.collection),
-        variants: [{ colorName: 'Único', images: imageUrls }],
-      })
-      
+      await refresh()
       setSaved(true)
-      setTimeout(() => {
-        router.push('/admin/productos')
-      }, 1500)
+      setTimeout(() => router.push('/admin/productos'), 1200)
     } catch (error: any) {
-      console.error('Error al guardar el producto:', error)
-      alert(`Error al guardar el producto: ${error.message || 'Error desconocido'}`)
+      alert(`Error al guardar el producto: ${error?.message || 'Error desconocido'}`)
     } finally {
       setIsSaving(false)
     }
@@ -161,7 +122,7 @@ export default function NuevoProductoPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-serif text-2xl tracking-wide text-foreground">Nuevo Producto</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Completa los campos para crear un producto</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Crea un producto en Supabase</p>
         </div>
         {saved && (
           <div className="flex items-center gap-2 text-green-700 text-sm">
@@ -172,251 +133,143 @@ export default function NuevoProductoPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main fields */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Product info card */}
           <div className="bg-white border border-border p-6 space-y-4">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Información del producto</h2>
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Información</h2>
 
-            {/* Name */}
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground uppercase tracking-wider">Nombre *</label>
               <input
                 type="text"
                 value={form.name}
-                onChange={e => handleField('name', e.target.value)}
-                placeholder="Ej. Pendientes Lágrima de Coral"
+                onChange={(e) => handleField('name', e.target.value)}
                 suppressHydrationWarning
                 className={cn(
                   'w-full px-3 py-2.5 text-sm border bg-background focus:outline-none focus:border-foreground transition-colors',
-                  errors.name ? 'border-destructive' : 'border-border'
+                  errors.name ? 'border-destructive' : 'border-border',
                 )}
               />
               {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
 
-            {/* Price + SKU */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground uppercase tracking-wider">Precio (€) *</label>
                 <input
                   type="number"
                   value={form.price}
-                  onChange={e => handleField('price', e.target.value)}
-                  placeholder="65"
+                  onChange={(e) => handleField('price', e.target.value)}
                   suppressHydrationWarning
                   min="0"
                   step="0.01"
                   className={cn(
                     'w-full px-3 py-2.5 text-sm border bg-background focus:outline-none focus:border-foreground transition-colors',
-                    errors.price ? 'border-destructive' : 'border-border'
+                    errors.price ? 'border-destructive' : 'border-border',
                   )}
                 />
                 {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground uppercase tracking-wider">SKU *</label>
-                <input
-                  type="text"
-                  value={form.sku}
-                  onChange={e => handleField('sku', e.target.value)}
-                  placeholder="PLC-001"
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">Categoría</label>
+                <select
+                  value={form.category}
+                  onChange={(e) => handleField('category', e.target.value)}
                   suppressHydrationWarning
-                  className={cn(
-                    'w-full px-3 py-2.5 text-sm border bg-background focus:outline-none focus:border-foreground transition-colors',
-                    errors.sku ? 'border-destructive' : 'border-border'
-                  )}
-                />
-                {errors.sku && <p className="text-xs text-destructive">{errors.sku}</p>}
+                  className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Stock */}
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">Stock *</label>
-              <input
-                type="number"
-                value={form.stock}
-                onChange={e => handleField('stock', e.target.value)}
-                placeholder="10"
+              <label className="text-xs text-muted-foreground uppercase tracking-wider">Descripción</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => handleField('description', e.target.value)}
+                rows={5}
                 suppressHydrationWarning
-                min="0"
-                className={cn(
-                  'w-full px-3 py-2.5 text-sm border bg-background focus:outline-none focus:border-foreground transition-colors',
-                  errors.stock ? 'border-destructive' : 'border-border'
-                )}
+                className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors resize-none"
               />
-              {errors.stock && <p className="text-xs text-destructive">{errors.stock}</p>}
             </div>
+
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_new_arrival}
+                onChange={(e) => handleField('is_new_arrival', e.target.checked)}
+                className="w-3.5 h-3.5 accent-foreground"
+                suppressHydrationWarning
+              />
+              <span className="text-sm text-muted-foreground">Marcar como novedad</span>
+            </label>
           </div>
+        </div>
 
-          {/* Image upload */}
+        <aside className="space-y-4">
           <div className="bg-white border border-border p-6 space-y-4">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Imágenes del producto</h2>
-
-            {/* Drop zone */}
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Imágenes *</h2>
             <div
-              onDragOver={e => { e.preventDefault(); setDragging(true) }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
               className={cn(
-                'border-2 border-dashed rounded-sm cursor-pointer transition-all duration-200 flex flex-col items-center justify-center py-10 gap-3',
-                dragging
-                  ? 'border-foreground bg-secondary/60 scale-[1.01]'
-                  : 'border-border hover:border-foreground/40 hover:bg-secondary/30'
+                'border border-dashed rounded-md p-6 text-center transition-colors',
+                dragging ? 'border-foreground bg-secondary/50' : 'border-border',
               )}
+              onDragEnter={() => setDragging(true)}
+              onDragLeave={() => setDragging(false)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
             >
-              <UploadCloud className={cn('w-8 h-8 transition-colors', dragging ? 'text-foreground' : 'text-muted-foreground')} strokeWidth={1.5} />
-              <div className="text-center">
-                <p className="text-sm text-foreground">Arrastra imágenes aquí</p>
-                <p className="text-xs text-muted-foreground mt-0.5">o <span className="underline">selecciona desde tu ordenador</span></p>
-              </div>
-              <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — Máx. 5MB por imagen</p>
+              <UploadCloud className="w-6 h-6 mx-auto text-muted-foreground" strokeWidth={1.5} />
+              <p className="mt-3 text-sm text-muted-foreground">Arrastra imágenes o selecciona archivos</p>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-4 inline-flex items-center gap-2 border border-border px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-foreground hover:text-background transition-colors"
+                suppressHydrationWarning
+              >
+                <ImageIcon className="w-4 h-4" />
+                Seleccionar
+              </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 multiple
                 className="hidden"
-                onChange={e => processFiles(e.target.files)}
-                suppressHydrationWarning
+                onChange={(e) => processFiles(e.target.files)}
               />
+              {errors.images ? <p className="mt-3 text-xs text-destructive">{errors.images}</p> : null}
             </div>
 
-            {/* Image preview grid */}
             {images.length > 0 && (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {images.map((img, idx) => (
-                  <div key={img.id} className="relative group aspect-square bg-secondary">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.url}
-                      alt={img.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {idx === 0 && (
-                      <span className="absolute bottom-1 left-1 text-[10px] bg-foreground text-background px-1.5 py-0.5">
-                        Principal
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeImage(img.id)}
-                      suppressHydrationWarning
-                      className="absolute top-1 right-1 w-5 h-5 bg-foreground text-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
+              <div className="space-y-2">
+                {images.map((img) => (
+                  <div key={img.id} className="flex items-center justify-between gap-3 border border-border px-3 py-2">
+                    <p className="text-xs text-muted-foreground truncate">{img.name}</p>
+                    <button type="button" onClick={() => removeImage(img.id)} suppressHydrationWarning>
+                      <X className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
                     </button>
                   </div>
                 ))}
-                {/* Add more */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  suppressHydrationWarning
-                  className="aspect-square border-2 border-dashed border-border hover:border-foreground/40 flex items-center justify-center transition-colors"
-                >
-                  <ImageIcon className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
-                </button>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Sidebar fields */}
-        <div className="space-y-4">
-          {/* Status */}
-          <div className="bg-white border border-border p-5 space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Estado</h2>
-            <div className="space-y-2">
-              {(['published', 'draft'] as const).map(s => (
-                <label key={s} className="flex items-center gap-3 cursor-pointer">
-                  <div
-                    className={cn(
-                      'w-4 h-4 border flex-shrink-0 flex items-center justify-center transition-colors',
-                      form.status === s ? 'border-foreground bg-foreground' : 'border-border'
-                    )}
-                  >
-                    {form.status === s && <div className="w-2 h-2 bg-background" />}
-                  </div>
-                  <input
-                    type="radio"
-                    name="status"
-                    value={s}
-                    checked={form.status === s}
-                    onChange={() => handleField('status', s)}
-                    className="sr-only"
-                    suppressHydrationWarning
-                  />
-                  <span className="text-sm capitalize">{s === 'published' ? 'Publicado' : 'Borrador'}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Category */}
-          <div className="bg-white border border-border p-5 space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Categoría</h2>
-            <select
-              value={form.category}
-              onChange={e => handleField('category', e.target.value)}
-              suppressHydrationWarning
-              className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors appearance-none"
-            >
-              {CATEGORIES.map(c => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Collection */}
-          <div className="bg-white border border-border p-5 space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Colección</h2>
-            <select
-              value={form.collection}
-              onChange={e => handleField('collection', e.target.value)}
-              suppressHydrationWarning
-              className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors appearance-none"
-            >
-              {COLLECTIONS.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Submit */}
-          <div className="space-y-2">
-            <button
-              type="submit"
-              disabled={isSaving}
-              suppressHydrationWarning
-              className={cn(
-                "w-full bg-foreground text-background py-3 text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2",
-                isSaving ? "opacity-70 cursor-not-allowed" : "hover:bg-foreground/90"
-              )}
-            >
-              {isSaving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                'Guardar producto'
-              )}
-            </button>
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => router.push('/admin/productos')}
-              suppressHydrationWarning
-              className="w-full border border-border py-3 text-sm uppercase tracking-wider text-muted-foreground hover:border-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="w-full bg-foreground text-background py-3 text-xs tracking-[0.3em] uppercase hover:bg-foreground/90 transition-colors disabled:opacity-60"
+            suppressHydrationWarning
+          >
+            {isSaving ? 'Guardando…' : 'Guardar'}
+          </button>
+        </aside>
       </form>
     </div>
   )
 }
+

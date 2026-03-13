@@ -1,4 +1,5 @@
 node_modules
+.DS_Store
 
 # Env files
 .env
@@ -9,4 +10,15 @@ node_modules
 
 # Next.js build output
 .next
+.next/
+.next 2
+.next 2/
+.next*
+!.next-env.d.ts
 out
+
+# Intrusive / unrelated directories
+app-cc/
+app-gemini/
+.claude/
+verifactu/

@@ -1,11 +1,10 @@
 'use client'
 
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Heart, ArrowLeft } from 'lucide-react'
-import { ProductVariant, useProducts } from '@/lib/products-context'
 import { useCart } from '@/lib/cart-context'
 import { useWishlist } from '@/lib/wishlist-context'
 import { cn } from '@/lib/utils'
@@ -18,48 +17,59 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 
-export default function ProductDetailClient({ id }: { id: string }) {
+export type SupabaseProduct = {
+  id: string
+  name: string
+  description: string | null
+  price: number | string
+  image_url: string | null
+  category: string | null
+  stripe_product_id?: string | null
+  stripe_price_id?: string | null
+}
+
+function toNumber(value: number | string) {
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+export default function ProductDetailClient({ product }: { product: SupabaseProduct | null }) {
   const router = useRouter()
-  const { products } = useProducts()
   const { addToCart } = useCart()
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
 
-  const product = useMemo(() => products.find((p) => p.id === id), [products, id])
-  const [selectedImage, setSelectedImage] = useState(0)
-  const [selectedSize, setSelectedSize] = useState('U')
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
-  const [hoveredColor, setHoveredColor] = useState<string | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
   const [animationCoords, setAnimationCoords] = useState({ x: 0, y: 0 })
   const imageRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!product?.variants?.[0]) return
-    setSelectedVariant(product.variants[0])
-    setSelectedImage(0)
-  }, [product])
+  const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
+  const imageUrl = product?.image_url ?? ''
 
-  const galleryImages = useMemo(() => selectedVariant?.images ?? [], [selectedVariant])
-  const activeImage = galleryImages[selectedImage] ?? galleryImages[0]
-
-  const isAccessory = useMemo(() => {
-    if (!product) return true
-    const cat = product.category.toLowerCase()
-    const name = product.name.toLowerCase()
+  if (!product) {
     return (
-      cat.includes('pendiente') ||
-      cat.includes('collar') ||
-      cat.includes('broche') ||
-      cat.includes('peinecillo') ||
-      cat.includes('bolso') ||
-      cat.includes('manton') ||
-      name.includes('bolso') ||
-      name.includes('mantón') ||
-      name.includes('manton')
+      <main className="min-h-screen bg-background" suppressHydrationWarning>
+        <Navbar />
+        <div className="pt-24 md:pt-32 pb-20 px-6 md:px-12 lg:px-24 max-w-3xl mx-auto text-center">
+          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-2">
+            Producto no disponible
+          </p>
+          <h1 className="font-serif text-3xl md:text-4xl tracking-tight">No encontramos esta pieza</h1>
+          <p className="mt-3 text-sm md:text-base text-muted-foreground">
+            Es posible que el enlace esté desactualizado o que el producto ya no esté disponible.
+          </p>
+          <button
+            onClick={() => router.push('/catalogo')}
+            className="inline-flex mt-10 border border-foreground px-10 py-4 font-sans text-xs tracking-[0.25em] uppercase hover:bg-foreground hover:text-background transition-all duration-300"
+            suppressHydrationWarning
+          >
+            Ver catálogo
+          </button>
+        </div>
+        <Footer />
+      </main>
     )
-  }, [product])
+  }
 
-  if (!product || !selectedVariant || !activeImage) return null
   const wishlisted = isInWishlist(product.id)
 
   const handleAddToCart = () => {
@@ -78,10 +88,11 @@ export default function ProductDetailClient({ id }: { id: string }) {
         addToCart({
           id: product.id,
           name: product.name,
-          price: product.price,
-          image: selectedVariant.images[0],
+          price,
+          image: imageUrl,
           quantity: 1,
-          variant: isAccessory ? selectedVariant.colorName : `${selectedVariant.colorName} · ${selectedSize}`,
+          variant: 'Único',
+          stripe_price_id: product.stripe_price_id ?? null,
         })
         setIsAnimating(false)
       }, 700)
@@ -91,10 +102,11 @@ export default function ProductDetailClient({ id }: { id: string }) {
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.price,
-      image: selectedVariant.images[0],
+      price,
+      image: imageUrl,
       quantity: 1,
-      variant: isAccessory ? selectedVariant.colorName : `${selectedVariant.colorName} · ${selectedSize}`,
+      variant: 'Único',
+      stripe_price_id: product.stripe_price_id ?? null,
     })
   }
 
@@ -114,37 +126,10 @@ export default function ProductDetailClient({ id }: { id: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
           <div className="lg:col-span-7 space-y-4">
             <div ref={imageRef} className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={selectedImage}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="relative w-full h-full"
-                >
-                  <Image src={activeImage} alt={product.name} fill priority className="object-cover" />
-                </motion.div>
-              </AnimatePresence>
+              {imageUrl ? (
+                <Image src={imageUrl} alt={product.name} fill priority className="object-cover" />
+              ) : null}
             </div>
-
-            {galleryImages.length > 1 && (
-              <div className="grid grid-cols-5 gap-4">
-                {galleryImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={cn(
-                      'relative aspect-[3/4] border transition-colors',
-                      selectedImage === idx ? 'border-foreground' : 'border-transparent hover:border-foreground/30',
-                    )}
-                    suppressHydrationWarning
-                  >
-                    <Image src={img} alt={`${product.name} ${idx}`} fill className="object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="lg:col-span-5">
@@ -164,8 +149,8 @@ export default function ProductDetailClient({ id }: { id: string }) {
                       addToWishlist({
                         id: product.id,
                         name: product.name,
-                        price: product.price,
-                        image: activeImage,
+                        price,
+                        image: imageUrl,
                         href: `/producto/${product.id}`,
                       })
                     }}
@@ -186,65 +171,12 @@ export default function ProductDetailClient({ id }: { id: string }) {
                   </button>
                 </div>
 
-                <p className="text-xl font-sans tracking-wider">{product.price}€</p>
-
-                {product.variants.length > 1 && (
-                  <div className="pt-4 space-y-3">
-                    <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
-                      COLOR: {(hoveredColor || selectedVariant.colorName).toLocaleUpperCase('es-ES')}
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {product.variants.map((variant) => (
-                        <button
-                          key={variant.colorName}
-                          type="button"
-                          onClick={() => {
-                            setSelectedVariant(variant)
-                            setSelectedImage(0)
-                          }}
-                          onMouseEnter={() => setHoveredColor(variant.colorName)}
-                          onMouseLeave={() => setHoveredColor(null)}
-                          className={cn(
-                            'inline-flex w-8 h-8 rounded-full border border-border/70 overflow-hidden bg-secondary/30 cursor-pointer transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                            selectedVariant.colorName === variant.colorName &&
-                              'ring-2 ring-black ring-offset-2 ring-offset-background',
-                          )}
-                          aria-label={`Color ${variant.colorName}`}
-                          title={variant.colorName}
-                          suppressHydrationWarning
-                        >
-                          <span
-                            className="w-full h-full rounded-full bg-cover bg-center"
-                            style={variant.images?.[0] ? { backgroundImage: `url(${variant.images[0]})` } : undefined}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <p className="text-xl font-sans tracking-wider">{price.toFixed(2)}€</p>
               </div>
 
               <div className="space-y-4 pt-4 border-t border-border/50">
                 <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">Talla</p>
-                {isAccessory ? (
-                  <p className="text-sm font-medium tracking-widest">TALLA ÚNICA</p>
-                ) : (
-                  <div className="flex gap-4">
-                    {['S', 'M', 'L', 'XL'].map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => setSelectedSize(size)}
-                        className={cn(
-                          'w-12 h-12 flex items-center justify-center border text-xs tracking-widest transition-all',
-                          selectedSize === size ? 'bg-foreground text-background' : 'hover:border-foreground',
-                        )}
-                        suppressHydrationWarning
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <p className="text-sm font-medium tracking-widest">TALLA ÚNICA</p>
               </div>
 
               <button
@@ -259,8 +191,8 @@ export default function ProductDetailClient({ id }: { id: string }) {
                 <AccordionItem value="description">
                   <AccordionTrigger className="text-[10px] tracking-[0.2em] uppercase">Descripción</AccordionTrigger>
                   <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
-                    Esta pieza de la colección {product.collection} ha sido diseñada bajo los más altos estándares de
-                    artesanía. Un equilibrio perfecto entre tradición y modernidad que eleva cualquier conjunto.
+                    {product.description ||
+                      'Esta pieza ha sido diseñada bajo los más altos estándares de artesanía. Un equilibrio perfecto entre tradición y modernidad que eleva cualquier conjunto.'}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="details">
@@ -302,7 +234,7 @@ export default function ProductDetailClient({ id }: { id: string }) {
             transition={{ type: 'tween', ease: 'easeInOut', duration: 0.7 }}
             className="pointer-events-none overflow-hidden"
           >
-            <Image src={selectedVariant.images[0]} alt="fly" fill className="object-cover" />
+            {imageUrl ? <Image src={imageUrl} alt="fly" fill className="object-cover" /> : null}
           </motion.div>
         )}
       </AnimatePresence>
@@ -311,4 +243,3 @@ export default function ProductDetailClient({ id }: { id: string }) {
     </main>
   )
 }
-

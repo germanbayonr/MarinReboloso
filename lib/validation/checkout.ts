@@ -1,17 +1,17 @@
 import { z } from 'zod'
 
 export const checkoutSchema = z.object({
-  email: z.string().email('Email inválido'),
-  phone: z.string().min(1, 'Teléfono requerido'),
-
-  firstName: z.string().min(1, 'Nombre requerido'),
-  lastName: z.string().min(1, 'Apellidos requeridos'),
-  address1: z.string().min(1, 'Dirección requerida'),
+  email: z.string().email(),
+  phone: z.string().min(6),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  address1: z.string().min(1),
   address2: z.string().optional(),
-  city: z.string().min(1, 'Población requerida'),
-  province: z.string().min(1, 'Provincia requerida'),
-  postalCode: z.string().min(5, 'CP inválido'),
-  country: z.string().min(1, 'País requerido'),
+  city: z.string().min(1),
+  province: z.string().min(1),
+  postalCode: z.string().min(3),
+  country: z.string().min(1),
 })
 
 export type CheckoutFormValues = z.infer<typeof checkoutSchema>
+

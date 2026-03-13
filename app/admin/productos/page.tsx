@@ -6,32 +6,21 @@ import { PlusCircle, Pencil, Trash2, Search, X, CheckCircle } from 'lucide-react
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
-const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras']
-const COLLECTIONS = ['Descará', 'Marebo', 'Corales', 'Filipa', 'Jaipur']
+const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
 function EditModal({ product, onClose }: { product: Product; onClose: () => void }) {
   const { updateProduct } = useProducts()
   const [form, setForm] = useState({
     name: product.name,
     price: String(product.price),
-    sku: product.sku,
-    stock: String(product.stock),
-    status: product.status,
-    category: product.category,
-    collection: product.collection,
+    category: product.category ?? 'accesorios',
+    image_url: product.image_url ?? '',
+    is_new_arrival: product.is_new_arrival,
   })
   const [saved, setSaved] = useState(false)
 
   const handleSave = () => {
-    updateProduct(product.id, {
-      name: form.name,
-      price: Number(form.price),
-      sku: form.sku,
-      stock: Number(form.stock),
-      status: form.status,
-      category: form.category,
-      collection: form.collection,
-    })
+    updateProduct(product.id, { name: form.name, price: Number(form.price), category: form.category, image_url: form.image_url, is_new_arrival: form.is_new_arrival })
     setSaved(true)
     setTimeout(onClose, 900)
   }
@@ -73,43 +62,6 @@ function EditModal({ product, onClose }: { product: Product; onClose: () => void
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">SKU</label>
-              <input
-                type="text"
-                value={form.sku}
-                onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
-                suppressHydrationWarning
-                className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">Stock</label>
-              <input
-                type="number"
-                value={form.stock}
-                onChange={e => setForm(f => ({ ...f, stock: e.target.value }))}
-                suppressHydrationWarning
-                min="0"
-                className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">Estado</label>
-              <select
-                value={form.status}
-                onChange={e => setForm(f => ({ ...f, status: e.target.value as 'published' | 'draft' }))}
-                suppressHydrationWarning
-                className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
-              >
-                <option value="published">Publicado</option>
-                <option value="draft">Borrador</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground uppercase tracking-wider">Categoría</label>
               <select
                 value={form.category}
@@ -120,18 +72,27 @@ function EditModal({ product, onClose }: { product: Product; onClose: () => void
                 {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
               </select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">Colección</label>
-              <select
-                value={form.collection}
-                onChange={e => setForm(f => ({ ...f, collection: e.target.value }))}
-                suppressHydrationWarning
-                className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
-              >
-                {COLLECTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
           </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground uppercase tracking-wider">Imagen (URL)</label>
+            <input
+              type="url"
+              value={form.image_url}
+              onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
+              suppressHydrationWarning
+              className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
+            />
+          </div>
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.is_new_arrival}
+              onChange={(e) => setForm(f => ({ ...f, is_new_arrival: e.target.checked }))}
+              className="w-3.5 h-3.5 accent-foreground"
+              suppressHydrationWarning
+            />
+            <span className="text-sm text-muted-foreground">Marcar como novedad</span>
+          </label>
         </div>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-border">
@@ -166,13 +127,13 @@ function EditModal({ product, onClose }: { product: Product; onClose: () => void
 }
 
 export default function ProductosPage() {
-  const { products, deleteProduct, updateProduct } = useProducts()
+  const { products, deleteProduct } = useProducts()
   const [search, setSearch] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.sku.toLowerCase().includes(search.toLowerCase())
+    (p.category ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -201,7 +162,7 @@ export default function ProductosPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
         <input
           type="text"
-          placeholder="Buscar por nombre o SKU..."
+          placeholder="Buscar por nombre o categoría..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           suppressHydrationWarning
@@ -216,11 +177,9 @@ export default function ProductosPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal">Producto</th>
-                <th className="text-left text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal hidden md:table-cell">SKU</th>
-                <th className="text-left text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal hidden lg:table-cell">Colección</th>
+                <th className="text-left text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal hidden md:table-cell">Categoría</th>
                 <th className="text-right text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal">Precio</th>
-                <th className="text-right text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal">Stock</th>
-                <th className="text-left text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal">Estado</th>
+                <th className="text-left text-xs text-muted-foreground uppercase tracking-wider px-5 py-3.5 font-normal">Stripe</th>
                 <th className="px-5 py-3.5" />
               </tr>
             </thead>
@@ -229,36 +188,26 @@ export default function ProductosPage() {
                 <tr key={product.id} className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      {product.variants[0]?.images?.[0] ? (
+                      {product.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={product.variants[0].images[0]} alt={product.name} className="w-9 h-9 object-cover flex-shrink-0 bg-secondary" />
+                        <img src={product.image_url} alt={product.name} className="w-9 h-9 object-cover flex-shrink-0 bg-secondary" />
                       ) : (
                         <div className="w-9 h-9 bg-secondary flex-shrink-0" />
                       )}
                       <span className="font-medium text-sm">{product.name}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-xs font-mono text-muted-foreground hidden md:table-cell">{product.sku}</td>
-                  <td className="px-5 py-3.5 text-sm text-muted-foreground hidden lg:table-cell">{product.collection}</td>
+                  <td className="px-5 py-3.5 text-sm text-muted-foreground hidden md:table-cell">{product.category ?? '—'}</td>
                   <td className="px-5 py-3.5 text-sm text-right font-medium">{product.price}€</td>
-                  <td className="px-5 py-3.5 text-sm text-right">
-                    <span className={cn(product.stock < 5 ? 'text-amber-600' : 'text-foreground')}>
-                      {product.stock}
-                    </span>
-                  </td>
                   <td className="px-5 py-3.5">
-                    <button
-                      onClick={() => updateProduct(product.id, { status: product.status === 'published' ? 'draft' : 'published' })}
-                      suppressHydrationWarning
+                    <span
                       className={cn(
-                        'text-xs px-2 py-0.5 transition-colors cursor-pointer',
-                        product.status === 'published'
-                          ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                          : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                        'text-xs px-2 py-0.5 transition-colors',
+                        product.stripe_price_id ? 'bg-green-50 text-green-700' : 'bg-secondary text-muted-foreground',
                       )}
                     >
-                      {product.status === 'published' ? 'Activo' : 'Borrador'}
-                    </button>
+                      {product.stripe_price_id ? 'OK' : 'Pendiente'}
+                    </span>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-2">

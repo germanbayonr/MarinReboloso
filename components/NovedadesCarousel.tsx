@@ -4,14 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
-import { useProducts } from '@/lib/products-context'
 import ProductCard from '@/components/ProductCard'
+import { supabase } from '@/lib/supabase'
 
 export default function NovedadesCarousel() {
-  const { products } = useProducts()
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start', dragFree: true })
   const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const [paused, setPaused] = useState(false)
+  const [items, setItems] = useState<Array<{ id: string; name: string; price: number | string; image_url: string | null; category: string | null }>>([])
+  const [loaded, setLoaded] = useState(false)
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
@@ -27,13 +28,43 @@ export default function NovedadesCarousel() {
     }
   }, [emblaApi, paused])
 
-  // Show only published products, newest first, max 12
-  const featured = products
-    .filter(p => p.status === 'published')
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 12)
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id,name,price,image_url,category,is_new_arrival')
+          .eq('is_new_arrival', true)
+          .limit(12)
+        if (cancelled) return
+        if (error) {
+          setItems([])
+          setLoaded(true)
+          return
+        }
+        setItems((data ?? []).map((p) => ({
+          id: String((p as any).id),
+          name: String((p as any).name ?? ''),
+          price: (p as any).price,
+          image_url: (p as any).image_url ?? null,
+          category: (p as any).category ?? null,
+        })))
+        setLoaded(true)
+      } catch {
+        if (!cancelled) {
+          setItems([])
+          setLoaded(true)
+        }
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  if (featured.length === 0) return null
+  if (loaded && items.length === 0) return null
 
   return (
     <section className="py-20 md:py-32 bg-background overflow-hidden">
@@ -82,7 +113,7 @@ export default function NovedadesCarousel() {
         onMouseLeave={() => setPaused(false)}
       >
         <div className="flex gap-5 md:gap-6">
-          {featured.map(product => (
+          {items.map((product) => (
             <div key={product.id} className="flex-shrink-0 w-[260px] md:w-[320px]">
               <ProductCard product={product} />
             </div>

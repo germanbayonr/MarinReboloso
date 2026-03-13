@@ -5,40 +5,21 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-const DONE_EVENT = 'marebo:preloader-done'
-const STORAGE_KEY = 'preloader-seen'
-
 export default function HeroSection() {
-  const [isReady, setIsReady] = useState(() => {
-    try {
-      return sessionStorage.getItem(STORAGE_KEY) !== null
-    } catch {
-      return true
-    }
-  })
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    if (isReady) return
-
-    const onDone = () => setIsReady(true)
-    window.addEventListener(DONE_EVENT, onDone, { once: true })
-    const fallback = window.setTimeout(() => setIsReady(true), 4000)
-
-    return () => {
-      window.removeEventListener(DONE_EVENT, onDone)
-      window.clearTimeout(fallback)
-    }
-  }, [isReady])
+    setIsReady(true)
+  }, [])
 
   return (
-    <section className="bg-background w-full overflow-hidden" suppressHydrationWarning>
+    <section className="bg-background w-full overflow-hidden">
       <div className="grid grid-cols-1 md:grid-cols-2">
 
         {/* --- BLOQUE IZQUIERDO: LIFESTYLE --- */}
         <Link 
           href="/shop/descara"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
-          suppressHydrationWarning
         >
           <div
             className={[
@@ -69,7 +50,6 @@ export default function HeroSection() {
         <Link 
           href="/shop/descara"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
-          suppressHydrationWarning
         >
           <div
             className={[

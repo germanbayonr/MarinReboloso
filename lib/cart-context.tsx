@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export interface CartItem {
   id: string
@@ -9,6 +10,7 @@ export interface CartItem {
   image: string
   quantity: number
   variant?: string
+  stripe_price_id?: string | null
 }
 
 interface CartContextType {
@@ -51,6 +53,7 @@ function normalizeCart(value: unknown): CartItem[] {
       image: String(item.image),
       quantity: Math.floor(item.quantity),
       variant,
+      stripe_price_id: item.stripe_price_id ? String(item.stripe_price_id) : null,
     })
   }
 
@@ -84,13 +87,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [cartItems, hydrated])
 
+  useEffect(() => {
+    if (!hydrated) return
+    const missingIds = Array.from(
+      new Set(cartItems.filter((i) => !i.stripe_price_id).map((i) => i.id)),
+    )
+    if (missingIds.length === 0) return
+
+    let cancelled = false
+    const run = async () => {
+      const { data, error } = await supabase.from('products').select('id,stripe_price_id').in('id', missingIds)
+      if (cancelled) return
+      if (error) return
+
+      const map = new Map((data ?? []).map((r: any) => [String(r.id), (r.stripe_price_id ? String(r.stripe_price_id) : null)]))
+      setCartItems((prev) =>
+        prev.map((item) => {
+          if (item.stripe_price_id) return item
+          const stripeId = map.get(item.id)
+          if (!stripeId) return item
+          return { ...item, stripe_price_id: stripeId }
+        }),
+      )
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [cartItems, hydrated])
+
   const addToCart = useCallback((newItem: CartItem) => {
     setCartItems(prev => {
       const existing = prev.find(item => item.id === newItem.id && item.variant === newItem.variant)
       if (existing) {
         return prev.map(item => 
           item.id === newItem.id && item.variant === newItem.variant 
-            ? { ...item, quantity: item.quantity + Math.max(1, newItem.quantity || 1) } 
+            ? { 
+                ...item, 
+                quantity: item.quantity + Math.max(1, newItem.quantity || 1),
+                stripe_price_id: item.stripe_price_id ?? newItem.stripe_price_id ?? null,
+              } 
             : item
         )
       }

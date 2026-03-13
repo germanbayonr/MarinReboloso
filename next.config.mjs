@@ -11,6 +11,12 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  async redirects() {
+    return [
+      { source: '/shop/producto/:id', destination: '/producto/:id', permanent: true },
+      { source: '/product/:id', destination: '/producto/:id', permanent: true },
+    ]
+  },
   images: {
     unoptimized: true,
     remotePatterns: [

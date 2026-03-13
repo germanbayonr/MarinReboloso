@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductCard from '@/components/ProductCard'
 import ProductFilters, { Filters, DEFAULT_FILTERS } from '@/components/ProductFilters'
-import { useProducts } from '@/lib/products-context'
+import { supabase } from '@/lib/supabase'
 
 export default function ShopCollectionPage() {
-  const { products } = useProducts()
   const params = useParams()
   
   const rawCategory = Array.isArray(params?.category) ? params.category[0] : params?.category || ''
@@ -17,61 +16,87 @@ export default function ShopCollectionPage() {
   
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [products, setProducts] = useState<
+    Array<{ id: string; name: string; price: number | string; image_url: string | null; category: string | null; is_new_arrival: boolean }>
+  >([])
+  const [loaded, setLoaded] = useState(false)
 
-  const collectionProducts = useMemo(() => {
-    if (!safeCategory) return []
-    
-    // Mapeo de slugs a nombres reales para asegurar el filtrado
-    const slugToCollectionName: Record<string, string> = {
-      'descara': 'Descará',
-      'marebo': 'Marebo',
-      'corales': 'Corales',
-      'filipa': 'Filipa',
-      'jaipur': 'Jaipur'
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id,name,price,image_url,category,is_new_arrival')
+          .limit(500)
+        if (cancelled) return
+        if (error) {
+          setProducts([])
+          setLoaded(true)
+          return
+        }
+        setProducts(
+          (data ?? []).map((p) => ({
+            id: String((p as any).id),
+            name: String((p as any).name ?? ''),
+            price: (p as any).price,
+            image_url: (p as any).image_url ?? null,
+            category: (p as any).category ?? null,
+            is_new_arrival: Boolean((p as any).is_new_arrival),
+          })),
+        )
+        setLoaded(true)
+      } catch {
+        if (!cancelled) {
+          setProducts([])
+          setLoaded(true)
+        }
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const categoryProducts = useMemo(() => {
+    if (!safeCategory) return products
+    const knownCategories = new Set(['mantones', 'peinecillos', 'collares', 'bolsos', 'pendientes', 'pulseras', 'accesorios'])
+    if (knownCategories.has(safeCategory)) {
+      return products.filter((p) => (p.category ?? '').toLowerCase() === safeCategory)
     }
 
-    const targetName = slugToCollectionName[safeCategory] || safeCategory
-
-    return products.filter(p => 
-      p.collection.toLowerCase() === targetName.toLowerCase() || 
-      p.collection.toLowerCase() === safeCategory
-    )
-  }, [products, safeCategory])
-
-  const filtered = useMemo(() => {
-    let list = collectionProducts.filter(p => p.status === 'published')
     const normalize = (value: string) =>
       value
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
 
-    if (safeCategory === 'corales') {
-      const blocked = ['manton', 'mantones', 'peinecillo', 'peinecillos', 'collar', 'collares', 'bolso', 'bolsos']
-      list = list.filter((p) => {
-        const haystack = `${p.category} ${p.name} ${p.collection}`
-        const text = normalize(haystack)
-        return !blocked.some((b) => text.includes(b))
-      })
-    }
+    const needle = normalize(safeCategory)
+    return products.filter((p) => normalize(p.name).includes(needle))
+  }, [products, safeCategory])
+
+  const filtered = useMemo(() => {
+    let list = categoryProducts
 
     if (filters.types.length > 0) {
-      list = list.filter(p => filters.types.some(t => p.category.toLowerCase().includes(t.toLowerCase())))
+      list = list.filter((p) => filters.types.some((t) => (p.category ?? '').toLowerCase().includes(t.toLowerCase())))
     }
-    if (filters.collections.length > 0) {
-      list = list.filter(p => filters.collections.includes(p.collection))
-    }
-    list = list.filter(p => p.price <= filters.maxPrice)
-    if (filters.onlyInStock) {
-      list = list.filter(p => p.stock > 0)
-    }
+    list = list.filter((p) => {
+      const n = typeof p.price === 'number' ? p.price : Number(p.price)
+      return Number.isFinite(n) ? n <= filters.maxPrice : false
+    })
 
-    if (filters.sort === 'price-asc') list = [...list].sort((a, b) => a.price - b.price)
-    else if (filters.sort === 'price-desc') list = [...list].sort((a, b) => b.price - a.price)
-    else if (filters.sort === 'newest') list = [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    if (filters.sort === 'price-asc') list = [...list].sort((a, b) => Number(a.price) - Number(b.price))
+    else if (filters.sort === 'price-desc') list = [...list].sort((a, b) => Number(b.price) - Number(a.price))
+    else if (filters.sort === 'newest')
+      list = [...list].sort((a, b) => {
+        if (a.is_new_arrival !== b.is_new_arrival) return a.is_new_arrival ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
 
     return list
-  }, [collectionProducts, filters, safeCategory])
+  }, [categoryProducts, filters])
 
   const displayTitle = useMemo(() => {
     if (!safeCategory) return 'Colección'
@@ -112,6 +137,16 @@ export default function ShopCollectionPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
             {filtered.map(product => (
               <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : !loaded ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <div key={idx} className="space-y-4">
+                <div className="relative aspect-[3/4] bg-stone-100" />
+                <div className="h-5 bg-stone-100 w-4/5" />
+                <div className="h-4 bg-stone-100 w-24" />
+              </div>
             ))}
           </div>
         ) : (

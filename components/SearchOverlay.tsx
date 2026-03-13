@@ -35,7 +35,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
     const term = searchTerm.trim().toLowerCase()
     if (!term) return []
     return products
-      .filter((p) => p.status === 'published' && p.name.toLowerCase().includes(term))
+      .filter((p) => p.name.toLowerCase().includes(term))
       .slice(0, 5)
   }, [products, searchTerm])
 
@@ -72,8 +72,8 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
         ) : (
           <div className="flex flex-col space-y-4 mt-12">
             {results.map((p) => {
-              const href = `/shop/producto/${p.id}`
-              const image = p.variants?.[0]?.images?.[0] ?? ''
+              const href = `/producto/${p.id}`
+              const image = p.image_url ?? ''
 
               return (
                 <Link
@@ -103,4 +103,3 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
     </div>
   )
 }
-
