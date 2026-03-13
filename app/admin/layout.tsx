@@ -3,8 +3,8 @@ import { ProductsProvider } from '@/lib/products-context'
 import AdminLayoutClient from '@/components/admin/AdminLayoutClient'
 
 export const metadata = {
-  title: 'Wayfar Admin',
-  description: 'Panel de administración de Wayfar Brand',
+  title: 'Marebo Jewelry Admin',
+  description: 'Panel de administración de Marebo Jewelry',
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

@@ -121,7 +121,7 @@ const content: Record<Tab, React.ReactNode> = {
 
       <SubTitle>Proceso de devolución</SubTitle>
       <Body>
-        Para iniciar una devolución, escríbenos a <strong>wayfar.meri@gmail.com</strong> indicando tu número de pedido y el motivo de la devolución. Te facilitaremos las instrucciones y la etiqueta de devolución en un plazo máximo de 48 horas.
+        Para iniciar una devolución, escríbenos a <strong>marebo.meri@gmail.com</strong> indicando tu número de pedido y el motivo de la devolución. Te facilitaremos las instrucciones y la etiqueta de devolución en un plazo máximo de 48 horas.
       </Body>
       <Body>
         Una vez recibido y comprobado el estado del artículo, procederemos al reembolso del importe íntegro (excluidos los gastos de envío originales) en un plazo máximo de <strong>14 días naturales</strong>, utilizando el mismo método de pago empleado en la compra.
@@ -164,7 +164,7 @@ const content: Record<Tab, React.ReactNode> = {
 
       <SubTitle>Bolsos</SubTitle>
       <Body>
-        Las dimensiones exactas (alto × ancho × fondo) de cada bolso se especifican en la ficha de producto. Para más detalles sobre materiales o capacidad, escríbenos a wayfar.meri@gmail.com.
+        Las dimensiones exactas (alto × ancho × fondo) de cada bolso se especifican en la ficha de producto. Para más detalles sobre materiales o capacidad, escríbenos a marebo.meri@gmail.com.
       </Body>
     </div>
   ),
@@ -214,7 +214,7 @@ const content: Record<Tab, React.ReactNode> = {
       <Body>
         <strong>Titular:</strong> María Marín Reboloso<br />
         <strong>Denominación comercial:</strong> MAREBO<br />
-        <strong>Correo electrónico:</strong> wayfar.meri@gmail.com
+        <strong>Correo electrónico:</strong> marebo.meri@gmail.com
       </Body>
 
       <SubTitle>Finalidad del tratamiento</SubTitle>
@@ -234,7 +234,7 @@ const content: Record<Tab, React.ReactNode> = {
 
       <SubTitle>Derechos del interesado</SubTitle>
       <Body>
-        Puede ejercer sus derechos de acceso, rectificación, supresión, limitación, portabilidad y oposición dirigiéndose por escrito a wayfar.meri@gmail.com, adjuntando copia de su documento de identidad. Asimismo, tiene derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (aepd.es).
+        Puede ejercer sus derechos de acceso, rectificación, supresión, limitación, portabilidad y oposición dirigiéndose por escrito a marebo.meri@gmail.com, adjuntando copia de su documento de identidad. Asimismo, tiene derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (aepd.es).
       </Body>
     </div>
   ),
@@ -283,7 +283,7 @@ const content: Record<Tab, React.ReactNode> = {
         <strong>Titular:</strong> María Marín Reboloso<br />
         <strong>Denominación comercial:</strong> MAREBO<br />
         <strong>Domicilio:</strong> Sevilla, España<br />
-        <strong>Correo electrónico:</strong> wayfar.meri@gmail.com
+        <strong>Correo electrónico:</strong> marebo.meri@gmail.com
       </Body>
 
       <SubTitle>Objeto y ámbito de aplicación</SubTitle>

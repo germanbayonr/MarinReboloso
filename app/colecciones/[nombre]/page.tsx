@@ -28,14 +28,14 @@ export async function generateMetadata({ params }: { params: { nombre: string } 
   
   if (!validCollections.includes(collection)) {
     return {
-      title: 'Colección no encontrada | Wayfar Brand',
+      title: 'Colección no encontrada | Marebo Jewelry',
     }
   }
 
   const data = collectionData[collection as keyof typeof collectionData]
 
   return {
-    title: `${data.title} | Wayfar Brand`,
+    title: `${data.title} | Marebo Jewelry`,
     description: data.description,
   }
 }

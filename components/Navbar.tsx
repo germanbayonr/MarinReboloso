@@ -6,11 +6,11 @@ import Link from 'next/link'
 import { ChameleonHeader } from '@/components/ChameleonHeader'
 
 const NAV_COLLECTIONS = [
-  { label: 'Descará', href: '/shop/descara', isNew: true },
-  { label: 'Marebo', href: '/shop/marebo' },
-  { label: 'Corales', href: '/shop/corales' },
-  { label: 'Filipa', href: '/shop/filipa' },
-  { label: 'Jaipur', href: '/shop/jaipur' },
+  { label: 'Descará', href: '/coleccion/descara', isNew: true },
+  { label: 'Marebo', href: '/coleccion/marebo' },
+  { label: 'Corales', href: '/coleccion/corales' },
+  { label: 'Filipa', href: '/coleccion/filipa' },
+  { label: 'Jaipur', href: '/coleccion/jaipur' },
 ]
 
 export default function Navbar() {
@@ -115,14 +115,14 @@ export default function Navbar() {
         {/* Drawer Footer */}
         <div className="px-6 py-6 border-t border-border/50 flex-shrink-0">
           <a
-            href="https://instagram.com/wayfarbrand"
+            href="https://instagram.com/marebojewelry"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             suppressHydrationWarning
           >
             <Instagram className="h-4 w-4" strokeWidth={1.5} />
-            @wayfarbrand
+            @marebojewelry
           </a>
         </div>
       </aside>

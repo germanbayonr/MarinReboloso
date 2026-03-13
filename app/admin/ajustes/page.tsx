@@ -5,8 +5,8 @@ import { Save } from 'lucide-react'
 
 export default function AjustesPage() {
   const [settings, setSettings] = useState({
-    storeName: 'Wayfar Brand',
-    storeEmail: 'wayfar.meri@gmail.com',
+    storeName: 'Marebo Jewelry',
+    storeEmail: 'marebo.meri@gmail.com',
     storePhone: '+34 600 000 000',
     storeCity: 'Sevilla',
     currency: 'EUR',

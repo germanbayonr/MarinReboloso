@@ -43,7 +43,7 @@ export function ChameleonHeader({ onMenuClick }: ChameleonHeaderProps) {
           {/* Logo next to Hamburger */}
           <Link href="/" className="group" suppressHydrationWarning>
             <span className="font-serif text-2xl tracking-widest uppercase block leading-tight">
-              MAREBO :)
+              MAREBO JEWELRY
             </span>
             <span className="text-[10px] tracking-widest uppercase block">
               MARÍA MARÍN REBOLOSO

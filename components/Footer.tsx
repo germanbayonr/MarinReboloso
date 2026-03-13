@@ -7,12 +7,12 @@ export default function Footer() {
 
         {/* Brand column */}
         <div className="col-span-2 md:col-span-1" suppressHydrationWarning>
-          <h3 className="font-serif text-xl tracking-[0.15em] uppercase mb-1" suppressHydrationWarning>MAREBO :)</h3>
+          <h3 className="font-serif text-xl tracking-[0.15em] uppercase mb-1" suppressHydrationWarning>Marebo Jewelry</h3>
           <p className="font-sans text-[10px] tracking-[0.22em] uppercase text-muted-foreground mb-4" suppressHydrationWarning>
             María Marín Reboloso
           </p>
           <p className="font-sans text-sm text-muted-foreground leading-relaxed" suppressHydrationWarning>
-            Moda y accesorios exclusivos para la mujer contemporánea. Piezas únicas con alma de Sevilla.
+            Joyería artesanal y mantones de diseño. Piezas únicas con alma de Sevilla.
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export default function Footer() {
         <div suppressHydrationWarning>
           <h4 className="font-sans text-[10px] tracking-[0.22em] uppercase mb-4 text-foreground" suppressHydrationWarning>Contacto</h4>
           <ul className="space-y-2.5" suppressHydrationWarning>
-            <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>wayfar.meri@gmail.com</li>
+            <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>marebo.meri@gmail.com</li>
             <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>+34 657 46 04 46</li>
             <li className="font-sans text-sm text-muted-foreground mt-1" suppressHydrationWarning>Sevilla, España</li>
           </ul>

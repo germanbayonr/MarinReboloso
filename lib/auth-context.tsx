@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
-const ADMIN_EMAIL = 'wayfar.meri@gmail.com'
+const ADMIN_EMAIL = 'marebo.meri@gmail.com'
 const ADMIN_PASSWORD = 'admin123'
 const SESSION_KEY = 'marebo_session'
 

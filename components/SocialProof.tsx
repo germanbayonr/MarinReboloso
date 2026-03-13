@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Play, Instagram, ChevronLeft, ChevronRight } from 'lucide-react'
 
-const INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/wayfar_brand/'
+const INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/marebo_jewelry/'
 
 const reviews = [
   {
