@@ -7,9 +7,9 @@
   "theme_color": "#111111",
   "icons": [
     {
-      "src": "/icon.svg?v=20260313",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg?v=20260313",
+      "sizes": "512x512",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]
