@@ -10,6 +10,18 @@ const cartItemSchema = z.object({
 
 const requestSchema = z.object({
   cartItems: z.array(cartItemSchema).min(1),
+  customer: z
+    .object({
+      email: z.string().email().optional(),
+    })
+    .passthrough()
+    .optional(),
+  customerDetails: z
+    .object({
+      email: z.string().email().optional(),
+    })
+    .passthrough()
+    .optional(),
   customerData: z
     .object({
       email: z.string().email().optional(),
@@ -21,11 +33,19 @@ const requestSchema = z.object({
 export async function POST(req: Request) {
   try {
     const json = await req.json()
-    const { customerData, cartItems } = requestSchema.parse(json)
+    const { customer, customerData, customerDetails, cartItems } = requestSchema.parse(json)
 
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY || ''
+    const stripeSecretKey =
+      process.env.STRIPE_SECRET_KEY ||
+      process.env.STRIPE_API_KEY ||
+      process.env.STRIPE_SECRET ||
+      process.env.NEXT_STRIPE_SECRET_KEY ||
+      ''
     if (!stripeSecretKey) {
-      return NextResponse.json({ success: false, error: 'Missing STRIPE_SECRET_KEY' }, { status: 500 })
+      return NextResponse.json(
+        { error: { message: 'Missing STRIPE_SECRET_KEY' } },
+        { status: 500 },
+      )
     }
 
     const stripe = new Stripe(stripeSecretKey)
@@ -45,7 +65,7 @@ export async function POST(req: Request) {
       mode: 'payment',
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
-      customer_email: customerData?.email,
+      customer_email: customer?.email ?? customerDetails?.email ?? customerData?.email,
       shipping_address_collection: { allowed_countries: ['ES'] },
       shipping_options: [
         {
@@ -71,15 +91,15 @@ export async function POST(req: Request) {
     })
 
     if (!session.url) {
-      return NextResponse.json({ success: false, error: 'Failed to create Stripe session' }, { status: 500 })
+      return NextResponse.json({ error: { message: 'Failed to create Stripe session' } }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, url: session.url, session_id: session.id })
+    return NextResponse.json({ url: session.url })
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 })
+      return NextResponse.json({ error: { message: 'Invalid payload' } }, { status: 400 })
     }
     const message = err instanceof Error ? err.message : 'Unexpected error'
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+    return NextResponse.json({ error: { message } }, { status: 500 })
   }
 }

@@ -4,19 +4,19 @@ import Link from 'next/link'
 const collections = [
   {
     title: 'Corales',
-    href: '/shop/corales',
+    href: '/coleccion/corales',
     image:
       'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Salmon.jpg',
   },
   {
     title: 'Marebo',
-    href: '/shop/marebo',
+    href: '/coleccion/marebo',
     image:
       'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Flor%20MAREBO%20Dore.png',
   },
   {
     title: 'Filipa',
-    href: '/shop/filipa',
+    href: '/coleccion/filipa',
     image:
       'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Filipa.PNG',
   },
@@ -43,10 +43,10 @@ export default function CollectionBanners() {
           <div className="absolute inset-0 bg-black/40" />
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10 px-6 text-center">
-            <h2 className="font-serif text-6xl md:text-7xl lg:text-8xl tracking-tight">
+            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight">
               {collection.title}
             </h2>
-            <span className="mt-10 inline-flex items-center justify-center border border-white px-10 py-4 text-xs tracking-[0.3em] uppercase transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+            <span className="mt-8 md:mt-10 inline-flex items-center justify-center h-11 md:h-12 border border-white px-7 sm:px-9 md:px-12 text-[10px] sm:text-xs tracking-[0.35em] uppercase transition-colors duration-300 group-hover:bg-white group-hover:text-black">
               Explorar
             </span>
           </div>

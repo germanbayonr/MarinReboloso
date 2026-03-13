@@ -10,6 +10,7 @@ export interface Product {
   price: number
   image_url: string | null
   category: string | null
+  collection: string | null
   is_new_arrival: boolean
   stripe_product_id: string | null
   stripe_price_id: string | null
@@ -39,6 +40,7 @@ function mapRow(row: any): Product {
     price: toNumber(row.price),
     image_url: row.image_url ?? null,
     category: row.category ?? null,
+    collection: row.collection ?? null,
     is_new_arrival: Boolean(row.is_new_arrival),
     stripe_product_id: row.stripe_product_id ?? null,
     stripe_price_id: row.stripe_price_id ?? null,
@@ -52,7 +54,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     const { data, error } = await supabase
       .from('products')
-      .select('id,name,description,price,image_url,category,is_new_arrival,stripe_product_id,stripe_price_id')
+      .select('id,name,description,price,image_url,category,collection,is_new_arrival,stripe_product_id,stripe_price_id')
       .order('name', { ascending: true })
       .limit(1000)
 
@@ -136,4 +138,3 @@ export function useProducts() {
   if (!ctx) throw new Error('useProducts must be used within ProductsProvider')
   return ctx
 }
-

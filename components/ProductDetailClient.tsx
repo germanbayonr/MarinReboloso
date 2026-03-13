@@ -10,12 +10,6 @@ import { useWishlist } from '@/lib/wishlist-context'
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
 
 export type SupabaseProduct = {
   id: string
@@ -24,6 +18,7 @@ export type SupabaseProduct = {
   price: number | string
   image_url: string | null
   category: string | null
+  collection?: string | null
   stripe_product_id?: string | null
   stripe_price_id?: string | null
 }
@@ -41,9 +36,12 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const [isAnimating, setIsAnimating] = useState(false)
   const [animationCoords, setAnimationCoords] = useState({ x: 0, y: 0 })
   const imageRef = useRef<HTMLDivElement>(null)
+  const [quantity, setQuantity] = useState(1)
+  const [selectedVariant, setSelectedVariant] = useState('Único')
 
   const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
   const imageUrl = product?.image_url ?? ''
+  const productHref = product ? `/producto/${product.id}` : ''
 
   if (!product) {
     return (
@@ -90,8 +88,8 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           name: product.name,
           price,
           image: imageUrl,
-          quantity: 1,
-          variant: 'Único',
+          quantity,
+          variant: selectedVariant,
           stripe_price_id: product.stripe_price_id ?? null,
         })
         setIsAnimating(false)
@@ -104,8 +102,8 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
       name: product.name,
       price,
       image: imageUrl,
-      quantity: 1,
-      variant: 'Único',
+      quantity,
+      variant: selectedVariant,
       stripe_price_id: product.stripe_price_id ?? null,
     })
   }
@@ -125,7 +123,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
           <div className="lg:col-span-7 space-y-4">
-            <div ref={imageRef} className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
+            <div ref={imageRef} className="relative aspect-[4/5] bg-stone-100 overflow-hidden">
               {imageUrl ? (
                 <Image src={imageUrl} alt={product.name} fill priority className="object-cover" />
               ) : null}
@@ -135,78 +133,102 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-32 space-y-8">
               <div className="space-y-4">
-                <div className="flex justify-between items-start gap-6">
-                  <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl tracking-wide leading-tight">
-                    {product.name}
-                  </h1>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (wishlisted) {
-                        removeFromWishlist(product.id)
-                        return
-                      }
-                      addToWishlist({
-                        id: product.id,
-                        name: product.name,
-                        price,
-                        image: imageUrl,
-                        href: `/producto/${product.id}`,
-                      })
-                    }}
-                    aria-label={wishlisted ? 'Quitar de wishlist' : 'Añadir a wishlist'}
-                    className={cn(
-                      'mt-1 w-11 h-11 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center',
-                      'transition-[opacity,transform,background-color] duration-300 ease-out active:scale-90',
-                    )}
-                    suppressHydrationWarning
-                  >
-                    <Heart
+                <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl tracking-wide leading-tight">
+                  {product.name}
+                </h1>
+                <p className="text-xl font-sans tracking-wider">{price.toFixed(2)}€</p>
+                <p className="text-sm md:text-base leading-relaxed text-muted-foreground tracking-wide">
+                  {product.description ||
+                    'Esta pieza ha sido diseñada bajo los más altos estándares de artesanía. Un equilibrio perfecto entre tradición y modernidad que eleva cualquier conjunto.'}
+                </p>
+              </div>
+
+              <div className="space-y-6 pt-6 border-t border-border/50">
+                <div className="space-y-2">
+                  <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Variante</p>
+                  <div className="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVariant('Único')}
                       className={cn(
-                        'w-6 h-6 transition-colors duration-300',
-                        wishlisted ? 'fill-gray-900 text-gray-900' : 'text-gray-500 hover:text-gray-900',
+                        'h-11 px-4 border text-xs tracking-[0.3em] uppercase transition-colors',
+                        selectedVariant === 'Único'
+                          ? 'border-foreground bg-foreground text-background'
+                          : 'border-border bg-transparent text-foreground hover:bg-foreground hover:text-background',
                       )}
-                      strokeWidth={1.5}
-                    />
-                  </button>
+                      suppressHydrationWarning
+                    >
+                      Único
+                    </button>
+                  </div>
                 </div>
 
-                <p className="text-xl font-sans tracking-wider">{price.toFixed(2)}€</p>
+                <div className="space-y-2">
+                  <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Cantidad</p>
+                  <div className="inline-flex items-center border border-border">
+                    <button
+                      type="button"
+                      aria-label="Disminuir cantidad"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      className="w-12 h-12 flex items-center justify-center text-gray-900 hover:bg-gray-100 transition-colors"
+                      suppressHydrationWarning
+                    >
+                      −
+                    </button>
+                    <div className="w-14 h-12 flex items-center justify-center text-base tracking-widest">
+                      {quantity}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Aumentar cantidad"
+                      onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+                      className="w-12 h-12 flex items-center justify-center text-gray-900 hover:bg-gray-100 transition-colors"
+                      suppressHydrationWarning
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-border/50">
-                <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">Talla</p>
-                <p className="text-sm font-medium tracking-widest">TALLA ÚNICA</p>
+              <div className="grid grid-cols-1 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="w-full bg-foreground text-background py-4 text-base tracking-[0.3em] uppercase hover:bg-foreground/90 transition-all active:scale-[0.98]"
+                  suppressHydrationWarning
+                >
+                  Añadir a la cesta
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (wishlisted) {
+                      removeFromWishlist(product.id)
+                      return
+                    }
+                    addToWishlist({
+                      id: product.id,
+                      name: product.name,
+                      price,
+                      image: imageUrl,
+                      href: productHref,
+                    })
+                  }}
+                  className="w-full border border-foreground bg-transparent text-foreground py-4 text-base tracking-[0.3em] uppercase hover:bg-foreground hover:text-background transition-colors inline-flex items-center justify-center gap-3"
+                  suppressHydrationWarning
+                >
+                  <Heart
+                    className={cn(
+                      'w-5 h-5 transition-colors duration-300',
+                      wishlisted ? 'fill-foreground text-foreground' : 'text-foreground',
+                    )}
+                    strokeWidth={1.5}
+                  />
+                  {wishlisted ? 'En wishlist' : 'Añadir a wishlist'}
+                </button>
               </div>
-
-              <button
-                onClick={handleAddToCart}
-                className="w-full bg-foreground text-background py-4 text-xs tracking-[0.3em] uppercase hover:bg-foreground/90 transition-all active:scale-[0.98]"
-                suppressHydrationWarning
-              >
-                Agregar al carrito
-              </button>
-
-              <Accordion type="single" collapsible className="w-full pt-8">
-                <AccordionItem value="description">
-                  <AccordionTrigger className="text-[10px] tracking-[0.2em] uppercase">Descripción</AccordionTrigger>
-                  <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
-                    {product.description ||
-                      'Esta pieza ha sido diseñada bajo los más altos estándares de artesanía. Un equilibrio perfecto entre tradición y modernidad que eleva cualquier conjunto.'}
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="details">
-                  <AccordionTrigger className="text-[10px] tracking-[0.2em] uppercase">
-                    Detalles y Cuidados
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm leading-relaxed text-muted-foreground space-y-2">
-                    <p>• Material: Baño de oro de 18k / Plata de ley</p>
-                    <p>• Piedras: Corales naturales / Cristales checos</p>
-                    <p>• Evitar el contacto directo con perfumes y agua</p>
-                    <p>• Limpiar con un paño suave y seco tras su uso</p>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
             </div>
           </div>
         </div>

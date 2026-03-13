@@ -21,10 +21,11 @@ interface InteractiveCardProps {
   href?: string
 }
 
-export function InteractiveCard({ product, href = `/producto/${product.id}` }: InteractiveCardProps) {
+export function InteractiveCard({ product, href }: InteractiveCardProps) {
   const [imgIndex, setImgIndex] = useState(0)
   const [hovered, setHovered] = useState(false)
   const images = product.images?.length ? product.images : (product.variants?.[0]?.images ?? [])
+  const resolvedHref = href ?? `/producto/${product.id}`
 
   const handlePrev = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -52,7 +53,7 @@ export function InteractiveCard({ product, href = `/producto/${product.id}` }: I
       >
         {/* Image Link - entire container is clickable for navigation to product page */}
         <Link 
-          href={href}
+          href={resolvedHref}
           className="absolute inset-0 z-0"
           suppressHydrationWarning
         >

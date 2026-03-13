@@ -2,9 +2,6 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { Heart } from 'lucide-react'
-import { useWishlist } from '@/lib/wishlist-context'
-import { cn } from '@/lib/utils'
 
 interface ProductCardProps {
   product: {
@@ -17,56 +14,12 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
-  const wishlisted = isInWishlist(product.id)
   const imageUrl = product.image_url ?? ''
   const price = typeof product.price === 'number' ? product.price : Number(product.price)
 
-  const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    if (wishlisted) {
-      removeFromWishlist(product.id)
-      return
-    }
-
-    addToWishlist({
-      id: product.id,
-      name: product.name,
-      price: Number.isFinite(price) ? price : 0,
-      image: imageUrl,
-      href: `/producto/${product.id}`,
-    })
-  }
-
   return (
-    <Link
-      href={`/producto/${product.id}`}
-      className="group block"
-      suppressHydrationWarning
-    >
-      <div className="relative aspect-[3/4] overflow-hidden bg-stone-100 mb-4">
-        <button
-          type="button"
-          onClick={toggleWishlist}
-          aria-label={wishlisted ? 'Quitar de wishlist' : 'Añadir a wishlist'}
-          className={cn(
-            'absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center',
-            'transition-[opacity,transform,background-color] duration-300 ease-out active:scale-90',
-            wishlisted ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100',
-          )}
-          suppressHydrationWarning
-        >
-          <Heart
-            className={cn(
-              'w-5 h-5 transition-colors duration-300',
-              wishlisted ? 'fill-gray-900 text-gray-900' : 'text-gray-500 hover:text-gray-900',
-            )}
-            strokeWidth={1.5}
-          />
-        </button>
-
+    <Link href={`/producto/${product.id}`} className="group block" suppressHydrationWarning>
+      <div className="relative aspect-[4/5] overflow-hidden bg-stone-100 mb-4">
         {imageUrl ? (
           <Image
             src={imageUrl}

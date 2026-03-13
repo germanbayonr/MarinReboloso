@@ -11,7 +11,7 @@ export default function NovedadesCarousel() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start', dragFree: true })
   const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const [paused, setPaused] = useState(false)
-  const [items, setItems] = useState<Array<{ id: string; name: string; price: number | string; image_url: string | null; category: string | null }>>([])
+  const [items, setItems] = useState<Array<{ id: string; name: string; price: number | string; image_url: string | null; category: string | null; collection: string | null }>>([])
   const [loaded, setLoaded] = useState(false)
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
@@ -34,7 +34,7 @@ export default function NovedadesCarousel() {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('id,name,price,image_url,category,is_new_arrival')
+          .select('id,name,price,image_url,category,collection,is_new_arrival')
           .eq('is_new_arrival', true)
           .limit(12)
         if (cancelled) return
@@ -49,6 +49,7 @@ export default function NovedadesCarousel() {
           price: (p as any).price,
           image_url: (p as any).image_url ?? null,
           category: (p as any).category ?? null,
+          collection: (p as any).collection ?? null,
         })))
         setLoaded(true)
       } catch {

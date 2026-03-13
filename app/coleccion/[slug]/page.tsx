@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductGrid, { type ProductGridProduct } from '@/components/ProductGrid'
@@ -8,12 +9,27 @@ function toNumber(value: unknown) {
   return Number.isFinite(n) ? n : 0
 }
 
-export default async function CatalogoPage() {
+function getCollectionTitle(slug: string) {
+  const normalized = slug.toLowerCase()
+  const map: Record<string, string> = {
+    corales: 'Corales',
+    descara: 'Descará',
+    filipa: 'Filipa',
+    marebo: 'Marebo',
+  }
+  return map[normalized] ?? normalized
+}
+
+export default async function ColeccionPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const normalizedSlug = String(slug ?? '').toLowerCase().trim()
+  if (!normalizedSlug) notFound()
+
   const supabase = createSupabaseServerClient()
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .order('is_new_arrival', { ascending: false })
+    .eq('collection', normalizedSlug)
     .order('name', { ascending: true })
     .limit(2000)
 
@@ -28,25 +44,22 @@ export default async function CatalogoPage() {
         collection: row.collection ?? null,
       }))
 
+  if (products.length === 0) notFound()
+
+  const title = getCollectionTitle(normalizedSlug)
+
   return (
     <main className="min-h-screen bg-background" suppressHydrationWarning>
       <Navbar />
 
       <div className="pt-28 lg:pt-32 pb-16 px-4 md:px-10 max-w-7xl mx-auto">
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-3xl md:text-4xl tracking-tight">Catálogo</h1>
-            <p className="font-sans text-sm text-muted-foreground mt-1">{products.length} piezas</p>
-          </div>
+        <div className="mb-8">
+          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-2">Colección</p>
+          <h1 className="font-serif text-3xl md:text-4xl tracking-tight">{title}</h1>
+          <p className="font-sans text-sm text-muted-foreground mt-1">{products.length} piezas</p>
         </div>
 
-        {products.length > 0 ? (
-          <ProductGrid products={products} />
-        ) : (
-          <div className="py-20 text-center">
-            <p className="font-serif text-xl text-muted-foreground">No hay piezas disponibles</p>
-          </div>
-        )}
+        <ProductGrid products={products} />
       </div>
 
       <Footer />

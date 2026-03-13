@@ -65,7 +65,7 @@ export default function CollectionsGrid() {
 function CollectionCard({ collection }: { collection: typeof collections[0] }) {
   return (
     <Link 
-      href={`/shop/${collection.slug}`}
+      href={`/coleccion/${collection.slug}`}
       className="group block relative overflow-hidden bg-stone-100"
       suppressHydrationWarning
     >

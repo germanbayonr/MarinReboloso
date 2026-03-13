@@ -33,7 +33,10 @@ function normalizeItems(value: unknown): WishlistItem[] {
     if (!item.id || !item.name || typeof item.price !== 'number' || !item.image || !item.href) continue
     if (seen.has(item.id)) continue
     seen.add(item.id)
-    out.push({ id: String(item.id), name: String(item.name), price: item.price, image: String(item.image), href: String(item.href) })
+
+    const id = String(item.id)
+    const href = String(item.href).startsWith('/shop/') ? `/producto/${id}` : String(item.href)
+    out.push({ id, name: String(item.name), price: item.price, image: String(item.image), href })
   }
 
   return out

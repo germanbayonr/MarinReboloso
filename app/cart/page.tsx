@@ -6,44 +6,11 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { useCart } from '@/lib/cart-context'
 import { Minus, Plus, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
 
 export default function CartPage() {
   const { cartItems, removeFromCart, updateQuantity, cartTotal } = useCart()
-  const [isCheckingOut, setIsCheckingOut] = useState(false)
 
   const formattedSubtotal = `${cartTotal.toFixed(2)}€`
-  const canCheckout = useMemo(() => cartItems.every((i) => !!i.stripe_price_id), [cartItems])
-
-  const startCheckout = async () => {
-    if (isCheckingOut) return
-    if (!canCheckout) {
-      alert('Estamos preparando el pago. Espera un momento y vuelve a intentarlo.')
-      return
-    }
-    setIsCheckingOut(true)
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          cartItems: cartItems.map((i) => ({
-            id: i.id,
-            quantity: i.quantity,
-            stripe_price_id: i.stripe_price_id,
-          })),
-        }),
-      })
-      const json = (await res.json().catch(() => ({}))) as { success?: boolean; url?: string; error?: string }
-      if (!res.ok || !json.success || !json.url) {
-        alert(json.error || 'No se pudo iniciar el pago. Inténtalo de nuevo.')
-        return
-      }
-      window.location.href = json.url
-    } finally {
-      setIsCheckingOut(false)
-    }
-  }
 
   return (
     <main className="min-h-screen bg-background" suppressHydrationWarning>
@@ -83,17 +50,26 @@ export default function CartPage() {
             <div className="divide-y divide-gray-200">
               {cartItems.map((item) => {
                 const subtotal = item.price * item.quantity
+                const productHref = `/producto/${encodeURIComponent(item.id)}`
                 return (
                   <div key={`${item.id}__${item.variant ?? ''}`} className="py-6">
                     <div className="flex gap-4 md:hidden">
-                      <div className="relative w-24 h-32 overflow-hidden bg-stone-100 flex-shrink-0">
+                      <Link
+                        href={productHref}
+                        className="relative w-24 h-32 overflow-hidden bg-stone-100 flex-shrink-0 block"
+                        suppressHydrationWarning
+                      >
                         <Image src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
-                      </div>
+                      </Link>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="font-serif text-base truncate">{item.name}</p>
+                            <Link href={productHref} className="block min-w-0" suppressHydrationWarning>
+                              <p className="font-serif text-base truncate underline-offset-4 hover:underline">
+                                {item.name}
+                              </p>
+                            </Link>
                             {item.variant && (
                               <p className="mt-1 text-xs text-muted-foreground tracking-wide truncate">{item.variant}</p>
                             )}
@@ -142,11 +118,19 @@ export default function CartPage() {
 
                     <div className="hidden md:grid md:grid-cols-12 md:items-center gap-6">
                       <div className="md:col-span-6 flex items-center gap-5 min-w-0">
-                        <div className="relative w-24 h-32 overflow-hidden bg-stone-100 flex-shrink-0">
+                        <Link
+                          href={productHref}
+                          className="relative w-24 h-32 overflow-hidden bg-stone-100 flex-shrink-0 block"
+                          suppressHydrationWarning
+                        >
                           <Image src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
-                        </div>
+                        </Link>
                         <div className="min-w-0">
-                          <p className="font-serif text-lg truncate">{item.name}</p>
+                          <Link href={productHref} className="block min-w-0" suppressHydrationWarning>
+                            <p className="font-serif text-lg truncate underline-offset-4 hover:underline">
+                              {item.name}
+                            </p>
+                          </Link>
                           {item.variant && (
                             <p className="mt-1 text-xs text-muted-foreground tracking-wide truncate">{item.variant}</p>
                           )}
@@ -212,15 +196,13 @@ export default function CartPage() {
             <span className="text-muted-foreground">Total</span>
             <span className="text-gray-900">{formattedSubtotal}</span>
           </div>
-          <button
-            type="button"
-            onClick={startCheckout}
-            disabled={isCheckingOut || !canCheckout}
-            className="mt-3 w-full bg-gray-900 text-white uppercase tracking-widest py-4 hover:bg-black transition-colors inline-flex items-center justify-center disabled:opacity-60"
+          <Link
+            href="/checkout"
+            className="mt-3 w-full bg-gray-900 text-white uppercase tracking-widest py-4 hover:bg-black transition-colors inline-flex items-center justify-center"
             suppressHydrationWarning
           >
-            {isCheckingOut ? 'Conectando pasarela…' : 'Finalizar compra'}
-          </button>
+            Finalizar compra
+          </Link>
           <p className="mt-2 text-[11px] text-muted-foreground tracking-wide">Envío a España: 5€</p>
         </div>
       )}
@@ -249,15 +231,13 @@ export default function CartPage() {
                     <span className="text-gray-900">{(cartTotal + 5).toFixed(2)}€</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={startCheckout}
-                  disabled={isCheckingOut || !canCheckout}
-                  className="mt-8 w-full bg-gray-900 text-white uppercase tracking-widest py-4 hover:bg-black transition-colors inline-flex items-center justify-center disabled:opacity-60"
+                <Link
+                  href="/checkout"
+                  className="mt-8 w-full bg-gray-900 text-white uppercase tracking-widest py-4 hover:bg-black transition-colors inline-flex items-center justify-center"
                   suppressHydrationWarning
                 >
-                  {isCheckingOut ? 'Conectando pasarela…' : 'Finalizar compra'}
-                </button>
+                  Finalizar compra
+                </Link>
               </div>
             </div>
           </div>

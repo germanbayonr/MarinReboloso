@@ -18,7 +18,7 @@ export default function HeroSection() {
 
         {/* --- BLOQUE IZQUIERDO: LIFESTYLE --- */}
         <Link 
-          href="/shop/descara"
+          href="/coleccion/descara"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
         >
           <div
@@ -39,16 +39,16 @@ export default function HeroSection() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
           <div className="absolute inset-0 flex flex-col items-start justify-end text-white p-10 md:p-12">
-            <p className="text-3xl tracking-[0.25em] uppercase mb-6 opacity-80">
+            <p className="font-sans text-[10px] sm:text-xs tracking-[0.35em] uppercase mb-4 md:mb-6 opacity-85">
               NUEVA COLECCIÓN
             </p>
-            <ArrowRight className="w-14 h-14 transition-transform duration-300 group-hover:translate-x-2" />
+            <ArrowRight className="w-10 h-10 md:w-12 md:h-12 transition-transform duration-300 group-hover:translate-x-2" />
           </div>
         </Link>
 
         {/* --- BLOQUE DERECHO: PRODUCTO --- */}
         <Link 
-          href="/shop/descara"
+          href="/coleccion/descara"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
         >
           <div
@@ -69,11 +69,11 @@ export default function HeroSection() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
           <div className="absolute inset-0 flex flex-col items-center justify-end text-white p-10 md:p-12 text-center">
-            <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl leading-tight tracking-wide mb-8">
+            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide mb-6 md:mb-8">
               Colección Descará
             </h1>
             <div
-              className="group/btn relative inline-flex items-center justify-center px-14 py-5 text-2xl tracking-[0.35em] uppercase border border-white/80 overflow-hidden transition-all duration-300"
+              className="group/btn relative inline-flex items-center justify-center h-11 px-7 sm:px-9 md:h-12 md:px-12 text-[10px] sm:text-xs tracking-[0.35em] uppercase border border-white/80 overflow-hidden transition-all duration-300"
             >
               <span className="relative z-10 transition-colors duration-300 group-hover/btn:text-gray-900">
                 VER COLECCIÓN
