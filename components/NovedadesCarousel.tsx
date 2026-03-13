@@ -5,7 +5,7 @@ import useEmblaCarousel from 'embla-carousel-react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 import { useProducts } from '@/lib/products-context'
-import { InteractiveCard } from '@/components/InteractiveCard'
+import ProductCard from '@/components/ProductCard'
 
 export default function NovedadesCarousel() {
   const { products } = useProducts()
@@ -36,69 +36,69 @@ export default function NovedadesCarousel() {
   if (featured.length === 0) return null
 
   return (
-    <section className="py-16 md:py-24 bg-background overflow-hidden">
+    <section className="py-20 md:py-32 bg-background overflow-hidden">
       {/* Header */}
-      <div className="px-4 md:px-10 mb-8 flex items-end justify-between">
+      <div className="px-4 md:px-12 mb-10 md:mb-12 flex items-end justify-between">
         <div>
-          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">Lo último</p>
-          <h2 className="font-serif text-3xl md:text-4xl tracking-tight">Novedades</h2>
+          <p className="font-sans text-xs tracking-[0.3em] uppercase text-muted-foreground mb-2">Lo último</p>
+          <h2 className="font-serif text-4xl md:text-5xl tracking-tight">Novedades</h2>
         </div>
         <div className="flex items-center gap-4 md:gap-6">
           {/* Prev/Next */}
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={scrollPrev}
-              className="w-8 h-8 border border-border flex items-center justify-center hover:bg-foreground hover:text-background transition-colors"
+              className="w-11 h-11 border border-border flex items-center justify-center hover:bg-foreground hover:text-background transition-colors"
               aria-label="Anterior"
               suppressHydrationWarning
             >
-              <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+              <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
             </button>
             <button
               onClick={scrollNext}
-              className="w-8 h-8 border border-border flex items-center justify-center hover:bg-foreground hover:text-background transition-colors"
+              className="w-11 h-11 border border-border flex items-center justify-center hover:bg-foreground hover:text-background transition-colors"
               aria-label="Siguiente"
               suppressHydrationWarning
             >
-              <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+              <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
             </button>
           </div>
           <Link
             href="/catalogo"
-            className="flex items-center gap-1.5 font-sans text-[10px] tracking-widest uppercase hover:text-accent transition-colors"
+            className="flex items-center gap-2 font-sans text-xs tracking-widest uppercase hover:text-accent transition-colors"
             suppressHydrationWarning
           >
             Ver todo
-            <ArrowRight className="h-3 w-3" strokeWidth={1.5} />
+            <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
           </Link>
         </div>
       </div>
 
       {/* Embla carousel */}
       <div
-        className="overflow-hidden pl-4 md:pl-10"
+        className="overflow-hidden pl-4 md:pl-12"
         ref={emblaRef}
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
-        <div className="flex gap-4 md:gap-5">
+        <div className="flex gap-5 md:gap-6">
           {featured.map(product => (
-            <div key={product.id} className="flex-shrink-0 w-[240px] md:w-[280px]">
-              <InteractiveCard product={product} />
+            <div key={product.id} className="flex-shrink-0 w-[260px] md:w-[320px]">
+              <ProductCard product={product} />
             </div>
           ))}
         </div>
       </div>
 
       {/* CTA */}
-      <div className="mt-10 text-center">
+      <div className="mt-12 md:mt-14 text-center">
         <Link
           href="/catalogo"
-          className="inline-flex items-center gap-2 border border-foreground px-8 py-3 font-sans text-[10px] tracking-[0.25em] uppercase hover:bg-foreground hover:text-background transition-all duration-300"
+          className="inline-flex items-center gap-3 border border-foreground px-10 py-4 font-sans text-xs tracking-[0.25em] uppercase hover:bg-foreground hover:text-background transition-all duration-300"
           suppressHydrationWarning
         >
           Ver todo el catálogo
-          <ArrowRight className="h-3 w-3" strokeWidth={1.5} />
+          <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
         </Link>
       </div>
     </section>

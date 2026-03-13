@@ -109,6 +109,8 @@ type Product = {
   images: string[]
 }
 
+const EMPTY_PRODUCTS: Product[] = []
+
 const categoryTitles: Record<string, string> = {
   pendientes: 'Pendientes',
   mantones: 'Mantones',
@@ -132,7 +134,10 @@ export default function ProductListingClient({ category }: { category: string })
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
 
-  const products = (mockProducts[category as keyof typeof mockProducts] || []) as Product[]
+  const products = useMemo(
+    () => (mockProducts[category as keyof typeof mockProducts] ?? EMPTY_PRODUCTS) as Product[],
+    [category],
+  )
   const title = categoryTitles[category] || category.charAt(0).toUpperCase() + category.slice(1)
 
   const collections = useMemo(() => Array.from(new Set(products.map(p => p.collection))), [products])

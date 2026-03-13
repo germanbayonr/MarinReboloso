@@ -13,11 +13,19 @@ export default function NuestraHistoriaPage() {
       <section className="relative w-full min-h-[100svh] overflow-hidden" suppressHydrationWarning>
         <Image
           src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.58.jpeg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center blur-3xl scale-110"
+        />
+        <Image
+          src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.58.jpeg"
           alt="María Marín — Nuestra Historia"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-center"
+          className="object-contain object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/60 to-black/80" />
 

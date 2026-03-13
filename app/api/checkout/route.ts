@@ -30,7 +30,13 @@ export async function POST(req: Request) {
     }
 
     const stripe = new Stripe(stripeSecretKey)
-    const supabase = createSupabaseServerClient()
+    let supabase: ReturnType<typeof createSupabaseServerClient>
+    try {
+      supabase = createSupabaseServerClient()
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Supabase server client not configured'
+      return NextResponse.json({ success: false, error: message }, { status: 500 })
+    }
 
     const { data: customerRow, error: customerError } = await supabase
       .from('customers')
@@ -52,7 +58,7 @@ export async function POST(req: Request) {
       .single()
 
     if (customerError) {
-      return NextResponse.json({ success: false, error: 'Failed to create customer' }, { status: 500 })
+      return NextResponse.json({ success: false, error: customerError.message }, { status: 500 })
     }
 
     const orderSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
@@ -82,7 +88,7 @@ export async function POST(req: Request) {
       .single()
 
     if (orderError) {
-      return NextResponse.json({ success: false, error: 'Failed to create order' }, { status: 500 })
+      return NextResponse.json({ success: false, error: orderError.message }, { status: 500 })
     }
 
     const orderId = orderRow.id
@@ -101,7 +107,7 @@ export async function POST(req: Request) {
     const { error: itemsError } = await supabase.from('order_items').insert(orderItemsPayload)
 
     if (itemsError) {
-      return NextResponse.json({ success: false, error: 'Failed to create order items' }, { status: 500 })
+      return NextResponse.json({ success: false, error: itemsError.message }, { status: 500 })
     }
 
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cartItems.map((item) => ({
@@ -136,6 +142,7 @@ export async function POST(req: Request) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 })
     }
-    return NextResponse.json({ success: false, error: 'Unexpected error' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Unexpected error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

@@ -44,13 +44,13 @@ export default function ProductCard({ product }: ProductCardProps) {
       name: product.name,
       price: product.price,
       image: images[0] ?? '',
-      href: `/shop/producto/${product.id}`,
+      href: `/producto/${product.id}`,
     })
   }
 
   return (
     <Link
-      href={`/shop/producto/${product.id}`}
+      href={`/producto/${product.id}`}
       className="group block"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

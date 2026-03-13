@@ -1738,13 +1738,22 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Load from localStorage on mount; seed with INITIAL_PRODUCTS if empty
   useEffect(() => {
     try {
-      localStorage.removeItem(STORAGE_KEY)
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProducts(parsed as Product[])
+          setHydrated(true)
+          return
+        }
+      }
       setProducts(INITIAL_PRODUCTS)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PRODUCTS))
     } catch {
       setProducts(INITIAL_PRODUCTS)
+    } finally {
+      setHydrated(true)
     }
-    setHydrated(true)
   }, [])
 
   // Persist to localStorage whenever products change (after hydration)

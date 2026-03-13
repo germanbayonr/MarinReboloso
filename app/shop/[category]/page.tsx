@@ -40,6 +40,20 @@ export default function ShopCollectionPage() {
 
   const filtered = useMemo(() => {
     let list = collectionProducts.filter(p => p.status === 'published')
+    const normalize = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+
+    if (safeCategory === 'corales') {
+      const blocked = ['manton', 'mantones', 'peinecillo', 'peinecillos', 'collar', 'collares', 'bolso', 'bolsos']
+      list = list.filter((p) => {
+        const haystack = `${p.category} ${p.name} ${p.collection}`
+        const text = normalize(haystack)
+        return !blocked.some((b) => text.includes(b))
+      })
+    }
 
     if (filters.types.length > 0) {
       list = list.filter(p => filters.types.some(t => p.category.toLowerCase().includes(t.toLowerCase())))
@@ -57,7 +71,7 @@ export default function ShopCollectionPage() {
     else if (filters.sort === 'newest') list = [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     return list
-  }, [collectionProducts, filters])
+  }, [collectionProducts, filters, safeCategory])
 
   const displayTitle = useMemo(() => {
     if (!safeCategory) return 'Colección'

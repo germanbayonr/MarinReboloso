@@ -36,7 +36,7 @@ export default function HeroSection() {
 
         {/* --- BLOQUE IZQUIERDO: LIFESTYLE --- */}
         <Link 
-          href="/shop/corales"
+          href="/shop/descara"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
           suppressHydrationWarning
         >
@@ -47,27 +47,27 @@ export default function HeroSection() {
             ].join(' ')}
           >
             <Image
-              src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Sky.JPG"
-              alt="Lifestyle Colección Corales"
+              src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/WhatsApp%20Image%202026-03-11%20at%2006.57.39.jpeg"
+              alt="Lifestyle Colección Descará"
               fill
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+              className="object-cover object-center transition-transform duration-700 ease-out scale-[1.24] group-hover:scale-[1.28]"
             />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
           <div className="absolute inset-0 flex flex-col items-start justify-end text-white p-10 md:p-12">
-            <p className="text-xs tracking-[0.4em] uppercase mb-4 opacity-80">
+            <p className="text-3xl tracking-[0.25em] uppercase mb-6 opacity-80">
               NUEVA COLECCIÓN
             </p>
-            <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-2" />
+            <ArrowRight className="w-14 h-14 transition-transform duration-300 group-hover:translate-x-2" />
           </div>
         </Link>
 
         {/* --- BLOQUE DERECHO: PRODUCTO --- */}
         <Link 
-          href="/shop/corales"
+          href="/shop/descara"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
           suppressHydrationWarning
         >
@@ -78,8 +78,8 @@ export default function HeroSection() {
             ].join(' ')}
           >
             <Image
-              src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Sky.PNG"
-              alt="Producto Colección Corales"
+              src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Pasion.PNG"
+              alt="Producto Colección Descará"
               fill
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -90,10 +90,10 @@ export default function HeroSection() {
 
           <div className="absolute inset-0 flex flex-col items-center justify-end text-white p-10 md:p-12 text-center">
             <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl leading-tight tracking-wide mb-8">
-              Colección Corales
+              Colección Descará
             </h1>
             <div
-              className="group/btn relative inline-flex items-center justify-center px-8 py-3 text-sm tracking-widest uppercase border border-white/80 overflow-hidden transition-all duration-300"
+              className="group/btn relative inline-flex items-center justify-center px-14 py-5 text-2xl tracking-[0.35em] uppercase border border-white/80 overflow-hidden transition-all duration-300"
             >
               <span className="relative z-10 transition-colors duration-300 group-hover/btn:text-gray-900">
                 VER COLECCIÓN

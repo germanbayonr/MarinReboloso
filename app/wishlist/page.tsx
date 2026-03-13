@@ -17,7 +17,7 @@ export default function WishlistPage() {
     <main className="min-h-screen bg-background" suppressHydrationWarning>
       <Navbar />
 
-      <div className="pt-28 lg:pt-36 pb-16 px-6 md:px-10 max-w-7xl mx-auto">
+      <div className="pt-24 lg:pt-32 pb-16 px-6 md:px-10 max-w-7xl mx-auto">
         <div className="max-w-3xl">
           <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-2">
             Wishlist

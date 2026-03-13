@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Playfair_Display, Lato } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { ProductsProvider } from '@/lib/products-context'
@@ -7,19 +6,6 @@ import { CartProvider } from '@/lib/cart-context'
 import { WishlistProvider } from '@/lib/wishlist-context'
 import Preloader from '@/components/Preloader'
 import './globals.css'
-
-const playfairDisplay = Playfair_Display({ 
-  subsets: ["latin"],
-  variable: '--font-serif',
-  display: 'swap',
-});
-
-const lato = Lato({ 
-  subsets: ["latin"],
-  weight: ['300', '400'],
-  variable: '--font-sans',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Wayfar Brand | Elegancia y Artesanía del Sur',
@@ -51,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${playfairDisplay.variable} ${lato.variable}`} suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Preloader />
         <AuthProvider>

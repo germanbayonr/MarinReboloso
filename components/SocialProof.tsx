@@ -50,19 +50,19 @@ export default function SocialProof() {
   }
 
   return (
-    <section className="bg-background py-16 md:py-24" suppressHydrationWarning>
-      <div className="max-w-7xl mx-auto px-4 md:px-8">
+    <section className="bg-background py-20 md:py-32" suppressHydrationWarning>
+      <div className="max-w-7xl mx-auto px-4 md:px-10">
         {/* Customer Reviews Carousel */}
-        <div className="mb-16 md:mb-24">
-          <h2 className="font-serif text-2xl md:text-3xl text-center mb-8">Lo que dicen nuestras clientas</h2>
-          <div className="max-w-3xl mx-auto relative">
-            <div className="text-center py-8">
+        <div className="mb-20 md:mb-28">
+          <h2 className="font-serif text-3xl md:text-4xl text-center mb-10 md:mb-12">Lo que dicen nuestras clientas</h2>
+          <div className="max-w-4xl mx-auto relative">
+            <div className="text-center py-10 md:py-12">
               {/* Stars */}
-              <div className="flex justify-center gap-1 mb-4">
+              <div className="flex justify-center gap-1.5 mb-6">
                 {[...Array(reviews[currentReview].rating)].map((_, i) => (
                   <svg
                     key={i}
-                    className="w-5 h-5 fill-accent"
+                    className="w-6 h-6 fill-accent"
                     viewBox="0 0 20 20"
                   >
                     <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -70,10 +70,10 @@ export default function SocialProof() {
                 ))}
               </div>
               {/* Review Text */}
-              <blockquote className="font-serif text-lg md:text-xl italic text-foreground mb-4 leading-relaxed">
+              <blockquote className="font-serif text-xl md:text-2xl italic text-foreground mb-6 leading-relaxed">
                 "{reviews[currentReview].text}"
               </blockquote>
-              <p className="text-sm text-muted-foreground">— {reviews[currentReview].author}</p>
+              <p className="text-base text-muted-foreground">— {reviews[currentReview].author}</p>
             </div>
 
             {/* Navigation Buttons */}
@@ -83,7 +83,7 @@ export default function SocialProof() {
               aria-label="Anterior reseña"
               suppressHydrationWarning
             >
-              <ChevronLeft className="w-8 h-8" />
+              <ChevronLeft className="w-10 h-10" />
             </button>
             <button
               onClick={nextReview}
@@ -91,11 +91,11 @@ export default function SocialProof() {
               aria-label="Siguiente reseña"
               suppressHydrationWarning
             >
-              <ChevronRight className="w-8 h-8" />
+              <ChevronRight className="w-10 h-10" />
             </button>
 
             {/* Dots */}
-            <div className="flex justify-center gap-2 mt-6">
+            <div className="flex justify-center gap-2.5 mt-8">
               {reviews.map((_, index) => (
                 <button
                   key={index}
@@ -114,20 +114,20 @@ export default function SocialProof() {
         {/* Instagram Feed */}
         <div>
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
             <a
               href={INSTAGRAM_PROFILE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-baseline justify-center gap-2 mb-2 hover:opacity-60 transition-opacity duration-300 leading-none"
             >
-              <Instagram className="w-6 h-6 text-foreground" />
-              <h2 className="font-serif text-2xl md:text-3xl leading-none">@marebo</h2>
+              <Instagram className="w-7 h-7 text-foreground" />
+              <h2 className="font-serif text-3xl md:text-4xl leading-none">@marebo_jewelry</h2>
             </a>
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-10">
             {INSTAGRAM_POSTS.map((post) => (
               <InstagramPost key={post.id} post={post} />
             ))}
@@ -139,10 +139,10 @@ export default function SocialProof() {
               href={INSTAGRAM_PROFILE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-3 bg-primary text-primary-foreground text-sm uppercase tracking-wider hover:bg-primary/90 transition-colors flex items-center gap-2"
+              className="px-10 py-4 bg-primary text-primary-foreground text-base uppercase tracking-wider hover:bg-primary/90 transition-colors flex items-center gap-3"
               suppressHydrationWarning
             >
-              <Instagram className="w-4 h-4" />
+              <Instagram className="w-5 h-5" />
               Seguir en Instagram
             </a>
           </div>
