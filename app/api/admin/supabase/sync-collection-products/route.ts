@@ -460,6 +460,272 @@ const COLLECTION_UPDATES: Record<string, UpdateItem[]> = {
   ],
 }
 
+const CATEGORY_UPDATES: Record<string, UpdateItem[]> = {
+  mantones: [
+    {
+      name: 'Mantón Agua de Mujer',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Agua_%20de%20mujer.PNG',
+    },
+    {
+      name: 'Mantón Agua de Niña',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Agua_%20de%20mujer.PNG',
+    },
+    {
+      name: 'Mantón Blanca',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Blanca_.jpg',
+    },
+    {
+      name: 'Mantón Candela',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20de%20mujer%20Candela.PNG',
+    },
+    {
+      name: 'Mantón Carmesí',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Carmesi%20.PNG',
+    },
+    {
+      name: 'Mantón Carmesí - Edición Limitada',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Carmesi%20.PNG',
+    },
+    {
+      name: 'Mantón de niña Candela',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20de%20mujer%20Candela.PNG',
+    },
+    {
+      name: 'Mantón Dolores',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Dolores_%20.PNG',
+    },
+    {
+      name: 'Mantón Dolores - Edición Limitada',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Dolores_%20.PNG',
+    },
+    {
+      name: 'Mantón Isabella',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Isabella.PNG',
+    },
+    {
+      name: 'Mantón Isabella - Edición Limitada',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Isabella.PNG',
+    },
+    {
+      name: 'Mantón Lima - Edición Limitada',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Piquillo%20LIMA.PNG',
+    },
+    {
+      name: 'Mantón Melocotón Sevilla',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Melocoton%20Sevilla.PNG',
+    },
+    {
+      name: 'Mantón Noche de Sevilla',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Noche%20de%20Sevilla_.PNG',
+    },
+    {
+      name: 'Mantón Noir',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Noir.PNG',
+    },
+    {
+      name: 'Mantón Noir de Mujer',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Noir%20de%20mujer.PNG',
+    },
+    {
+      name: 'Mantón Noir de Niña',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Noir%20de%20mujer.PNG',
+    },
+    {
+      name: 'Mantón Oliva',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Oliva.PNG',
+    },
+    {
+      name: 'Mantón Oliva - Edición Limitada',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Oliva.PNG',
+    },
+    {
+      name: 'Mantón Rosa de Triana',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Rosa%20de%20Triana_.PNG',
+    },
+    {
+      name: 'Mantón Valentina',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Valentina_.PNG',
+    },
+    {
+      name: 'Mantón Valeria',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Valeria_.PNG',
+    },
+  ],
+  collares: [
+    {
+      name: 'Collar Alba',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Alba.PNG',
+    },
+    {
+      name: 'Collar Cruz Corrallium',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Cruz%20Corrallium.PNG',
+    },
+    {
+      name: 'Collar Esfera Azul Eléctrico 42',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Azul%20Electrico%2042.jpg',
+    },
+    {
+      name: 'Collar Esfera Burdeos 42',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Burdeos%2042.jpg',
+    },
+    {
+      name: 'Collar Esfera Coral-Teja 42',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Coral-Teja%2042.PNG',
+    },
+    {
+      name: 'Collar Esfera Coral-Teja 58',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Coral-Teja%2058.PNG',
+    },
+    {
+      name: 'Collar Esfera Crudo 42',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Crudo%2042.jpg',
+    },
+    {
+      name: 'Collar Esfera Crudo 58',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20crudo%2058.jpg',
+    },
+    {
+      name: 'Collar Esfera Rojo 58',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20rojo%2058.jpg',
+    },
+    {
+      name: 'Collar Esfera Salmón 42',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Salmon%2042.jpg',
+    },
+    {
+      name: 'Collar Esfera Salmón 58',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Salmon%2058.jpg',
+    },
+    {
+      name: 'Collar Esfera Turquesa 42',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20turquesa%2042.jpg',
+    },
+    {
+      name: 'Collar Esfera Turquesa 58',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20turquesa%2058.jpg',
+    },
+    {
+      name: 'Collar Esfera Verde Botella 42',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Verde%20Botella%2042.jpg',
+    },
+    {
+      name: 'Collar Esfera Verde Botella 58',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Verde%20Botella%2058.jpg',
+    },
+  ],
+  bolsos: [
+    {
+      name: 'Bolso Agua Borde',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Agua%20Borde.PNG',
+    },
+    {
+      name: 'Bolso Carmesí Borde',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Carmesi%20Borde.PNG',
+    },
+    {
+      name: 'Bolso Clavel Noir',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Clavel%20Noir.PNG',
+    },
+    {
+      name: 'Bolso Flor de Noche',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Flor%20de%20Noche.PNG',
+    },
+    {
+      name: 'Bolso Ivory Jardin',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Ivory%20Jardin.PNG',
+    },
+    {
+      name: 'Bolso Noir Imperial',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Noir%20Imperial.PNG',
+    },
+    {
+      name: 'Bolso Oriental Noir',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Oriental%20Noir.PNG',
+    },
+  ],
+  peinecillos: [
+    {
+      name: 'Peinecillos Azul Vintage',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Azul%20Vintage.PNG',
+    },
+    {
+      name: 'Peinecillos Coral y Crudo',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Coral%20y%20Crudo.PNG',
+    },
+    {
+      name: 'Peinecillos Ébano',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Ebano.PNG',
+    },
+    {
+      name: 'Peinecillos Noir Filigrana',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Noir%20Filigrana.PNG',
+    },
+    {
+      name: 'Peinecillos Rosa Nude',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Rosa%20Nude.PNG',
+    },
+    {
+      name: 'Peinecillos Rosa Nude y Crudo',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Rosa%20Nude%20y%20Crudo.PNG',
+    },
+    {
+      name: 'Peinecillos Verde Agua',
+      image_url:
+        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Verde%20Agua.PNG',
+    },
+  ],
+}
+
 export async function POST(req: Request) {
   const token = req.headers.get('x-sync-token') || ''
   const requiredToken = process.env.SYNC_TOKEN || 'MareboReverse2026'
@@ -476,7 +742,8 @@ export async function POST(req: Request) {
   const dryRun = url.searchParams.get('dryRun') !== '0'
 
   const updated: Array<{
-    collection: string
+    scope_type: 'collection' | 'category'
+    scope_value: string
     supabase_id: string
     before_name: string
     after_name: string
@@ -484,11 +751,17 @@ export async function POST(req: Request) {
     after_image_url: string
     score: number
   }> = []
-  const errors: Array<{ collection: string; target_name: string; reason: string; candidates?: any[] }> = []
+  const errors: Array<{
+    scope_type: 'collection' | 'category'
+    scope_value: string
+    target_name: string
+    reason: string
+    candidates?: any[]
+  }> = []
 
   const { data: allData, error: allError } = await supabase
     .from('products')
-    .select('id,name,image_url,collection')
+    .select('id,name,image_url,collection,category')
     .order('name', { ascending: true })
     .limit(5000)
 
@@ -503,12 +776,19 @@ export async function POST(req: Request) {
     name: String(r.name ?? ''),
     image_url: r.image_url ?? null,
     collection: r.collection ?? null,
+    category: r.category ?? null,
   }))
 
   const usedGlobal = new Set<string>()
 
-  for (const [collection, items] of Object.entries(COLLECTION_UPDATES)) {
-    for (const item of items) {
+  const groups: Array<{ scope_type: 'collection' | 'category'; scope_value: string; items: UpdateItem[] }> = [
+    ...Object.entries(COLLECTION_UPDATES).map(([scope_value, items]) => ({ scope_type: 'collection' as const, scope_value, items })),
+    ...Object.entries(CATEGORY_UPDATES).map(([scope_value, items]) => ({ scope_type: 'category' as const, scope_value, items })),
+  ]
+
+  for (const group of groups) {
+    const scopeValue = group.scope_value
+    for (const item of group.items) {
       const kind = tokens(item.name)[0] ?? ''
       const kindAllow = new Set<string>(
         kind === 'pendientes' || kind === 'pendiente'
@@ -517,9 +797,15 @@ export async function POST(req: Request) {
             ? ['pulseras', 'pulsera']
             : kind === 'collar' || kind === 'collares'
               ? ['collar', 'collares']
-              : kind
-                ? [kind]
-                : [],
+              : kind === 'manton' || kind === 'mantones'
+                ? ['manton', 'mantones']
+                : kind === 'bolso' || kind === 'bolsos'
+                  ? ['bolso', 'bolsos']
+                  : kind === 'peinecillo' || kind === 'peinecillos'
+                    ? ['peinecillo', 'peinecillos']
+                    : kind
+                      ? [kind]
+                      : [],
       )
 
       const scored = allRows
@@ -535,8 +821,11 @@ export async function POST(req: Request) {
             if (!ok) return { row: r, score: 0 }
           }
 
-          const currentCollection = normalizeSoft(r.collection ?? '')
-          const bonus = currentCollection === collection ? 0.12 : !currentCollection ? 0.06 : -0.12
+          const currentScope =
+            group.scope_type === 'collection'
+              ? normalizeSoft((r as any).collection ?? '')
+              : normalizeSoft((r as any).category ?? '')
+          const bonus = currentScope === scopeValue ? 0.12 : !currentScope ? 0.06 : -0.12
           const score = Math.max(0, Math.min(1, base + bonus))
           return { row: r, score }
         })
@@ -548,7 +837,8 @@ export async function POST(req: Request) {
 
       if (!best || best.score < 0.86 || (second && best.score - second.score < 0.08)) {
         errors.push({
-          collection,
+          scope_type: group.scope_type,
+          scope_value: scopeValue,
           target_name: item.name,
           reason: !best
             ? 'No candidates'
@@ -563,18 +853,22 @@ export async function POST(req: Request) {
       usedGlobal.add(best.row.id)
 
       if (!dryRun) {
+        const patch: any = { name: item.name, image_url: item.image_url }
+        if (group.scope_type === 'collection') patch.collection = scopeValue
+        else patch.category = scopeValue
         const { error: updateError } = await supabase
           .from('products')
-          .update({ name: item.name, image_url: item.image_url, collection })
+          .update(patch)
           .eq('id', best.row.id)
         if (updateError) {
-          errors.push({ collection, target_name: item.name, reason: updateError.message })
+          errors.push({ scope_type: group.scope_type, scope_value: scopeValue, target_name: item.name, reason: updateError.message })
           continue
         }
       }
 
       updated.push({
-        collection,
+        scope_type: group.scope_type,
+        scope_value: scopeValue,
         supabase_id: best.row.id,
         before_name: best.row.name,
         after_name: item.name,
