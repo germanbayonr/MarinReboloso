@@ -486,42 +486,73 @@ export async function POST(req: Request) {
   }> = []
   const errors: Array<{ collection: string; target_name: string; reason: string; candidates?: any[] }> = []
 
+  const { data: allData, error: allError } = await supabase
+    .from('products')
+    .select('id,name,image_url,collection')
+    .order('name', { ascending: true })
+    .limit(5000)
+
+  if (allError) {
+    return NextResponse.json({ success: false, error: allError.message }, { status: 500 })
+  }
+
+  const allRows: Array<{ id: string; name: string; image_url: string | null; collection: string | null }> = (
+    allData ?? []
+  ).map((r: any) => ({
+    id: String(r.id),
+    name: String(r.name ?? ''),
+    image_url: r.image_url ?? null,
+    collection: r.collection ?? null,
+  }))
+
+  const usedGlobal = new Set<string>()
+
   for (const [collection, items] of Object.entries(COLLECTION_UPDATES)) {
-    const { data, error } = await supabase
-      .from('products')
-      .select('id,name,image_url,collection')
-      .ilike('collection', collection)
-      .limit(5000)
-
-    if (error) {
-      errors.push({ collection, target_name: '*', reason: error.message })
-      continue
-    }
-
-    const rows: Array<{ id: string; name: string; image_url: string | null }> = (data ?? []).map((r: any) => ({
-      id: String(r.id),
-      name: String(r.name ?? ''),
-      image_url: r.image_url ?? null,
-    }))
-
-    const used = new Set<string>()
-
     for (const item of items) {
-      const scored = rows
-        .filter((r) => !used.has(r.id))
-        .map((r) => ({ row: r, score: scorePair(item.name, r.name) }))
+      const kind = tokens(item.name)[0] ?? ''
+      const kindAllow = new Set<string>(
+        kind === 'pendientes' || kind === 'pendiente'
+          ? ['pendientes', 'pendiente']
+          : kind === 'pulseras' || kind === 'pulsera'
+            ? ['pulseras', 'pulsera']
+            : kind === 'collar' || kind === 'collares'
+              ? ['collar', 'collares']
+              : kind
+                ? [kind]
+                : [],
+      )
+
+      const scored = allRows
+        .filter((r) => !usedGlobal.has(r.id))
+        .map((r) => {
+          const base = scorePair(item.name, r.name)
+          if (base <= 0) return { row: r, score: 0 }
+
+          if (kindAllow.size > 0) {
+            const rt = new Set(tokens(r.name))
+            let ok = false
+            for (const k of kindAllow) if (rt.has(k)) ok = true
+            if (!ok) return { row: r, score: 0 }
+          }
+
+          const currentCollection = normalizeSoft(r.collection ?? '')
+          const bonus = currentCollection === collection ? 0.12 : !currentCollection ? 0.06 : -0.12
+          const score = Math.max(0, Math.min(1, base + bonus))
+          return { row: r, score }
+        })
+        .filter((s) => s.score > 0)
         .sort((a, b) => b.score - a.score)
 
       const best = scored[0]
       const second = scored[1]
 
-      if (!best || best.score < 0.82 || (second && best.score - second.score < 0.08)) {
+      if (!best || best.score < 0.86 || (second && best.score - second.score < 0.08)) {
         errors.push({
           collection,
           target_name: item.name,
           reason: !best
             ? 'No candidates'
-            : best.score < 0.82
+            : best.score < 0.86
               ? 'Low confidence match'
               : 'Ambiguous match',
           candidates: scored.slice(0, 5).map((c) => ({ id: c.row.id, name: c.row.name, score: c.score })),
@@ -529,7 +560,7 @@ export async function POST(req: Request) {
         continue
       }
 
-      used.add(best.row.id)
+      usedGlobal.add(best.row.id)
 
       if (!dryRun) {
         const { error: updateError } = await supabase
@@ -563,4 +594,3 @@ export async function POST(req: Request) {
     errors,
   })
 }
-
