@@ -32,9 +32,9 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .eq('collection', normalizedSlug)
+    .ilike('collection', normalizedSlug)
     .order('name', { ascending: true })
-    .limit(2000)
+    .limit(5000)
 
   const products: ProductGridProduct[] = error
     ? []

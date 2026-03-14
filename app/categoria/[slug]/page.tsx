@@ -29,7 +29,7 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
     .ilike('category', slug)
     .order('is_new_arrival', { ascending: false })
     .order('name', { ascending: true })
-    .limit(2000)
+    .limit(5000)
 
   const products: ProductGridProduct[] = error
     ? []

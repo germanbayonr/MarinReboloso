@@ -18,7 +18,7 @@ export default async function CatalogoPage() {
     .select('*')
     .order('is_new_arrival', { ascending: false })
     .order('name', { ascending: true })
-    .limit(2000)
+    .limit(5000)
 
   const products: ProductGridProduct[] = error
     ? []

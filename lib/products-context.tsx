@@ -20,6 +20,7 @@ interface ProductsContextType {
   products: Product[]
   hydrated: boolean
   refresh: () => Promise<void>
+  getByName: (name: string) => Product | null
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>
   updateProduct: (id: string, updates: Partial<Omit<Product, 'id'>>) => Promise<void>
   deleteProduct: (id: string) => Promise<void>
@@ -30,6 +31,15 @@ const ProductsContext = createContext<ProductsContextType | null>(null)
 function toNumber(value: unknown) {
   const n = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(n) ? n : 0
+}
+
+function normalizeName(value: unknown) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function mapRow(row: any): Product {
@@ -51,12 +61,36 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([])
   const [hydrated, setHydrated] = useState(false)
 
+  const productsByName = useMemo(() => {
+    const map = new Map<string, Product>()
+    const duplicates = new Set<string>()
+
+    for (const p of products) {
+      const key = normalizeName(p.name)
+      if (!key) continue
+      if (map.has(key)) duplicates.add(key)
+      else map.set(key, p)
+    }
+
+    for (const key of duplicates) map.delete(key)
+    return map
+  }, [products])
+
+  const getByName = useCallback(
+    (name: string) => {
+      const key = normalizeName(name)
+      if (!key) return null
+      return productsByName.get(key) ?? null
+    },
+    [productsByName],
+  )
+
   const refresh = useCallback(async () => {
     const { data, error } = await supabase
       .from('products')
       .select('id,name,description,price,image_url,category,collection,is_new_arrival,stripe_product_id,stripe_price_id')
       .order('name', { ascending: true })
-      .limit(1000)
+      .limit(5000)
 
     if (error) {
       setProducts([])
@@ -126,8 +160,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ products, hydrated, refresh, addProduct, updateProduct, deleteProduct }),
-    [products, hydrated, refresh, addProduct, updateProduct, deleteProduct],
+    () => ({ products, hydrated, refresh, getByName, addProduct, updateProduct, deleteProduct }),
+    [products, hydrated, refresh, getByName, addProduct, updateProduct, deleteProduct],
   )
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>

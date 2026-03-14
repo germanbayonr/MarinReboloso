@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { notFound } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import ProductListingClient from '@/components/ProductListingClient'
+import { redirect } from 'next/navigation'
 
 // Define categorías válidas
 const validCategories = [
@@ -10,6 +12,8 @@ const validCategories = [
   'peinecillos',
   'broches',
   'pulseras',
+  'collares',
+  'bolsos',
 ]
 
 type PageProps = {
@@ -54,34 +58,5 @@ export default async function ProductCategoryPage({ params }: PageProps) {
     notFound()
   }
 
-  // Títulos de categorías
-  const categoryTitles: Record<string, string> = {
-    pendientes: 'Pendientes',
-    mantones: 'Mantones',
-    trajes: 'Trajes',
-    accesorios: 'Accesorios',
-    cinturones: 'Cinturones',
-    chokers: 'Chokers',
-    peinecillos: 'Peinecillos',
-    broches: 'Broches',
-    pulseras: 'Pulseras',
-  }
-
-  return (
-    <>
-      <Navbar />
-      <main className="min-h-screen" suppressHydrationWarning>
-        <ProductListingClient 
-          category={categoria}
-        />
-      </main>
-    </>
-  )
-}
-
-// Generate static params for all categories
-export function generateStaticParams() {
-  return validCategories.map((categoria) => ({
-    categoria,
-  }))
+  redirect(`/categoria/${categoria}`)
 }

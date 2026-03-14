@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Heart, ArrowLeft } from 'lucide-react'
 import { useCart } from '@/lib/cart-context'
 import { useWishlist } from '@/lib/wishlist-context'
+import { useProducts } from '@/lib/products-context'
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -32,6 +33,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const router = useRouter()
   const { addToCart } = useCart()
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
+  const { getByName } = useProducts()
 
   const [isAnimating, setIsAnimating] = useState(false)
   const [animationCoords, setAnimationCoords] = useState({ x: 0, y: 0 })
@@ -39,8 +41,9 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const [quantity, setQuantity] = useState(1)
   const [selectedVariant, setSelectedVariant] = useState('Único')
 
-  const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
-  const imageUrl = product?.image_url ?? ''
+  const matched = useMemo(() => (product ? getByName(product.name) : null), [getByName, product])
+  const price = useMemo(() => (matched ? toNumber(matched.price) : product ? toNumber(product.price) : 0), [matched, product])
+  const imageUrl = (matched?.image_url ?? product?.image_url) ?? ''
   const productHref = product ? `/producto/${product.id}` : ''
 
   if (!product) {

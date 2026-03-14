@@ -39,7 +39,7 @@ export default function ProductListingClient({ category }: { category: string })
           .select('id,name,price,image_url,category')
           .eq('category', category)
           .order('name', { ascending: true })
-          .limit(1000)
+          .limit(5000)
 
         if (cancelled) return
         if (error) {
@@ -164,4 +164,3 @@ export default function ProductListingClient({ category }: { category: string })
     </section>
   )
 }
-
