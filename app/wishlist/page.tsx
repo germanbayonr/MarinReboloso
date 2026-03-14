@@ -8,10 +8,12 @@ import { useCart } from '@/lib/cart-context'
 import { useWishlist } from '@/lib/wishlist-context'
 import { Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 export default function WishlistPage() {
   const { items, removeFromWishlist } = useWishlist()
   const { addToCart } = useCart()
+  const formatPrice = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(2))
 
   return (
     <main className="min-h-screen bg-background" suppressHydrationWarning>
@@ -75,21 +77,32 @@ export default function WishlistPage() {
                   <Link href={item.href} className="block" suppressHydrationWarning>
                     <div className="space-y-1">
                       <h3 className="font-serif text-lg tracking-tight">{item.name}</h3>
-                      <p className="text-sm text-muted-foreground tracking-wide">{item.price}€</p>
+                      <p className="text-sm text-muted-foreground tracking-wide">
+                        {typeof item.price === 'number' ? formatPrice(item.price) : String(item.price)}€
+                      </p>
                     </div>
                   </Link>
                 </div>
 
                 <button
-                  onClick={() => {
-                    // TODO: Handle variants
+                  onClick={async () => {
+                    const { data, error } = await supabase
+                      .from('products')
+                      .select('id,name,price,image_url,stripe_price_id')
+                      .eq('id', item.id)
+                      .maybeSingle()
+                    if (error || !data?.id) return
+
+                    const price = typeof (data as any).price === 'number' ? (data as any).price : Number((data as any).price)
+
                     addToCart({
-                      id: item.id,
-                      name: item.name,
-                      price: item.price,
-                      image: item.image,
+                      id: String((data as any).id),
+                      name: String((data as any).name ?? item.name),
+                      price: Number.isFinite(price) ? price : (typeof item.price === 'number' ? item.price : Number(item.price)),
+                      image: String((data as any).image_url ?? item.image),
                       quantity: 1,
                       variant: 'Único',
+                      stripe_price_id: (data as any).stripe_price_id ? String((data as any).stripe_price_id) : null,
                     })
                   }}
                   className="w-full border border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-colors py-3 text-sm tracking-widest uppercase"

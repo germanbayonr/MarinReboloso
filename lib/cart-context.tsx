@@ -121,7 +121,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
           const nextPrice = Number.isFinite(next.price) ? next.price : item.price
           const nextName = next.name ? next.name : item.name
-          const nextStripePriceId = item.stripe_price_id ?? next.stripe_price_id ?? null
+          const nextStripePriceId = next.stripe_price_id ?? item.stripe_price_id ?? null
 
           if (nextPrice === item.price && nextName === item.name && nextStripePriceId === item.stripe_price_id) {
             return item

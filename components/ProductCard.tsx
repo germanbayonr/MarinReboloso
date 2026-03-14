@@ -16,6 +16,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const imageUrl = product.image_url ?? ''
   const price = typeof product.price === 'number' ? product.price : Number(product.price)
+  const formattedPrice = Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'
 
   return (
     <Link href={`/producto/${product.id}`} className="group block" suppressHydrationWarning>
@@ -36,7 +37,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </h3>
         <p className="text-sm text-muted-foreground tracking-wide">
-          {Number.isFinite(price) ? price.toFixed(2) : '—'}€
+          {formattedPrice}€
         </p>
       </div>
     </Link>

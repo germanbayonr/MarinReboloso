@@ -40,6 +40,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const [selectedVariant, setSelectedVariant] = useState('Único')
 
   const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
+  const formattedPrice = useMemo(() => (Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'), [price])
   const imageUrl = product?.image_url ?? ''
   const productHref = product ? `/producto/${product.id}` : ''
 
@@ -136,7 +137,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
                 <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl tracking-wide leading-tight">
                   {product.name}
                 </h1>
-                <p className="text-xl font-sans tracking-wider">{price.toFixed(2)}€</p>
+                <p className="text-xl font-sans tracking-wider">{formattedPrice}€</p>
                 <p className="text-sm md:text-base leading-relaxed text-muted-foreground tracking-wide">
                   {product.description ||
                     'Esta pieza ha sido diseñada bajo los más altos estándares de artesanía. Un equilibrio perfecto entre tradición y modernidad que eleva cualquier conjunto.'}
