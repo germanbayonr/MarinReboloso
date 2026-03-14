@@ -1,9 +1,10 @@
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductGrid, { type ProductGridProduct } from '@/components/ProductGrid'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-
-export const revalidate = 3600
 
 function toNumber(value: unknown) {
   const n = typeof value === 'number' ? value : Number(value)
