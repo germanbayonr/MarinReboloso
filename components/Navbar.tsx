@@ -13,9 +13,18 @@ const NAV_COLLECTIONS = [
   { label: 'Jaipur', href: '/coleccion/jaipur' },
 ]
 
+const NAV_CATEGORIES = [
+  { label: 'Pendientes', href: '/categoria/pendientes' },
+  { label: 'Collares', href: '/categoria/collares' },
+  { label: 'Mantones', href: '/categoria/mantones' },
+  { label: 'Peinecillos', href: '/categoria/peinecillos' },
+  { label: 'Bolsos', href: '/categoria/bolsos' },
+]
+
 export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collectionsOpen, setCollectionsOpen] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -88,6 +97,38 @@ export default function Navbar() {
                         nueva
                       </span>
                     )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* CATEGORÍAS accordion */}
+          <div>
+            <button
+              onClick={() => setCategoriesOpen((v) => !v)}
+              className="flex w-full items-center justify-between py-3 font-serif text-base tracking-widest uppercase hover:text-accent transition-colors"
+              suppressHydrationWarning
+            >
+              Categorías
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-200 ${categoriesOpen ? 'rotate-180' : ''}`}
+                strokeWidth={1.5}
+              />
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-300 ${categoriesOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}
+            >
+              <div className="pl-4 pb-2 space-y-0.5">
+                {NAV_CATEGORIES.map((cat) => (
+                  <Link
+                    key={cat.href}
+                    href={cat.href}
+                    onClick={() => setDrawerOpen(false)}
+                    className="flex items-center gap-2 py-2 text-sm italic text-muted-foreground hover:text-foreground transition-colors"
+                    suppressHydrationWarning
+                  >
+                    {cat.label}
                   </Link>
                 ))}
               </div>
