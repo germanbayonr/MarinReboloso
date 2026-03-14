@@ -126,7 +126,14 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           <div className="lg:col-span-7 space-y-4">
             <div ref={imageRef} className="relative aspect-[4/5] bg-stone-100 overflow-hidden">
               {imageUrl ? (
-                <Image src={imageUrl} alt={product.name} fill priority className="object-cover" />
+                <Image
+                  src={imageUrl}
+                  alt={product.name}
+                  fill
+                  priority={true}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                />
               ) : null}
             </div>
           </div>

@@ -3,7 +3,7 @@ export const revalidate = 0
 
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import ProductGrid, { type ProductGridProduct } from '@/components/ProductGrid'
+import ProductCatalogClient from '@/components/ProductCatalogClient'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 function toNumber(value: unknown) {
@@ -31,7 +31,17 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
     .order('name', { ascending: true })
     .limit(5000)
 
-  const products: ProductGridProduct[] = error
+  const products: Array<{
+    id: string
+    name: string
+    price: number
+    image_url: string | null
+    category: string | null
+    collection: string | null
+    is_new_arrival: boolean
+    stock?: number | null
+    in_stock?: boolean | null
+  }> = error
     ? []
     : (data ?? []).map((row: any) => ({
         id: String(row.id),
@@ -40,6 +50,9 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
         image_url: row.image_url ?? null,
         category: row.category ?? null,
         collection: row.collection ?? null,
+        is_new_arrival: Boolean(row.is_new_arrival),
+        stock: typeof row.stock === 'number' ? row.stock : null,
+        in_stock: typeof row.in_stock === 'boolean' ? row.in_stock : null,
       }))
 
   const title = titleize(String(slug ?? ''))
@@ -48,22 +61,7 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
     <main className="min-h-screen bg-background" suppressHydrationWarning>
       <Navbar />
 
-      <div className="pt-28 lg:pt-32 pb-16 px-4 md:px-10 max-w-7xl mx-auto">
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-3xl md:text-4xl tracking-tight">{title}</h1>
-            <p className="font-sans text-sm text-muted-foreground mt-1">{products.length} piezas</p>
-          </div>
-        </div>
-
-        {products.length > 0 ? (
-          <ProductGrid products={products} />
-        ) : (
-          <div className="py-20 text-center">
-            <p className="font-serif text-xl text-muted-foreground">No hay productos en esta categoría</p>
-          </div>
-        )}
-      </div>
+      <ProductCatalogClient title={title} products={products} />
 
       <Footer />
     </main>
