@@ -30,6 +30,15 @@ function normalizeName(value: string) {
   return value.trim().toLowerCase()
 }
 
+function normalizeSoft(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .trim()
+}
+
 function isValidImageUrl(value: unknown) {
   if (typeof value !== 'string') return false
   const v = value.trim()
@@ -66,6 +75,27 @@ async function resolveDefaultPrice(stripe: Stripe, product: Stripe.Product) {
     return price
   }
   return dp as Stripe.Price
+}
+
+async function resolvePriceWithFallback(stripe: Stripe, product: Stripe.Product) {
+  const defaultPrice = await resolveDefaultPrice(stripe, product)
+  if (defaultPrice?.id) {
+    return { price: defaultPrice, usedFallback: false }
+  }
+
+  const list = await stripe.prices.list({
+    product: product.id,
+    active: true,
+    limit: 1,
+  })
+  const fallback = list.data?.[0] ?? null
+  if (!fallback?.id) return { price: null, usedFallback: false }
+
+  try {
+    await stripe.products.update(product.id, { default_price: fallback.id })
+  } catch {}
+
+  return { price: fallback, usedFallback: true }
 }
 
 async function listAllSupabaseProducts(supabase: any) {
@@ -115,12 +145,22 @@ export async function POST(req: Request) {
 
   const byName = new Map<string, any>()
   const duplicates = new Set<string>()
+  const supabaseCandidates: Array<{ id: string; name: string; soft: string; raw: any }> = []
 
   for (const p of supabaseProducts) {
-    const name = normalizeName(String(p?.name ?? ''))
-    if (!name) continue
-    if (byName.has(name)) duplicates.add(name)
-    else byName.set(name, p)
+    const rawName = String(p?.name ?? '').trim()
+    const exact = normalizeName(rawName)
+    if (!exact) continue
+    if (byName.has(exact)) {
+      duplicates.add(exact)
+      continue
+    }
+    byName.set(exact, p)
+    const id = p?.id ? String(p.id) : ''
+    const soft = normalizeSoft(rawName)
+    if (id && soft && soft.length >= 8) {
+      supabaseCandidates.push({ id, name: rawName, soft, raw: p })
+    }
   }
 
   const updated_successfully: Array<{
@@ -133,7 +173,15 @@ export async function POST(req: Request) {
     updatedStripeImages: boolean
   }> = []
   const not_found_in_supabase: Array<{ stripe_product_id: string; name: string }> = []
+  const soft_matched_and_renamed: Array<{
+    stripe_product_id: string
+    supabase_id: string
+    stripe_name_before: string
+    stripe_name_after: string
+  }> = []
   const errors: Array<{ stripe_product_id: string; name: string; reason: string }> = []
+
+  const matchedSupabaseIds = new Set<string>()
 
   let scannedStripe = 0
   let matchedByName = 0
@@ -142,11 +190,15 @@ export async function POST(req: Request) {
   let skippedDuplicateName = 0
   let skippedNoDefaultPrice = 0
   let skippedNonEur = 0
+  let usedFallbackDefaultPrice = 0
+  let softMatchedByName = 0
+  let renamedStripeCount = 0
 
   for (const sp of stripeProducts) {
     scannedStripe += 1
     const stripeName = String(sp.name ?? '').trim()
     const key = normalizeName(stripeName)
+    const stripeSoft = normalizeSoft(stripeName)
 
     if (!key) {
       errors.push({ stripe_product_id: sp.id, name: stripeName, reason: 'Stripe product has empty name' })
@@ -159,21 +211,60 @@ export async function POST(req: Request) {
       continue
     }
 
-    const db = byName.get(key)
+    let db = byName.get(key)
+    let matchType: 'exact' | 'soft' = 'exact'
+    let softMatched = false
+
     if (!db?.id) {
+      if (!stripeSoft || stripeSoft.length < 8) {
+        not_found_in_supabase.push({ stripe_product_id: sp.id, name: stripeName })
+        continue
+      }
+
+      const matches = supabaseCandidates.filter((c) => {
+        if (matchedSupabaseIds.has(c.id)) return false
+        const a = stripeSoft
+        const b = c.soft
+        return a.includes(b) || b.includes(a)
+      })
+
+      if (matches.length === 1) {
+        const candidate = matches[0]
+        db = candidate.raw
+        matchType = 'soft'
+        softMatched = true
+        softMatchedByName += 1
+      } else if (matches.length > 1) {
+        errors.push({ stripe_product_id: sp.id, name: stripeName, reason: 'Ambiguous soft match' })
+        continue
+      } else {
+        not_found_in_supabase.push({ stripe_product_id: sp.id, name: stripeName })
+        continue
+      }
+    }
+
+    const supabaseId = db?.id ? String(db.id) : ''
+    if (!supabaseId) {
       not_found_in_supabase.push({ stripe_product_id: sp.id, name: stripeName })
       continue
     }
+    if (matchedSupabaseIds.has(supabaseId)) {
+      errors.push({ stripe_product_id: sp.id, name: stripeName, reason: 'Supabase product already matched' })
+      continue
+    }
 
+    matchedSupabaseIds.add(supabaseId)
     matchedByName += 1
 
     try {
-      const price = await resolveDefaultPrice(stripe, sp)
+      const resolved = await resolvePriceWithFallback(stripe, sp)
+      const price = resolved.price
       if (!price?.id) {
         skippedNoDefaultPrice += 1
         errors.push({ stripe_product_id: sp.id, name: stripeName, reason: 'Missing default_price' })
         continue
       }
+      if (resolved.usedFallback) usedFallbackDefaultPrice += 1
 
       const currency = price.currency ? String(price.currency).toLowerCase() : ''
       if (currency && currency !== 'eur') {
@@ -200,7 +291,7 @@ export async function POST(req: Request) {
           stripe_product_id: sp.id,
           stripe_price_id: price.id,
         })
-        .eq('id', String(db.id))
+        .eq('id', supabaseId)
 
       if (updateError) {
         errors.push({ stripe_product_id: sp.id, name: stripeName, reason: updateError.message })
@@ -210,21 +301,42 @@ export async function POST(req: Request) {
       updatedSupabaseCount += 1
 
       let updatedStripeImages = false
-      if (isValidImageUrl(db.image_url)) {
+      let renamedStripe = false
+
+      const stripeUpdate: Stripe.ProductUpdateParams = {}
+      if (softMatched) stripeUpdate.name = String(db.name ?? '').trim()
+      if (isValidImageUrl(db.image_url)) stripeUpdate.images = [String(db.image_url).trim()]
+
+      if (Object.keys(stripeUpdate).length > 0) {
         try {
-          await stripe.products.update(sp.id, { images: [String(db.image_url).trim()] })
-          updatedStripeImages = true
-          updatedStripeCount += 1
+          await stripe.products.update(sp.id, stripeUpdate)
+          if (stripeUpdate.images) {
+            updatedStripeImages = true
+            updatedStripeCount += 1
+          }
+          if (stripeUpdate.name && stripeUpdate.name !== stripeName) {
+            renamedStripe = true
+            renamedStripeCount += 1
+          }
         } catch (e) {
           const message = e instanceof Error ? e.message : 'Stripe update failed'
           errors.push({ stripe_product_id: sp.id, name: stripeName, reason: message })
         }
       }
 
+      if (softMatched && renamedStripe) {
+        soft_matched_and_renamed.push({
+          stripe_product_id: sp.id,
+          supabase_id: supabaseId,
+          stripe_name_before: stripeName,
+          stripe_name_after: String(db.name ?? '').trim(),
+        })
+      }
+
       updated_successfully.push({
         stripe_product_id: sp.id,
         stripe_price_id: price.id,
-        supabase_id: String(db.id),
+        supabase_id: supabaseId,
         name: stripeName,
         price: nextPrice,
         updatedSupabase: true,
@@ -248,8 +360,12 @@ export async function POST(req: Request) {
       skippedDuplicateName,
       skippedNoDefaultPrice,
       skippedNonEur,
+      usedFallbackDefaultPrice,
+      softMatchedByName,
+      renamedStripeCount,
     },
     updated_successfully,
+    soft_matched_and_renamed,
     not_found_in_supabase,
     errors,
   })

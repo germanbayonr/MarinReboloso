@@ -73,7 +73,7 @@ export default function HeroSection() {
               Colección Descará
             </h1>
             <div
-              className="group/btn relative inline-flex items-center justify-center h-11 px-7 sm:px-9 md:h-12 md:px-12 text-[10px] sm:text-xs tracking-[0.35em] uppercase border border-white/80 overflow-hidden transition-all duration-300"
+              className="group/btn relative inline-flex items-center justify-center h-12 px-8 sm:px-10 md:h-14 md:px-14 text-[11px] sm:text-xs tracking-[0.35em] uppercase border border-white/80 overflow-hidden transition-all duration-300"
             >
               <span className="relative z-10 transition-colors duration-300 group-hover/btn:text-gray-900">
                 VER COLECCIÓN

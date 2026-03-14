@@ -3,6 +3,8 @@ import Footer from '@/components/Footer'
 import ProductGrid, { type ProductGridProduct } from '@/components/ProductGrid'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
+export const revalidate = 3600
+
 function toNumber(value: unknown) {
   const n = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(n) ? n : 0
