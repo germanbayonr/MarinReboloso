@@ -4,17 +4,18 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
-import { useProducts } from '@/lib/products-context'
+import { supabase } from '@/lib/supabase'
 
 export default function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { products } = useProducts()
   const [searchTerm, setSearchTerm] = useState('')
+  const [results, setResults] = useState<Array<{ id: string; name: string; price: number | string; image_url: string | null }>>([])
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (!open) return
 
     setSearchTerm('')
+    setResults([])
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
@@ -31,13 +32,48 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
     }
   }, [open, onClose])
 
-  const results = useMemo(() => {
+  const term = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
-    if (!term) return []
-    return products
-      .filter((p) => p.name.toLowerCase().includes(term))
-      .slice(0, 5)
-  }, [products, searchTerm])
+    return term
+  }, [searchTerm])
+
+  useEffect(() => {
+    if (!open) return
+    if (!term) {
+      setResults([])
+      return
+    }
+
+    let cancelled = false
+    const t = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,name,price,image_url')
+        .ilike('name', `%${term}%`)
+        .order('name', { ascending: true })
+        .limit(5)
+
+      if (cancelled) return
+      if (error) {
+        setResults([])
+        return
+      }
+
+      setResults(
+        (data ?? []).map((p: any) => ({
+          id: String(p.id),
+          name: String(p.name ?? ''),
+          price: p.price,
+          image_url: p.image_url ?? null,
+        })),
+      )
+    }, 180)
+
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [open, term])
 
   if (!open) return null
 

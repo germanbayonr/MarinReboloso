@@ -2,8 +2,6 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useMemo } from 'react'
-import { useProducts } from '@/lib/products-context'
 
 interface ProductCardProps {
   product: {
@@ -16,11 +14,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { getByName } = useProducts()
   const imageUrl = product.image_url ?? ''
-  const matched = useMemo(() => getByName(product.name), [getByName, product.name])
-  const rawPrice = matched?.price ?? product.price
-  const price = typeof rawPrice === 'number' ? rawPrice : Number(rawPrice)
+  const price = typeof product.price === 'number' ? product.price : Number(product.price)
 
   return (
     <Link href={`/producto/${product.id}`} className="group block" suppressHydrationWarning>

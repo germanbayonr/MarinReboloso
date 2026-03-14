@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { CheckCircle, Image as ImageIcon, UploadCloud, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
-import { useProducts } from '@/lib/products-context'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
@@ -17,7 +16,6 @@ interface UploadedImage {
 }
 
 export default function NuevoProductoPage() {
-  const { refresh } = useProducts()
   const router = useRouter()
 
   const [form, setForm] = useState({
@@ -106,8 +104,6 @@ export default function NuevoProductoPage() {
       ])
 
       if (insertError) throw insertError
-
-      await refresh()
       setSaved(true)
       setTimeout(() => router.push('/admin/productos'), 1200)
     } catch (error: any) {
@@ -272,4 +268,3 @@ export default function NuevoProductoPage() {
     </div>
   )
 }
-

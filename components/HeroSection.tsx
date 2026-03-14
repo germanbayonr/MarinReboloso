@@ -39,7 +39,7 @@ export default function HeroSection() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
           <div className="absolute inset-0 flex flex-col items-start justify-end text-white p-10 md:p-12">
-            <p className="font-sans text-[10px] sm:text-xs tracking-[0.35em] uppercase mb-4 md:mb-6 opacity-85">
+            <p className="font-sans text-[11px] sm:text-sm tracking-[0.35em] uppercase mb-5 md:mb-7 opacity-85">
               NUEVA COLECCIÓN
             </p>
             <ArrowRight className="w-10 h-10 md:w-12 md:h-12 transition-transform duration-300 group-hover:translate-x-2" />

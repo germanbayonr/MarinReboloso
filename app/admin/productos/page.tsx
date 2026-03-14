@@ -1,15 +1,37 @@
 'use client'
 
 import Link from 'next/link'
-import { useProducts, Product } from '@/lib/products-context'
 import { PlusCircle, Pencil, Trash2, Search, X, CheckCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
-function EditModal({ product, onClose }: { product: Product; onClose: () => void }) {
-  const { updateProduct } = useProducts()
+type ProductRow = {
+  id: string
+  name: string
+  price: number
+  category: string | null
+  image_url: string | null
+  is_new_arrival: boolean
+  stripe_price_id: string | null
+}
+
+function toNumber(value: unknown) {
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+function EditModal({
+  product,
+  onClose,
+  onSaved,
+}: {
+  product: ProductRow
+  onClose: () => void
+  onSaved: (next: ProductRow) => void
+}) {
   const [form, setForm] = useState({
     name: product.name,
     price: String(product.price),
@@ -19,8 +41,26 @@ function EditModal({ product, onClose }: { product: Product; onClose: () => void
   })
   const [saved, setSaved] = useState(false)
 
-  const handleSave = () => {
-    updateProduct(product.id, { name: form.name, price: Number(form.price), category: form.category, image_url: form.image_url, is_new_arrival: form.is_new_arrival })
+  const handleSave = async () => {
+    const payload = {
+      name: form.name,
+      price: Number(form.price),
+      category: form.category,
+      image_url: form.image_url,
+      is_new_arrival: form.is_new_arrival,
+    }
+
+    const { data, error } = await supabase.from('products').update(payload).eq('id', product.id).select('id').maybeSingle()
+    if (error || !data?.id) return
+
+    onSaved({
+      ...product,
+      name: payload.name,
+      price: payload.price,
+      category: payload.category,
+      image_url: payload.image_url,
+      is_new_arrival: payload.is_new_arrival,
+    })
     setSaved(true)
     setTimeout(onClose, 900)
   }
@@ -127,19 +167,65 @@ function EditModal({ product, onClose }: { product: Product; onClose: () => void
 }
 
 export default function ProductosPage() {
-  const { products, deleteProduct } = useProducts()
   const [search, setSearch] = useState('')
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null)
+  const [products, setProducts] = useState<ProductRow[]>([])
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.category ?? '').toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,name,price,category,image_url,is_new_arrival,stripe_price_id')
+        .order('name', { ascending: true })
+        .limit(5000)
+
+      if (cancelled) return
+      if (error) {
+        setProducts([])
+        return
+      }
+
+      setProducts(
+        (data ?? []).map((p: any) => ({
+          id: String(p.id),
+          name: String(p.name ?? ''),
+          price: toNumber(p.price),
+          category: p.category ?? null,
+          image_url: p.image_url ?? null,
+          is_new_arrival: Boolean(p.is_new_arrival),
+          stripe_price_id: p.stripe_price_id ? String(p.stripe_price_id) : null,
+        })),
+      )
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim()
+    if (!q) return products
+    return products.filter(
+      (p) => p.name.toLowerCase().includes(q) || (p.category ?? '').toLowerCase().includes(q),
+    )
+  }, [products, search])
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) return
+    setProducts((prev) => prev.filter((p) => p.id !== id))
+  }
 
   return (
     <div className="space-y-5">
       {editingProduct && (
-        <EditModal product={editingProduct} onClose={() => setEditingProduct(null)} />
+        <EditModal
+          product={editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSaved={(next) => setProducts((prev) => prev.map((p) => (p.id === next.id ? next : p)))}
+        />
       )}
 
       <div className="flex items-center justify-between">
@@ -220,7 +306,7 @@ export default function ProductosPage() {
                         <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
                       </button>
                       <button
-                        onClick={() => deleteProduct(product.id)}
+                        onClick={() => handleDelete(product.id)}
                         suppressHydrationWarning
                         className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
                         aria-label="Eliminar producto"

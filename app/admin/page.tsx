@@ -1,7 +1,8 @@
 'use client'
 
-import { useProducts } from '@/lib/products-context'
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Clock } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const MOCK_ORDERS = [
   { id: '#0041', customer: 'Elena García', product: 'Pendientes Pastora', amount: 80, status: 'entregado', date: '2025-02-20' },
@@ -18,8 +19,46 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 export default function AdminDashboardPage() {
-  const { products } = useProducts()
-  const syncedCount = products.filter((p) => !!p.stripe_price_id).length
+  const [products, setProducts] = useState<
+    Array<{
+      id: string
+      name: string
+      price: number | string
+      image_url: string | null
+      category: string | null
+      stripe_price_id: string | null
+    }>
+  >([])
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,name,price,image_url,category,stripe_price_id')
+        .order('name', { ascending: true })
+        .limit(5000)
+      if (cancelled) return
+      if (error) {
+        setProducts([])
+        return
+      }
+      setProducts((data ?? []).map((p: any) => ({
+        id: String(p.id),
+        name: String(p.name ?? ''),
+        price: p.price,
+        image_url: p.image_url ?? null,
+        category: p.category ?? null,
+        stripe_price_id: p.stripe_price_id ? String(p.stripe_price_id) : null,
+      })))
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const syncedCount = useMemo(() => products.filter((p) => !!p.stripe_price_id).length, [products])
 
   const STATS = [
     { label: 'Ingresos este mes', value: '1.240€', change: '+12%', icon: TrendingUp },

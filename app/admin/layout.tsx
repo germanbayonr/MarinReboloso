@@ -1,5 +1,4 @@
 import { ReactNode } from 'react'
-import { ProductsProvider } from '@/lib/products-context'
 import AdminLayoutClient from '@/components/admin/AdminLayoutClient'
 
 export const metadata = {
@@ -9,10 +8,6 @@ export const metadata = {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <ProductsProvider>
-      <AdminLayoutClient>
-        {children}
-      </AdminLayoutClient>
-    </ProductsProvider>
+    <AdminLayoutClient>{children}</AdminLayoutClient>
   )
 }

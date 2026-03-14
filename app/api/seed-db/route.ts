@@ -51,42 +51,6 @@ function extractFirstImageUrl(block: string) {
   return url && isSupabaseStorageUrl(url) ? url : null
 }
 
-function parseProductsContextRaw(src: string): SeedItem[] {
-  const segment = extractBetween(src, 'const INITIAL_RAW_PRODUCTS', 'const COLOR_SUFFIXES')
-  if (!segment) return []
-
-  const blocks = segment.match(/\{\s*id:\s*'[^']+'\s*,[\s\S]*?\}\s*,/g) ?? []
-  const out: SeedItem[] = []
-
-  for (const block of blocks) {
-    const status = extractField(block, /status:\s*'([^']+)'/i)
-    if (status && status !== 'published') continue
-
-    const name = extractField(block, /name:\s*'([^']+)'/i)
-    const priceRaw = extractField(block, /price:\s*(\d+(?:\.\d+)?)/i)
-    const category = extractField(block, /category:\s*'([^']+)'/i)
-    const createdAt = extractField(block, /createdAt:\s*'([^']+)'/i)
-    const image = extractFirstImageUrl(block)
-
-    if (!name || !priceRaw || !category || !image) continue
-    const price = Number(priceRaw)
-    if (!Number.isFinite(price)) continue
-
-    out.push({
-      name,
-      description: null,
-      price,
-      image_url: image,
-      category,
-      is_new_arrival: false,
-      source: 'lib/products-context.tsx',
-      createdAt: createdAt ?? null,
-    })
-  }
-
-  return out
-}
-
 function parseProductListingMock(src: string): SeedItem[] {
   const segment = extractBetween(src, 'const mockProducts', 'type Product')
   if (!segment) return []
@@ -159,12 +123,10 @@ function dedupe(items: SeedItem[]) {
 async function collectSeedData() {
   const repoRoot = process.cwd()
 
-  const [productsContextSrc, productListingSrc] = await Promise.all([
-    readFile(path.join(repoRoot, 'lib', 'products-context.tsx'), 'utf8'),
-    readFile(path.join(repoRoot, 'components', 'ProductListingClient.tsx'), 'utf8').catch(() => ''),
-  ])
-
-  const fromContext = parseProductsContextRaw(productsContextSrc)
+  const productListingSrc = await readFile(path.join(repoRoot, 'components', 'ProductListingClient.tsx'), 'utf8').catch(
+    () => '',
+  )
+  const fromContext: SeedItem[] = []
   const fromListing = productListingSrc ? parseProductListingMock(productListingSrc) : []
 
   const combined = computeNewArrivals([...fromContext, ...fromListing], 12)
