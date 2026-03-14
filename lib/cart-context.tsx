@@ -90,25 +90,48 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return
     const missingIds = Array.from(
-      new Set(cartItems.filter((i) => !i.stripe_price_id).map((i) => i.id)),
+      new Set(cartItems.map((i) => i.id)),
     )
     if (missingIds.length === 0) return
 
     let cancelled = false
     const run = async () => {
-      const { data, error } = await supabase.from('products').select('id,stripe_price_id').in('id', missingIds)
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,name,price,stripe_price_id')
+        .in('id', missingIds)
       if (cancelled) return
       if (error) return
 
-      const map = new Map((data ?? []).map((r: any) => [String(r.id), (r.stripe_price_id ? String(r.stripe_price_id) : null)]))
-      setCartItems((prev) =>
-        prev.map((item) => {
-          if (item.stripe_price_id) return item
-          const stripeId = map.get(item.id)
-          if (!stripeId) return item
-          return { ...item, stripe_price_id: stripeId }
-        }),
+      const map = new Map(
+        (data ?? []).map((r: any) => [
+          String(r.id),
+          {
+            name: String(r.name ?? ''),
+            price: typeof r.price === 'number' ? r.price : Number(r.price),
+            stripe_price_id: r.stripe_price_id ? String(r.stripe_price_id) : null,
+          },
+        ]),
       )
+      setCartItems((prev) => {
+        let changed = false
+        const next = prev.map((item) => {
+          const next = map.get(item.id)
+          if (!next) return item
+
+          const nextPrice = Number.isFinite(next.price) ? next.price : item.price
+          const nextName = next.name ? next.name : item.name
+          const nextStripePriceId = item.stripe_price_id ?? next.stripe_price_id ?? null
+
+          if (nextPrice === item.price && nextName === item.name && nextStripePriceId === item.stripe_price_id) {
+            return item
+          }
+
+          changed = true
+          return { ...item, price: nextPrice, name: nextName, stripe_price_id: nextStripePriceId }
+        })
+        return changed ? next : prev
+      })
     }
     run()
     return () => {

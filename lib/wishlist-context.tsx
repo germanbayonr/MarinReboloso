@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export type WishlistItem = {
   id: string
@@ -68,6 +69,48 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
     } catch {}
   }, [items, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    const ids = Array.from(new Set(items.map((i) => i.id)))
+    if (ids.length === 0) return
+
+    let cancelled = false
+    const run = async () => {
+      const { data, error } = await supabase.from('products').select('id,name,price').in('id', ids)
+      if (cancelled) return
+      if (error) return
+
+      const map = new Map(
+        (data ?? []).map((r: any) => [
+          String(r.id),
+          {
+            name: String(r.name ?? ''),
+            price: typeof r.price === 'number' ? r.price : Number(r.price),
+          },
+        ]),
+      )
+
+      setItems((prev) => {
+        let changed = false
+        const next = prev.map((item) => {
+          const next = map.get(item.id)
+          if (!next) return item
+          const nextPrice = Number.isFinite(next.price) ? next.price : item.price
+          const nextName = next.name ? next.name : item.name
+          if (nextPrice === item.price && nextName === item.name) return item
+          changed = true
+          return { ...item, price: nextPrice, name: nextName }
+        })
+        return changed ? next : prev
+      })
+    }
+
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [hydrated, items])
 
   const addToWishlist = useCallback((item: WishlistItem) => {
     setItems(prev => {
