@@ -39,7 +39,7 @@ export default function WishlistPage() {
             </Link>
           </div>
         ) : (
-          <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-14">
+          <div className="mt-14 grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-14">
             {items.map((item) => (
               <div key={item.id} className="space-y-5">
                 <div className="space-y-4">

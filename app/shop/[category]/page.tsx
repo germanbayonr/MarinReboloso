@@ -134,13 +134,13 @@ export default function ShopCollectionPage() {
 
         {/* Product grid */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
             {filtered.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : !loaded ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
             {Array.from({ length: 8 }).map((_, idx) => (
               <div key={idx} className="space-y-4">
                 <div className="relative aspect-[3/4] bg-stone-100" />
