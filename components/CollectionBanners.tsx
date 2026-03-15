@@ -29,7 +29,7 @@ export default function CollectionBanners() {
         <Link
           key={collection.href}
           href={collection.href}
-          className="group block w-full h-[70vh] min-h-[70vh] relative overflow-hidden"
+          className="group block w-full relative overflow-hidden h-[60svh] min-h-[60svh] sm:h-[70svh] sm:min-h-[70svh] lg:h-[80vh] lg:min-h-[80vh]"
           suppressHydrationWarning
         >
           <Image
@@ -39,10 +39,12 @@ export default function CollectionBanners() {
             sizes="100vw"
             className={
               collection.title === 'Marebo'
-                ? 'object-cover object-[50%_15%]'
+                ? 'object-cover object-[50%_12%] md:object-[50%_10%] lg:object-[50%_6%]'
                 : collection.title === 'Corales'
-                  ? 'object-cover object-[50%_60%]'
-                  : 'object-cover object-center'
+                  ? 'object-cover object-[50%_35%] md:object-[50%_30%] lg:object-[50%_25%]'
+                  : collection.title === 'Filipa'
+                    ? 'object-cover object-[50%_35%] md:object-[50%_30%]'
+                    : 'object-cover object-center'
             }
             priority={collection.title === 'Marebo' || collection.title === 'Filipa'}
           />
