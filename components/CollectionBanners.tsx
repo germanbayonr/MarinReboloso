@@ -37,7 +37,13 @@ export default function CollectionBanners() {
             alt={`Colección ${collection.title}`}
             fill
             sizes="100vw"
-            className="object-cover object-[center_25%] w-full h-full"
+            className={
+              collection.title === 'Corales'
+                ? 'object-cover object-[center_35%] w-full h-full'
+                : collection.title === 'Filipa'
+                  ? 'object-cover object-[center_30%] w-full h-full'
+                  : 'object-cover object-[center_25%] w-full h-full'
+            }
             priority={collection.title === 'Marebo' || collection.title === 'Filipa'}
           />
           <div className="absolute inset-0 bg-black/40" />

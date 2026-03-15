@@ -29,6 +29,12 @@ export default function CollectionHero({
 }) {
   const key = String(slug ?? '').toLowerCase().trim()
   const asset = HERO_ASSETS[key]
+  const objectPositionClass =
+    key === 'corales'
+      ? 'object-[center_35%]'
+      : key === 'filipa'
+        ? 'object-[center_30%]'
+        : 'object-[center_25%]'
 
   return (
     <section aria-label={`Portada de colección ${title}`} className="w-full">
@@ -40,7 +46,7 @@ export default function CollectionHero({
             fill
             priority={true}
             sizes="100vw"
-            className="object-cover object-[center_25%] w-full h-full"
+            className={`object-cover w-full h-full ${objectPositionClass}`}
           />
         ) : null}
         <div className="absolute inset-0 bg-black/20" />
