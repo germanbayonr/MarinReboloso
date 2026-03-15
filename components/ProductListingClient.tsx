@@ -112,8 +112,8 @@ export default function ProductListingClient({ category }: { category: string })
   )
 
   return (
-    <section className="px-6 md:px-10 py-12 md:py-16">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-12 md:py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between gap-6">
           <div>
             <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-2">Productos</p>
@@ -138,7 +138,7 @@ export default function ProductListingClient({ category }: { category: string })
         <div className="mt-10">
           {filteredProducts.length === 0 ? (
             !loaded ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
                 {Array.from({ length: 8 }).map((_, idx) => (
                   <div key={idx} className="space-y-4">
                     <div className="relative aspect-[3/4] bg-stone-100" />
@@ -153,7 +153,7 @@ export default function ProductListingClient({ category }: { category: string })
               </div>
             )
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

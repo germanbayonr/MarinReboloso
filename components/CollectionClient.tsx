@@ -80,13 +80,13 @@ export default function CollectionClient({ collectionSlug, title, description }:
       </div>
 
       {/* Products */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {loaded && scopedProducts.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-muted-foreground">Próximamente nuevos productos en esta colección.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {(loaded ? scopedProducts : Array.from({ length: 8 })).map((product: any, idx: number) => (
               loaded ? (
                 <ProductCard key={product.id} product={product} />

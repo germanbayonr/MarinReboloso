@@ -83,7 +83,7 @@ export default function ProductCatalogClient({
   }, [filters.collections, filters.maxPrice, filters.onlyInStock, filters.sort, filters.types, products])
 
   return (
-    <div className="pt-28 lg:pt-32 pb-16 px-4 md:px-10 max-w-7xl mx-auto">
+    <div className="pt-28 lg:pt-32 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl md:text-4xl tracking-tight">{title}</h1>
@@ -102,7 +102,7 @@ export default function ProductCatalogClient({
       </div>
 
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -115,4 +115,3 @@ export default function ProductCatalogClient({
     </div>
   )
 }
-
