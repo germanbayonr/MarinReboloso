@@ -9,15 +9,15 @@ const HERO_ASSETS: Record<
 > = {
   corales: {
     image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Sky%202.JPG',
-    objectClass: 'object-cover object-[50%_35%] md:object-[50%_30%] xl:object-[50%_25%]',
+    objectClass: 'object-cover md:object-contain md:scale-[0.95] md:object-center',
   },
   marebo: {
     image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Flor%20MAREBO%20Dore.jpg',
-    objectClass: 'object-cover object-[50%_12%] md:object-[50%_10%] xl:object-[50%_6%]',
+    objectClass: 'object-cover md:object-contain md:scale-[0.92] md:object-center',
   },
   filipa: {
     image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes-Linaje-Carmesi%202.png',
-    objectClass: 'object-cover object-[50%_35%] md:object-[50%_30%]',
+    objectClass: 'object-cover md:object-contain md:scale-[0.95] md:object-center',
   },
   descara: {
     image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Alhambra.PNG',
@@ -37,7 +37,7 @@ export default function CollectionHero({
 
   return (
     <section aria-label={`Portada de colección ${title}`} className="w-full">
-      <div className="relative w-full h-[60vh] md:h-[50vh] xl:h-[45vh] xl:max-h-[500px] overflow-hidden">
+      <div className="relative w-full h-[60vh] md:h-[50vh] xl:h-[45vh] xl:max-h-[500px] overflow-hidden bg-black">
         {asset?.image ? (
           <Image
             src={asset.image}
@@ -59,4 +59,3 @@ export default function CollectionHero({
     </section>
   )
 }
-
