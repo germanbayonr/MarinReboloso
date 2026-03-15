@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductGrid, { type ProductGridProduct } from '@/components/ProductGrid'
 import CollectionHero from '@/components/CollectionHero'
+import CollectionProductsClient from '@/components/CollectionProductsClient'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 function toNumber(value: unknown) {
@@ -37,7 +38,9 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
     .order('name', { ascending: true })
     .limit(5000)
 
-  const products: ProductGridProduct[] = error
+  const products: Array<
+    ProductGridProduct & { is_new_arrival?: boolean | null; stock?: number | null; in_stock?: boolean | null }
+  > = error
     ? []
     : (data ?? []).map((row: any) => ({
         id: String(row.id),
@@ -46,6 +49,9 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
         image_url: row.image_url ?? null,
         category: row.category ?? null,
         collection: row.collection ?? null,
+        is_new_arrival: Boolean(row.is_new_arrival),
+        stock: typeof row.stock === 'number' ? row.stock : null,
+        in_stock: typeof row.in_stock === 'boolean' ? row.in_stock : null,
       }))
 
   if (products.length === 0) notFound()
@@ -59,10 +65,7 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
       <CollectionHero slug={normalizedSlug} title={title} />
 
       <div className="py-14 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <p className="font-sans text-sm text-muted-foreground">{products.length} piezas</p>
-        </div>
-        <ProductGrid products={products} />
+        <CollectionProductsClient products={products} />
       </div>
 
       <Footer />

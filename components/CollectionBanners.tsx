@@ -29,7 +29,7 @@ export default function CollectionBanners() {
         <Link
           key={collection.href}
           href={collection.href}
-          className="group block w-full relative overflow-hidden bg-black h-[60svh] min-h-[60svh] sm:h-[70svh] sm:min-h-[70svh] lg:h-[80vh] lg:min-h-[80vh]"
+          className="group block w-full relative overflow-hidden h-[60svh] min-h-[60svh] sm:h-[70svh] sm:min-h-[70svh] lg:h-[80vh] lg:min-h-[80vh]"
           suppressHydrationWarning
         >
           <Image
@@ -37,15 +37,7 @@ export default function CollectionBanners() {
             alt={`Colección ${collection.title}`}
             fill
             sizes="100vw"
-            className={
-              collection.title === 'Marebo'
-                ? 'object-cover md:object-contain md:scale-[0.92] md:object-center'
-                : collection.title === 'Corales'
-                  ? 'object-cover md:object-contain md:scale-[0.95] md:object-center'
-                  : collection.title === 'Filipa'
-                    ? 'object-cover md:object-contain md:scale-[0.95] md:object-center'
-                    : 'object-cover object-center'
-            }
+            className="object-cover object-[center_25%] w-full h-full"
             priority={collection.title === 'Marebo' || collection.title === 'Filipa'}
           />
           <div className="absolute inset-0 bg-black/40" />
