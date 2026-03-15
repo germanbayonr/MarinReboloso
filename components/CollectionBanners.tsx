@@ -6,7 +6,7 @@ const collections = [
     title: 'Corales',
     href: '/coleccion/corales',
     image:
-      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Salmon.jpg',
+      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Sky%202.JPG',
   },
   {
     title: 'Marebo',
