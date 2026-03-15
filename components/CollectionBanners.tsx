@@ -12,7 +12,7 @@ const collections = [
     title: 'Marebo',
     href: '/coleccion/marebo',
     image:
-      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Imperial%202.png',
+      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Flor%20MAREBO%20Dore.jpg',
   },
   {
     title: 'Filipa',
