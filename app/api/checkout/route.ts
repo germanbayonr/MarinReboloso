@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import Stripe from 'stripe'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 const cartItemSchema = z.object({
-  id: z.string().min(1).optional(),
-  quantity: z.number().int().positive(),
-  stripe_price_id: z.string().min(1),
+  id: z.string().min(1),
+  quantity: z.number().int().positive().max(99),
+  stripe_price_id: z.string().min(1).optional(),
 })
 
 const requestSchema = z.object({
@@ -50,9 +54,44 @@ export async function POST(req: Request) {
 
     const stripe = new Stripe(stripeSecretKey)
 
+    const supabase = createSupabaseServerClient()
+    const productIds = Array.from(new Set(cartItems.map((i) => i.id)))
+    const { data: rows, error: dbError } = await supabase
+      .from('products')
+      .select('id,stripe_price_id')
+      .in('id', productIds)
+      .limit(5000)
+
+    if (dbError) {
+      return NextResponse.json(
+        { error: { message: 'Supabase error fetching stripe_price_id' } },
+        { status: 500, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const byId = new Map(
+      (rows ?? []).map((r: any) => [String(r.id), r.stripe_price_id ? String(r.stripe_price_id) : null]),
+    )
+
+    const missingIds = productIds.filter((id) => !byId.has(id))
+    if (missingIds.length > 0) {
+      return NextResponse.json(
+        { error: { message: 'Producto no encontrado en Supabase', missingIds } },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const missingStripeIds = productIds.filter((id) => !byId.get(id))
+    if (missingStripeIds.length > 0) {
+      return NextResponse.json(
+        { error: { message: 'Producto sin stripe_price_id en Supabase', missingIds: missingStripeIds } },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cartItems.map((item) => ({
       quantity: item.quantity,
-      price: item.stripe_price_id,
+      price: byId.get(item.id) as string,
     }))
 
     const forwardedHost = req.headers.get('x-forwarded-host')
@@ -94,12 +133,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: { message: 'Failed to create Stripe session' } }, { status: 500 })
     }
 
-    return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: session.url }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: { message: 'Invalid payload' } }, { status: 400 })
+      return NextResponse.json({ error: { message: 'Invalid payload' } }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
     }
     const message = err instanceof Error ? err.message : 'Unexpected error'
-    return NextResponse.json({ error: { message } }, { status: 500 })
+    return NextResponse.json({ error: { message } }, { status: 500, headers: { 'Cache-Control': 'no-store' } })
   }
 }
