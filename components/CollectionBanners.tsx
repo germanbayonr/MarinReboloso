@@ -12,13 +12,13 @@ const collections = [
     title: 'Marebo',
     href: '/coleccion/marebo',
     image:
-      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Flor%20MAREBO%20Dore.png',
+      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Imperial%202.png',
   },
   {
     title: 'Filipa',
     href: '/coleccion/filipa',
     image:
-      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Filipa.PNG',
+      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes-Linaje-Carmesi%202.png',
   },
 ]
 
@@ -38,7 +38,7 @@ export default function CollectionBanners() {
             fill
             sizes="100vw"
             className="object-cover object-center"
-            priority={false}
+            priority={collection.title === 'Marebo' || collection.title === 'Filipa'}
           />
           <div className="absolute inset-0 bg-black/40" />
 
