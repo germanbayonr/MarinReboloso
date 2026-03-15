@@ -39,9 +39,9 @@ export default function CollectionBanners() {
             sizes="100vw"
             className={
               collection.title === 'Corales'
-                ? 'object-cover object-[center_35%] w-full h-full'
+                ? 'object-cover object-[center_45%] w-full h-full'
                 : collection.title === 'Filipa'
-                  ? 'object-cover object-[center_30%] w-full h-full'
+                  ? 'object-cover object-[center_40%] w-full h-full'
                   : 'object-cover object-[center_25%] w-full h-full'
             }
             priority={collection.title === 'Marebo' || collection.title === 'Filipa'}

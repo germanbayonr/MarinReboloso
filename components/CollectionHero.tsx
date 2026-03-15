@@ -31,9 +31,9 @@ export default function CollectionHero({
   const asset = HERO_ASSETS[key]
   const objectPositionClass =
     key === 'corales'
-      ? 'object-[center_35%]'
+      ? 'object-[center_45%]'
       : key === 'filipa'
-        ? 'object-[center_30%]'
+        ? 'object-[center_40%]'
         : 'object-[center_25%]'
 
   return (
