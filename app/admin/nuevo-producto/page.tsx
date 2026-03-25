@@ -67,6 +67,50 @@ export default function NuevoProductoPage() {
     return Object.keys(next).length === 0
   }
 
+  const compressImage = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target?.result as string
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const MAX_WIDTH = 1200
+          const MAX_HEIGHT = 1500
+          let width = img.width
+          let height = img.height
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height
+              height = MAX_HEIGHT
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) resolve(blob)
+              else reject(new Error('Canvas to Blob failed'))
+            },
+            'image/webp',
+            0.8,
+          )
+        }
+      }
+      reader.onerror = (error) => reject(error)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) return
@@ -78,11 +122,17 @@ export default function NuevoProductoPage() {
 
       for (const img of images) {
         if (!img.file) continue
-        const fileExt = img.file.name.split('.').pop() || 'jpg'
-        const fileName = `${crypto.randomUUID()}.${fileExt}`
+
+        // Optimizar imagen antes de subir
+        const compressedBlob = await compressImage(img.file)
+        const fileName = `${crypto.randomUUID()}.webp`
         const filePath = `products/${fileName}`
 
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, img.file)
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, compressedBlob, {
+          contentType: 'image/webp',
+          cacheControl: '3600',
+          upsert: false,
+        })
         if (uploadError) throw uploadError
 
         const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
