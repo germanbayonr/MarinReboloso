@@ -20,6 +20,12 @@ const nextConfig = {
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'marebo.b-cdn.net',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 }
