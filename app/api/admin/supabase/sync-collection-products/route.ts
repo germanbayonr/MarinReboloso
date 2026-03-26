@@ -448,7 +448,7 @@ const COLLECTION_UPDATES: Record<string, UpdateItem[]> = {
         'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Soberana%20Grandes.PNG',
     },
     {
-      name: 'Pendientes Soberana Little',
+      name: 'Pendientes Soberana Pequeños',
       image_url:
         'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20soberana%20little.PNG',
     },

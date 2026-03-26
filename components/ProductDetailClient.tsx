@@ -16,7 +16,7 @@ export type SupabaseProduct = {
   name: string
   description: string | null
   price: number | string
-  image_url: string | null
+  image_url: string[] | string | null
   category: string | null
   collection?: string | null
   stripe_product_id?: string | null
@@ -38,10 +38,18 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const imageRef = useRef<HTMLDivElement>(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedVariant, setSelectedVariant] = useState('Único')
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
 
   const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
   const formattedPrice = useMemo(() => (Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'), [price])
-  const imageUrl = product?.image_url ?? ''
+  
+  // Normalizar image_url a array
+  const images = useMemo(() => {
+    if (!product?.image_url) return []
+    return Array.isArray(product.image_url) ? product.image_url : [product.image_url]
+  }, [product?.image_url])
+
+  const mainImageUrl = images[activeImageIndex] || images[0] || ''
   const productHref = product ? `/producto/${product.id}` : ''
 
   if (!product) {
@@ -88,10 +96,10 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           id: product.id,
           name: product.name,
           price,
-          image: imageUrl,
+          image: mainImageUrl,
           quantity,
           variant: selectedVariant,
-          stripe_price_id: product.stripe_price_id ?? null,
+          stripe_price_id: product.stripe_product_id ?? null,
         })
         setIsAnimating(false)
       }, 700)
@@ -102,10 +110,10 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
       id: product.id,
       name: product.name,
       price,
-      image: imageUrl,
+      image: mainImageUrl,
       quantity,
       variant: selectedVariant,
-      stripe_price_id: product.stripe_price_id ?? null,
+      stripe_price_id: product.stripe_product_id ?? null,
     })
   }
 
@@ -125,9 +133,9 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
           <div className="lg:col-span-7 space-y-4">
             <div ref={imageRef} className="relative aspect-[4/5] bg-stone-100 overflow-hidden">
-              {imageUrl ? (
+              {mainImageUrl ? (
                 <Image
-                  src={imageUrl}
+                  src={mainImageUrl}
                   alt={product.name}
                   fill
                   priority={true}
@@ -136,6 +144,30 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
                 />
               ) : null}
             </div>
+            
+            {/* Galería de Miniaturas */}
+            {images.length > 1 && (
+              <div className="grid grid-cols-5 gap-4">
+                {images.map((img, idx) => (
+                  <button
+                    key={img}
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={cn(
+                      "relative aspect-[4/5] bg-stone-100 overflow-hidden border transition-all duration-300",
+                      activeImageIndex === idx ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100"
+                    )}
+                  >
+                    <Image
+                      src={img}
+                      alt={`${product.name} miniatura ${idx + 1}`}
+                      fill
+                      sizes="15vw"
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-5">
@@ -220,7 +252,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
                       id: product.id,
                       name: product.name,
                       price,
-                      image: imageUrl,
+                      image: mainImageUrl,
                       href: productHref,
                     })
                   }}
@@ -264,7 +296,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
             transition={{ type: 'tween', ease: 'easeInOut', duration: 0.7 }}
             className="pointer-events-none overflow-hidden"
           >
-            {imageUrl ? <Image src={imageUrl} alt="fly" fill className="object-cover" /> : null}
+            {mainImageUrl ? <Image src={mainImageUrl} alt="fly" fill className="object-cover" /> : null}
           </motion.div>
         )}
       </AnimatePresence>

@@ -11,7 +11,7 @@ interface ProductCardProps {
     id: string
     name: string
     price: number | string
-    image_url: string | null
+    image_url: string[] | string | null
     category?: string | null
     collection?: string | null
   }
@@ -19,7 +19,17 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
-  const imageUrl = product.image_url ?? ''
+  
+  // Normalizar image_url a un array
+  const images = Array.isArray(product.image_url) 
+    ? product.image_url 
+    : product.image_url 
+      ? [product.image_url] 
+      : []
+      
+  const mainImage = images[0] || ''
+  const hoverImage = images[1] || null
+  
   const price = typeof product.price === 'number' ? product.price : Number(product.price)
   const formattedPrice = Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'
   const wishlisted = isInWishlist(product.id)
@@ -41,7 +51,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               id: product.id,
               name: product.name,
               price: Number.isFinite(price) ? price : 0,
-              image: imageUrl,
+              image: mainImage,
               href: `/producto/${product.id}`,
             })
           }}
@@ -59,14 +69,31 @@ export default function ProductCard({ product }: ProductCardProps) {
             strokeWidth={1.5}
           />
         </button>
-        {imageUrl ? (
+        
+        {/* Imagen Principal */}
+        {mainImage ? (
           <Image
-            src={imageUrl}
+            src={mainImage}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            className={cn(
+              "object-cover transition-all duration-700 ease-out",
+              hoverImage ? "group-hover:opacity-0 group-hover:scale-105" : "group-hover:scale-105"
+            )}
+          />
+        ) : null}
+
+        {/* Imagen Hover */}
+        {hoverImage ? (
+          <Image
+            src={hoverImage}
+            alt={`${product.name} - vista alterna`}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            loading="lazy"
+            className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100"
           />
         ) : null}
       </div>

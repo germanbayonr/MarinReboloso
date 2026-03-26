@@ -78,7 +78,7 @@ export const masterCatalog = [
   { name: "Pendientes Isabela Aguamarina", image_url: " `https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Isabela%20Aguamarina.PNG` ", collection: "marebo", category: "pendientes" }, 
   { name: "Pendientes Isabela Vino", image_url: " `https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Isabela%20Vino.PNG` ", collection: "marebo", category: "pendientes" }, 
   { name: "Pendientes Soberana Grandes", image_url: " `https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Soberana%20Grandes.PNG` ", collection: "marebo", category: "pendientes" }, 
-  { name: "Pendientes Soberana Little", image_url: " `https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20soberana%20little.PNG` ", collection: "marebo", category: "pendientes" }, 
+  { name: "Pendientes Soberana Pequeños", image_url: " `https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20soberana%20little.PNG` ", collection: "marebo", category: "pendientes" }, 
   { name: "Pendientes Isolde", image_url: " `https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Isolde.PNG` ", collection: "marebo", category: "pendientes" }, 
  
   // MANTONES (22) 
