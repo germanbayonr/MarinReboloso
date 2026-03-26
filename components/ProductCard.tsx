@@ -27,7 +27,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       ? [product.image_url] 
       : []
       
-  const mainImage = images[0] || 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
+  const mainImage = images[0] || 'https://marebo.b-cdn.net/placeholder.jpg'
   const hoverImage = images[1] || null
   
   const price = typeof product.price === 'number' ? product.price : Number(product.price)

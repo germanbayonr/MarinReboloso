@@ -28,14 +28,14 @@ const reviews = [
 ]
 
 const INSTAGRAM_POSTS = [
-  { id: 1, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta1.png', isVideo: false },
-  { id: 2, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta2.png', isVideo: false },
-  { id: 3, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.57.jpeg', isVideo: false },
-  { id: 4, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta4.png', isVideo: true },
-  { id: 5, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta5.png', isVideo: false },
-  { id: 6, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta6%20.png', isVideo: false },
-  { id: 7, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta7.png', isVideo: false },
-  { id: 8, imageUrl: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/Insta8.png', isVideo: true },
+  { id: 1, imageUrl: 'https://marebo.b-cdn.net/assets/Insta1.png', isVideo: false },
+  { id: 2, imageUrl: 'https://marebo.b-cdn.net/assets/Insta2.png', isVideo: false },
+  { id: 3, imageUrl: 'https://marebo.b-cdn.net/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.57.jpeg', isVideo: false },
+  { id: 4, imageUrl: 'https://marebo.b-cdn.net/assets/Insta4.png', isVideo: true },
+  { id: 5, imageUrl: 'https://marebo.b-cdn.net/assets/Insta5.png', isVideo: false },
+  { id: 6, imageUrl: 'https://marebo.b-cdn.net/assets/Insta6%20.png', isVideo: false },
+  { id: 7, imageUrl: 'https://marebo.b-cdn.net/assets/Insta7.png', isVideo: false },
+  { id: 8, imageUrl: 'https://marebo.b-cdn.net/assets/Insta8.png', isVideo: true },
 ]
 
 export default function SocialProof() {

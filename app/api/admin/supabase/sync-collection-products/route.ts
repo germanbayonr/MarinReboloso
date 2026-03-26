@@ -84,378 +84,378 @@ const COLLECTION_UPDATES: Record<string, UpdateItem[]> = {
     {
       name: 'Pendientes Coralia Cocoa',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Cocoa.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Coralia%20Cocoa.PNG',
     },
     {
       name: 'Pendientes Coralia Sky',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Sky.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Coralia%20Sky.PNG',
     },
     {
       name: 'Pendientes Coralia Salmón',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Salmon.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Coralia%20Salmon.PNG',
     },
     {
       name: 'Pendientes Coralia Electric Blue',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Electric%20Blue.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Coralia%20Electric%20Blue.PNG',
     },
     {
       name: 'Pendientes Coralia Bottle Green',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Bottle%20Green.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Coralia%20Bottle%20Green.PNG',
     },
     {
       name: 'Pendientes Coralia Ivory',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Ivory.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Coralia%20Ivory.PNG',
     },
     {
       name: 'Pendientes Coralia Pistachio',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Pistachio.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Coralia%20Pistachio.PNG',
     },
     {
       name: 'Pendientes Lágrimas de Coral',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20_Lagrimas%20de%20coral_%20.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20_Lagrimas%20de%20coral_%20.PNG',
     },
     {
       name: 'Pendientes Ecos de Coral',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/pendientes%20ecos%20de%20coral.PNG',
+        'https://marebo.b-cdn.net/Colecciones/pendientes%20ecos%20de%20coral.PNG',
     },
     {
       name: 'Pendientes Aura Coralina Coral Antiguo',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.PNG',
     },
     {
       name: 'Pendientes Aura Coralina Rojos',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20_Aura%20Coralina_%20rojos.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20_Aura%20Coralina_%20rojos.PNG',
     },
     {
       name: 'Pendientes Lágrimas Coralinas',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/pendientes%20lagrimas%20de%20Coralinas.PNG',
+        'https://marebo.b-cdn.net/Colecciones/pendientes%20lagrimas%20de%20Coralinas.PNG',
     },
     {
       name: 'Pendientes Lágrimas Coralinas Crudo',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/pendientes%20lagrimas%20coralinas%20crudo.PNG',
+        'https://marebo.b-cdn.net/Colecciones/pendientes%20lagrimas%20coralinas%20crudo.PNG',
     },
     {
       name: 'Pendientes Pastora Crudos',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Pastora%20Crudos.JPG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Pastora%20Crudos.JPG',
     },
     {
       name: 'Pendientes Pastora Pistacho',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Pastora%20%28Pistacho.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Pastora%20%28Pistacho.PNG',
     },
     {
       name: 'Pendientes Pastora Azul',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Pastora%20%28Azul%29.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Pastora%20%28Azul%29.PNG',
     },
     {
       name: 'Pendientes Pastora Verde Botella',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Pastora%20%28Verde%20Botella%29.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Pastora%20%28Verde%20Botella%29.PNG',
     },
     {
       name: 'Pendientes Soleá Rojos',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Solea%20Rojos.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Solea%20Rojos.PNG',
     },
     {
       name: 'Pendientes Soleá Naranjas',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Solea%20naranjas.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Solea%20naranjas.PNG',
     },
     {
       name: 'Pendientes Soleá Negros',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Solea%20negros.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Solea%20negros.PNG',
     },
   ],
   descara: [
     {
       name: 'Pendientes Reina Isabela Marfil',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Reina%20Isabela%20Marfil.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Reina%20Isabela%20Marfil.PNG',
     },
     {
       name: 'Pendientes Descará Córdoba Coral',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Cordoba%20Coral.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Cordoba%20Coral.PNG',
     },
     {
       name: 'Pendientes Descará Coral',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Coral.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Coral.PNG',
     },
     {
       name: 'Pendientes Descará Dorados',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Dorados.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Dorados.PNG',
     },
     {
       name: 'Pendientes Descará Imperio',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Imperio.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Imperio.PNG',
     },
     {
       name: 'Pendientes Descará Pasión',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Pasion.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Pasion.PNG',
     },
     {
       name: 'Pendientes Descará Alhambra',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Alhambra.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Alhambra.PNG',
     },
     {
       name: 'Pendientes Descará Córdoba',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Cordoba.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Cordoba.PNG',
     },
     {
       name: 'Pendientes Descará Moneda',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Moneda.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Moneda.PNG',
     },
     {
       name: 'Pendientes Descará Cristal',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Cristal.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Cristal.PNG',
     },
     {
       name: 'Pendientes Descará Esmeralda',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Esmeralda.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Descara%20Esmeralda.PNG',
     },
     {
       name: 'Pendientes Folklore Blancos',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20folklore%20blancos.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20folklore%20blancos.PNG',
     },
     {
       name: 'Pendientes Folklore Fucsia',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20folklore%20fucsia.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20folklore%20fucsia.PNG',
     },
     {
       name: 'Pendientes Folklore Negros',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20folklore%20negros.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20folklore%20negros.PNG',
     },
     {
       name: 'Pendientes Folklore Turquesas',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20folklore%20turquesas.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20folklore%20turquesas.PNG',
     },
     {
       name: 'Pulseras Folklore Fucsia',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pulseras%20folklore%20fucsia.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pulseras%20folklore%20fucsia.PNG',
     },
     {
       name: 'Pulseras Folklore Negras',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pulseras%20Folklore%20negras.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pulseras%20Folklore%20negras.PNG',
     },
     {
       name: 'Pulseras Folklore Turquesas',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pulseras%20folklore%20turquesas.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pulseras%20folklore%20turquesas.PNG',
     },
   ],
   filipa: [
     {
       name: 'Pendientes Linaje Carmesí',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Linaje%20Carmesi.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Linaje%20Carmesi.jpg',
     },
     {
       name: 'Pendientes Herencia Imperial',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Herencia%20Imperial.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Herencia%20Imperial.jpg',
     },
     {
       name: 'Pendientes Legado Bizantino',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Legado%20Bizantino.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Legado%20Bizantino.PNG',
     },
     {
       name: 'Pendientes Noche Barroca',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Noche%20Barroca.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Noche%20Barroca.jpg',
     },
     {
       name: 'Pendientes Flor de Perlas',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20flor%20de%20perlas.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20flor%20de%20perlas.PNG',
     },
     {
       name: 'Pendientes Jardín Imperial',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Jardin%20Imperial.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Jardin%20Imperial.PNG',
     },
     {
       name: 'Collar Duquesa Blanca',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Duquesa%20Blanca.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Duquesa%20Blanca.PNG',
     },
     {
       name: 'Collar Filipa',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Filipa.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Filipa.PNG',
     },
   ],
   marebo: [
     {
       name: 'Pendiente Flor MAREBO Doré',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Flor%20MAREBO%20Dore.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Flor%20MAREBO%20Dore.png',
     },
     {
       name: 'Pendiente Flor Noir MAREBO Doré',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Flor%20Noir%20MAREBO%20Dore.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Flor%20Noir%20MAREBO%20Dore.png',
     },
     {
       name: 'Pendiente Flor Esmeralda',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Flor%20Esmeralda.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Flor%20Esmeralda.PNG',
     },
     {
       name: 'Pendiente Triángulo Rubí',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Triangulo%20Rubi.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Triangulo%20Rubi.png',
     },
     {
       name: 'Pendiente Triángulo Noir',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Triangulo%20Noir.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Triangulo%20Noir.png',
     },
     {
       name: 'Pendiente Triángulo Esmeralda',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Triangulo%20esmeralda.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Triangulo%20esmeralda.png',
     },
     {
       name: 'Pendiente Aura Carmín',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Aura%20Carmin.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Aura%20Carmin.png',
     },
     {
       name: 'Pendiente Aura Turquesa',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Aura%20turquesa.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Aura%20turquesa.png',
     },
     {
       name: 'Pendiente Aura Marfil',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Aura%20marfil.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Aura%20marfil.png',
     },
     {
       name: 'Pendiente Aura Nácar',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Aura%20nacar.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Aura%20nacar.png',
     },
     {
       name: 'Pendiente Aura Noir',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Aura%20Noir.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Aura%20Noir.png',
     },
     {
       name: 'Pendiente Corona',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Corona.png',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Corona.png',
     },
     {
       name: 'Pendiente Imperial',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Imperial.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendiente%20Imperial.PNG',
     },
     {
       name: 'Pendientes Lágrima Imperial Azul',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Lagrima%20Imperial%20Azul.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Lagrima%20Imperial%20Azul.PNG',
     },
     {
       name: 'Pendientes Lágrima Esmeralda Profunda',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Lagrima%20Esmeralda%20Profunda.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Lagrima%20Esmeralda%20Profunda.PNG',
     },
     {
       name: 'Pendientes Lágrima Buganvilla Real',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Lagrima%20Buganvilla%20Real%20.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Lagrima%20Buganvilla%20Real%20.PNG',
     },
     {
       name: 'Pendientes Lágrima Rosa Empolvado',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Lagrima%20Rosa%20Empolvado%20.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Lagrima%20Rosa%20Empolvado%20.PNG',
     },
     {
       name: 'Pendientes Lágrima Marfil Dorado',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Lagrima%20Marfil%20Dorado.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Lagrima%20Marfil%20Dorado.PNG',
     },
     {
       name: 'Pendientes Lágrima Jade Dorado',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Lagrima%20Jade%20Dorado.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Lagrima%20Jade%20Dorado.PNG',
     },
     {
       name: 'Pendientes Lágrima Coral Dorado',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20lagrima%20Coral%20Dorado.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20lagrima%20Coral%20Dorado.PNG',
     },
     {
       name: 'Pendientes Lágrima Vino Imperial',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Lagrima%20Vino%20Imperial.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Lagrima%20Vino%20Imperial.PNG',
     },
     {
       name: 'Pendientes Geometría Azul Real',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Geometria%20Azul%20Real.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Geometria%20Azul%20Real.PNG',
     },
     {
       name: 'Pendientes Geometría Esmeralda',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Geometria%20Esmeralda.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Geometria%20Esmeralda.jpg',
     },
     {
       name: 'Pendientes Isabela Aguamarina',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Isabela%20Aguamarina.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Isabela%20Aguamarina.PNG',
     },
     {
       name: 'Pendientes Isabela Vino',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Isabela%20Vino.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Isabela%20Vino.PNG',
     },
     {
       name: 'Pendientes Soberana Grandes',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Soberana%20Grandes.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Soberana%20Grandes.PNG',
     },
     {
       name: 'Pendientes Soberana Pequeños',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20soberana%20little.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20soberana%20little.PNG',
     },
     {
       name: 'Pendientes Isolde',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Isolde.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Isolde.PNG',
     },
   ],
 }
@@ -465,263 +465,263 @@ const CATEGORY_UPDATES: Record<string, UpdateItem[]> = {
     {
       name: 'Mantón Agua de Mujer',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Agua_%20de%20mujer.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Agua_%20de%20mujer.PNG',
     },
     {
       name: 'Mantón Agua de Niña',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Agua_%20de%20mujer.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Agua_%20de%20mujer.PNG',
     },
     {
       name: 'Mantón Blanca',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Blanca_.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Blanca_.jpg',
     },
     {
       name: 'Mantón Candela',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20de%20mujer%20Candela.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20de%20mujer%20Candela.PNG',
     },
     {
       name: 'Mantón Carmesí',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Carmesi%20.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Carmesi%20.PNG',
     },
     {
       name: 'Mantón Carmesí - Edición Limitada',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Carmesi%20.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Carmesi%20.PNG',
     },
     {
       name: 'Mantón de niña Candela',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20de%20mujer%20Candela.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20de%20mujer%20Candela.PNG',
     },
     {
       name: 'Mantón Dolores',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Dolores_%20.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Dolores_%20.PNG',
     },
     {
       name: 'Mantón Dolores - Edición Limitada',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Dolores_%20.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Dolores_%20.PNG',
     },
     {
       name: 'Mantón Isabella',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Isabella.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Isabella.PNG',
     },
     {
       name: 'Mantón Isabella - Edición Limitada',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Isabella.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Isabella.PNG',
     },
     {
       name: 'Mantón Lima - Edición Limitada',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Piquillo%20LIMA.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Piquillo%20LIMA.PNG',
     },
     {
       name: 'Mantón Melocotón Sevilla',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Melocoton%20Sevilla.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Melocoton%20Sevilla.PNG',
     },
     {
       name: 'Mantón Noche de Sevilla',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Noche%20de%20Sevilla_.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Noche%20de%20Sevilla_.PNG',
     },
     {
       name: 'Mantón Noir',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Noir.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Noir.PNG',
     },
     {
       name: 'Mantón Noir de Mujer',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Noir%20de%20mujer.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Noir%20de%20mujer.PNG',
     },
     {
       name: 'Mantón Noir de Niña',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Noir%20de%20mujer.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Noir%20de%20mujer.PNG',
     },
     {
       name: 'Mantón Oliva',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Oliva.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Oliva.PNG',
     },
     {
       name: 'Mantón Oliva - Edición Limitada',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20Oliva.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20Oliva.PNG',
     },
     {
       name: 'Mantón Rosa de Triana',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Rosa%20de%20Triana_.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Rosa%20de%20Triana_.PNG',
     },
     {
       name: 'Mantón Valentina',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Valentina_.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Valentina_.PNG',
     },
     {
       name: 'Mantón Valeria',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Manton%20_Valeria_.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Manton%20_Valeria_.PNG',
     },
   ],
   collares: [
     {
       name: 'Collar Alba',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Alba.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Alba.PNG',
     },
     {
       name: 'Collar Cruz Corrallium',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Cruz%20Corrallium.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Cruz%20Corrallium.PNG',
     },
     {
       name: 'Collar Esfera Azul Eléctrico 42',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Azul%20Electrico%2042.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Azul%20Electrico%2042.jpg',
     },
     {
       name: 'Collar Esfera Burdeos 42',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Burdeos%2042.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Burdeos%2042.jpg',
     },
     {
       name: 'Collar Esfera Coral-Teja 42',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Coral-Teja%2042.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Coral-Teja%2042.PNG',
     },
     {
       name: 'Collar Esfera Coral-Teja 58',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Coral-Teja%2058.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Coral-Teja%2058.PNG',
     },
     {
       name: 'Collar Esfera Crudo 42',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Crudo%2042.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Crudo%2042.jpg',
     },
     {
       name: 'Collar Esfera Crudo 58',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20crudo%2058.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20crudo%2058.jpg',
     },
     {
       name: 'Collar Esfera Rojo 58',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20rojo%2058.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20rojo%2058.jpg',
     },
     {
       name: 'Collar Esfera Salmón 42',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Salmon%2042.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Salmon%2042.jpg',
     },
     {
       name: 'Collar Esfera Salmón 58',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Salmon%2058.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Salmon%2058.jpg',
     },
     {
       name: 'Collar Esfera Turquesa 42',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20turquesa%2042.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20turquesa%2042.jpg',
     },
     {
       name: 'Collar Esfera Turquesa 58',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20turquesa%2058.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20turquesa%2058.jpg',
     },
     {
       name: 'Collar Esfera Verde Botella 42',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Verde%20Botella%2042.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Verde%20Botella%2042.jpg',
     },
     {
       name: 'Collar Esfera Verde Botella 58',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Esfera%20Verde%20Botella%2058.jpg',
+        'https://marebo.b-cdn.net/Colecciones/Collar%20Esfera%20Verde%20Botella%2058.jpg',
     },
   ],
   bolsos: [
     {
       name: 'Bolso Agua Borde',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Agua%20Borde.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Bolso%20Agua%20Borde.PNG',
     },
     {
       name: 'Bolso Carmesí Borde',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Carmesi%20Borde.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Bolso%20Carmesi%20Borde.PNG',
     },
     {
       name: 'Bolso Clavel Noir',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Clavel%20Noir.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Bolso%20Clavel%20Noir.PNG',
     },
     {
       name: 'Bolso Flor de Noche',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Flor%20de%20Noche.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Bolso%20Flor%20de%20Noche.PNG',
     },
     {
       name: 'Bolso Ivory Jardin',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Ivory%20Jardin.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Bolso%20Ivory%20Jardin.PNG',
     },
     {
       name: 'Bolso Noir Imperial',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Noir%20Imperial.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Bolso%20Noir%20Imperial.PNG',
     },
     {
       name: 'Bolso Oriental Noir',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Bolso%20Oriental%20Noir.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Bolso%20Oriental%20Noir.PNG',
     },
   ],
   peinecillos: [
     {
       name: 'Peinecillos Azul Vintage',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Azul%20Vintage.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Peinecillos%20Azul%20Vintage.PNG',
     },
     {
       name: 'Peinecillos Coral y Crudo',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Coral%20y%20Crudo.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Peinecillos%20Coral%20y%20Crudo.PNG',
     },
     {
       name: 'Peinecillos Ébano',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Ebano.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Peinecillos%20Ebano.PNG',
     },
     {
       name: 'Peinecillos Noir Filigrana',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Noir%20Filigrana.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Pendientes%20Noir%20Filigrana.PNG',
     },
     {
       name: 'Peinecillos Rosa Nude',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Rosa%20Nude.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Peinecillos%20Rosa%20Nude.PNG',
     },
     {
       name: 'Peinecillos Rosa Nude y Crudo',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Rosa%20Nude%20y%20Crudo.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Peinecillos%20Rosa%20Nude%20y%20Crudo.PNG',
     },
     {
       name: 'Peinecillos Verde Agua',
       image_url:
-        'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Peinecillos%20Verde%20Agua.PNG',
+        'https://marebo.b-cdn.net/Colecciones/Peinecillos%20Verde%20Agua.PNG',
     },
   ],
 }

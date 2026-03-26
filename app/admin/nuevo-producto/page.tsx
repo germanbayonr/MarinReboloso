@@ -135,8 +135,9 @@ export default function NuevoProductoPage() {
         })
         if (uploadError) throw uploadError
 
-        const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
-        imageUrls.push(data.publicUrl)
+        // Generamos la URL de Bunny directamente en lugar de usar getPublicUrl de Supabase
+        const bunnyUrl = `https://marebo.b-cdn.net/${filePath}`
+        imageUrls.push(bunnyUrl)
       }
 
       const image_url = imageUrls[0] || null

@@ -6,19 +6,19 @@ const collections = [
     title: 'Corales',
     href: '/coleccion/corales',
     image:
-      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Coralia%20Sky%202.JPG',
+      'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Sky%202.JPG',
   },
   {
     title: 'Marebo',
     href: '/coleccion/marebo',
     image:
-      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Flor%20MAREBO%20Dore.jpg',
+      'https://marebo.b-cdn.net/Colecciones/Marebo/Flor%20MAREBO%20Dore.jpg',
   },
   {
     title: 'Filipa',
     href: '/coleccion/filipa',
     image:
-      'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes-Linaje-Carmesi%202.png',
+      'https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes-Linaje-Carmesi%202.png',
   },
 ]
 

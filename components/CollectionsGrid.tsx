@@ -8,25 +8,25 @@ const collections = [
     id: 'descara',
     name: 'Descará',
     slug: 'descara',
-    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Alhambra.PNG',
+    image: 'https://marebo.b-cdn.net/Colecciones/Descara/Pendientes%20Descara%20Alhambra.PNG',
   },
   {
     id: 'marebo',
     name: 'Marebo',
     slug: 'marebo',
-    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendiente%20Flor%20MAREBO%20Dore.png',
+    image: 'https://marebo.b-cdn.net/Colecciones/Marebo/Pendiente%20Flor%20MAREBO%20Dore.png',
   },
   {
     id: 'corales',
     name: 'Corales',
     slug: 'corales',
-    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.PNG',
+    image: 'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.PNG',
   },
   {
     id: 'filipa',
     name: 'Filipa',
     slug: 'filipa',
-    image: 'https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Collar%20Filipa.PNG',
+    image: 'https://marebo.b-cdn.net/Colecciones/Filipa/Collar%20Filipa.PNG',
   },
 ]
 

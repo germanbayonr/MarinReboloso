@@ -28,7 +28,7 @@ export default function HeroSection() {
             ].join(' ')}
           >
             <Image
-              src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/assets/WhatsApp%20Image%202026-03-11%20at%2006.57.39.jpeg"
+              src="https://marebo.b-cdn.net/Colecciones/Descara/WhatsApp%20Image%202026-03-11%20at%2006.57.39.jpeg"
               alt="Lifestyle Colección Descará"
               fill
               priority
@@ -58,7 +58,7 @@ export default function HeroSection() {
             ].join(' ')}
           >
             <Image
-              src="https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/accesorios/Pendientes%20Descara%20Pasion.PNG"
+              src="https://marebo.b-cdn.net/Colecciones/Descara/Pendientes%20Descara%20Pasion.PNG"
               alt="Producto Colección Descará"
               fill
               priority

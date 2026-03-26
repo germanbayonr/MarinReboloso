@@ -43,8 +43,8 @@ function loadEnv() {
 
 loadEnv();
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nwpjxibuaxclzogatfcl.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53cGp4aWJ1YXhjbHpvZ2F0ZmNsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjU4NjQzMiwiZXhwIjoyMDg4MTYyNDMyfQ.v2aYJCpDkLw7q3d4R3UrNCVvmcIxhEsryrf7iL8Vuio';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseKey || !stripeSecretKey) {

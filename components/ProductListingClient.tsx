@@ -10,7 +10,7 @@ type ListingProduct = {
   id: string
   name: string
   price: number | string
-  image_url: string | null
+  image_url: string[] | string | null
   category: string | null
 }
 
