@@ -11,7 +11,7 @@ export default function NuestraHistoriaPage() {
       <Navbar />
       
       <section className="relative w-full min-h-[100svh] overflow-hidden" suppressHydrationWarning>
-        <Image
+        <Image unoptimized
           src="https://marebo.b-cdn.net/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.58.jpeg"
           alt=""
           fill
@@ -19,7 +19,7 @@ export default function NuestraHistoriaPage() {
           sizes="100vw"
           className="object-cover object-center blur-3xl scale-110"
         />
-        <Image
+        <Image unoptimized
           src="https://marebo.b-cdn.net/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.58.jpeg"
           alt="María Marín — Nuestra Historia"
           fill

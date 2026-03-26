@@ -72,10 +72,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         
         {/* Imagen Principal */}
         {mainImage ? (
-          <Image
+          <Image unoptimized
             src={mainImage}
             alt={product.name}
             fill
+            unoptimized
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
             className={cn(
@@ -87,10 +88,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Imagen Hover */}
         {hoverImage ? (
-          <Image
+          <Image unoptimized
             src={hoverImage}
             alt={`${product.name} - vista alterna`}
             fill
+            unoptimized
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
             className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100"

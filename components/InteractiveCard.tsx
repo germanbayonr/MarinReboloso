@@ -57,7 +57,7 @@ export function InteractiveCard({ product, href }: InteractiveCardProps) {
           className="absolute inset-0 z-0"
           suppressHydrationWarning
         >
-          <Image
+          <Image unoptimized
             src={images[imgIndex] ?? images[0]}
             alt={product.name}
             fill

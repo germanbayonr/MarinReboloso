@@ -71,7 +71,7 @@ function CollectionCard({ collection }: { collection: typeof collections[0] }) {
     >
       {/* Editorial Aspect Ratio 3:4 */}
       <div className="relative aspect-[3/4] w-full overflow-hidden">
-        <Image
+        <Image unoptimized
           src={collection.image}
           alt={`Colección ${collection.name}`}
           fill

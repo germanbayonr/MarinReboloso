@@ -40,7 +40,7 @@ export default function CollectionHero({
     <section aria-label={`Portada de colección ${title}`} className="w-full">
       <div className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] overflow-hidden">
         {asset?.image ? (
-          <Image
+          <Image unoptimized
             src={asset.image}
             alt={`Colección ${title}`}
             fill

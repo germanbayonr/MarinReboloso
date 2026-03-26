@@ -27,7 +27,7 @@ export default function HeroSection() {
               isReady ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-6 scale-[1.03]',
             ].join(' ')}
           >
-            <Image
+            <Image unoptimized
               src="https://marebo.b-cdn.net/Colecciones/Descara/WhatsApp%20Image%202026-03-11%20at%2006.57.39.jpeg"
               alt="Lifestyle Colección Descará"
               fill
@@ -57,7 +57,7 @@ export default function HeroSection() {
               isReady ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-6 scale-[1.03]',
             ].join(' ')}
           >
-            <Image
+            <Image unoptimized
               src="https://marebo.b-cdn.net/Colecciones/Descara/Pendientes%20Descara%20Pasion.PNG"
               alt="Producto Colección Descará"
               fill

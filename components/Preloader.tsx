@@ -73,7 +73,7 @@ export default function Preloader() {
       aria-hidden
     >
       <div className="absolute inset-0">
-        <Image
+        <Image unoptimized
           src="https://marebo.b-cdn.net/assets/WhatsApp%20Image%202026-03-11%20at%2006.58.03.jpeg"
           alt=""
           fill

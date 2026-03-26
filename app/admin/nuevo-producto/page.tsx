@@ -278,7 +278,7 @@ export default function NuevoProductoPage() {
                 className="mt-4 inline-flex items-center gap-2 border border-border px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-foreground hover:text-background transition-colors"
                 suppressHydrationWarning
               >
-                <ImageIcon className="w-4 h-4" />
+                <Image unoptimizedIcon className="w-4 h-4" />
                 Seleccionar
               </button>
               <input

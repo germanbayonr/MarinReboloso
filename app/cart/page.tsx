@@ -59,7 +59,7 @@ export default function CartPage() {
                         className="relative w-24 h-32 overflow-hidden bg-stone-100 flex-shrink-0 block"
                         suppressHydrationWarning
                       >
-                        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
+                        <Image unoptimized src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
                       </Link>
 
                       <div className="min-w-0 flex-1">
@@ -123,7 +123,7 @@ export default function CartPage() {
                           className="relative w-24 h-32 overflow-hidden bg-stone-100 flex-shrink-0 block"
                           suppressHydrationWarning
                         >
-                          <Image src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
+                          <Image unoptimized src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
                         </Link>
                         <div className="min-w-0">
                           <Link href={productHref} className="block min-w-0" suppressHydrationWarning>
