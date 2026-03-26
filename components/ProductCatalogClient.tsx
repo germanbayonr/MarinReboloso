@@ -8,7 +8,7 @@ type CatalogProduct = {
   id: string
   name: string
   price: number | string
-  image_url: string | null
+  image_url: string[] | string | null
   category?: string | null
   collection?: string | null
   is_new_arrival?: boolean | null

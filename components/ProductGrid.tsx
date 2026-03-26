@@ -4,7 +4,7 @@ export type ProductGridProduct = {
   id: string
   name: string
   price: number | string
-  image_url: string | null
+  image_url: string[] | string | null
   category?: string | null
   collection?: string | null
 }
