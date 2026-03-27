@@ -28,6 +28,19 @@ const nextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; frame-src https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://nwpjxibuaxclzogatfcl.supabase.co https://marebo.b-cdn.net; connect-src 'self' https://nwpjxibuaxclzogatfcl.supabase.co https://api.stripe.com;",
+          },
+        ],
+      },
+    ]
+  },
 }
 
 export default nextConfig

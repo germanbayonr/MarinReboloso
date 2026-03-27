@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Heart } from 'lucide-react'
@@ -20,12 +21,23 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
   
-  // Normalizar image_url a un array
-  const images = Array.isArray(product.image_url) 
-    ? product.image_url 
-    : product.image_url 
-      ? [product.image_url] 
-      : []
+  // Normalizar image_url a un array y corregir doble encoding de Bunny
+  const images = useMemo(() => {
+    const rawImages = Array.isArray(product.image_url) 
+      ? product.image_url 
+      : product.image_url 
+        ? [product.image_url] 
+        : []
+    
+    return rawImages.map(url => {
+      try {
+        // Corregir %2520 -> %20
+        return decodeURIComponent(url)
+      } catch {
+        return url
+      }
+    })
+  }, [product.image_url])
       
   const mainImage = images[0] || 'https://marebo.b-cdn.net/placeholder.jpg'
   const hoverImage = images[1] || null

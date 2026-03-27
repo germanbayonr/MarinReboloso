@@ -43,10 +43,16 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
   const formattedPrice = useMemo(() => (Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'), [price])
   
-  // Normalizar image_url a array
+  // Normalizar image_url a array y corregir doble encoding
   const images = useMemo(() => {
-    if (!product?.image_url) return []
-    return Array.isArray(product.image_url) ? product.image_url : [product.image_url]
+    const rawImages = !product?.image_url ? [] : (Array.isArray(product.image_url) ? product.image_url : [product.image_url])
+    return rawImages.map(url => {
+      try {
+        return decodeURIComponent(url)
+      } catch {
+        return url
+      }
+    })
   }, [product?.image_url])
 
   const mainImageUrl = images[activeImageIndex] || images[0] || ''

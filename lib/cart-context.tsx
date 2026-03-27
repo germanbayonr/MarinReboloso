@@ -90,7 +90,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return
     const missingIds = Array.from(
-      new Set(cartItems.map((i) => i.id)),
+      new Set(cartItems.map((i) => i.id).filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))),
     )
     if (missingIds.length === 0) return
 

@@ -72,7 +72,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
-    const ids = Array.from(new Set(items.map((i) => i.id)))
+    const ids = Array.from(new Set(items.map((i) => i.id).filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))))
     if (ids.length === 0) return
 
     let cancelled = false
