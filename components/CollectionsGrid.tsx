@@ -8,13 +8,13 @@ const collections = [
     id: 'descara',
     name: 'Descará',
     slug: 'descara',
-    image: 'https://marebo.b-cdn.net/Colecciones/Descara/Pendientes%20Descara%20Alhambra.PNG',
+    image: 'https://marebo.b-cdn.net/Colecciones/Drop%20_Descar%C3%A1_/Pendientes%20Descara%20Alhambra.PNG',
   },
   {
     id: 'marebo',
     name: 'Marebo',
     slug: 'marebo',
-    image: 'https://marebo.b-cdn.net/Colecciones/Marebo/Pendiente%20Flor%20MAREBO%20Dore.png',
+    image: 'https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Flor%20MAREBO%20Dore.png',
   },
   {
     id: 'corales',

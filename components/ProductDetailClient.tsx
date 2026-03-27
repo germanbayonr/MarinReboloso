@@ -39,10 +39,13 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const [quantity, setQuantity] = useState(1)
   const [selectedVariant, setSelectedVariant] = useState('Único')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({})
 
   const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
   const formattedPrice = useMemo(() => (Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'), [price])
   
+  const PLACEHOLDER_IMAGE = 'https://marebo.b-cdn.net/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
+
   // Normalizar image_url a array y corregir doble encoding
   const images = useMemo(() => {
     const rawImages = !product?.image_url ? [] : (Array.isArray(product.image_url) ? product.image_url : [product.image_url])
@@ -55,7 +58,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
     })
   }, [product?.image_url])
 
-  const mainImageUrl = images[activeImageIndex] || images[0] || ''
+  const mainImageUrl = imageErrors[activeImageIndex] ? PLACEHOLDER_IMAGE : (images[activeImageIndex] || images[0] || PLACEHOLDER_IMAGE)
   const productHref = product ? `/producto/${product.id}` : ''
 
   if (!product) {
@@ -140,12 +143,13 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           <div className="lg:col-span-7 space-y-4">
             <div ref={imageRef} className="relative aspect-[4/5] bg-stone-100 overflow-hidden">
               {mainImageUrl ? (
-                <Image unoptimized
+                <Image
                   src={mainImageUrl}
                   alt={product.name}
                   fill
                   priority={true}
-                  unoptimized
+                  unoptimized={true}
+                  onError={() => setImageErrors(prev => ({ ...prev, [activeImageIndex]: true }))}
                   sizes="(max-width: 1024px) 100vw, 50vw"
                   className="object-cover"
                 />
@@ -164,11 +168,12 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
                       activeImageIndex === idx ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100"
                     )}
                   >
-                    <Image unoptimized
-                      src={img}
+                    <Image
+                      src={imageErrors[idx] ? PLACEHOLDER_IMAGE : img}
                       alt={`${product.name} miniatura ${idx + 1}`}
                       fill
-                      unoptimized
+                      unoptimized={true}
+                      onError={() => setImageErrors(prev => ({ ...prev, [idx]: true }))}
                       sizes="15vw"
                       className="object-cover"
                     />
@@ -304,7 +309,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
             transition={{ type: 'tween', ease: 'easeInOut', duration: 0.7 }}
             className="pointer-events-none overflow-hidden"
           >
-            {mainImageUrl ? <Image unoptimized src={mainImageUrl} alt="fly" fill unoptimized className="object-cover" /> : null}
+            {mainImageUrl ? <Image src={mainImageUrl} alt="fly" fill unoptimized={true} className="object-cover" /> : null}
           </motion.div>
         )}
       </AnimatePresence>

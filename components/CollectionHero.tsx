@@ -10,13 +10,13 @@ const HERO_ASSETS: Record<
     image: 'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Sky%202.JPG',
   },
   marebo: {
-    image: 'https://marebo.b-cdn.net/Colecciones/Marebo/Flor%20MAREBO%20Dore.jpg',
+    image: 'https://marebo.b-cdn.net/Colecciones/MAREBO/Flor%20MAREBO%20Dore.jpg',
   },
   filipa: {
     image: 'https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes-Linaje-Carmesi%202.png',
   },
   descara: {
-    image: 'https://marebo.b-cdn.net/Colecciones/Descara/Pendientes%20Descara%20Alhambra.PNG',
+    image: 'https://marebo.b-cdn.net/Colecciones/Drop%20_Descar%C3%A1_/Pendientes%20Descara%20Alhambra.PNG',
   },
 }
 

@@ -1,11 +1,11 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Heart } from 'lucide-react'
-import { useWishlist } from '@/lib/wishlist-context'
 import { cn } from '@/lib/utils'
+import { useWishlist } from '@/lib/wishlist-context'
 
 interface ProductCardProps {
   product: {
@@ -18,8 +18,12 @@ interface ProductCardProps {
   }
 }
 
+const PLACEHOLDER_IMAGE = 'https://marebo.b-cdn.net/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
+
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
+  const [mainImgError, setMainImgError] = useState(false)
+  const [hoverImgError, setHoverImgError] = useState(false)
   
   // Normalizar image_url a un array y corregir doble encoding de Bunny
   const images = useMemo(() => {
@@ -39,11 +43,11 @@ export default function ProductCard({ product }: ProductCardProps) {
     })
   }, [product.image_url])
       
-  const mainImage = images[0] || 'https://marebo.b-cdn.net/placeholder.jpg'
-  const hoverImage = images[1] || null
+  const mainImage = mainImgError ? PLACEHOLDER_IMAGE : (images[0] || PLACEHOLDER_IMAGE)
+  const hoverImage = hoverImgError ? null : (images[1] || null)
 
-  if (mainImage) console.log(`[ProductCard] Cargando portada para ${product.name}:`, mainImage)
-  if (hoverImage) console.log(`[ProductCard] Cargando hover para ${product.name}:`, hoverImage)
+  if (mainImage && !mainImgError) console.log(`[ProductCard] Cargando portada para ${product.name}:`, mainImage)
+  if (hoverImage && !hoverImgError) console.log(`[ProductCard] Cargando hover para ${product.name}:`, hoverImage)
   
   const price = typeof product.price === 'number' ? product.price : Number(product.price)
   const formattedPrice = Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'
@@ -92,6 +96,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             fill
             unoptimized={true}
+            onError={() => setMainImgError(true)}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
             className={cn(
@@ -108,6 +113,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             alt={`${product.name} - vista alterna`}
             fill
             unoptimized={true}
+            onError={() => setHoverImgError(true)}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
             className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100"

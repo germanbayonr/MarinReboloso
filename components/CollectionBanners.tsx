@@ -12,7 +12,7 @@ const collections = [
     title: 'Marebo',
     href: '/coleccion/marebo',
     image:
-      'https://marebo.b-cdn.net/Colecciones/Marebo/Flor%20MAREBO%20Dore.jpg',
+      'https://marebo.b-cdn.net/Colecciones/MAREBO/Flor%20MAREBO%20Dore.jpg',
   },
   {
     title: 'Filipa',
