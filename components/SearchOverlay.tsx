@@ -121,7 +121,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
                 >
                   <div className="relative w-16 h-16 overflow-hidden bg-stone-100 flex-shrink-0">
                     {image ? (
-                      <Image unoptimized src={image} alt={p.name} fill sizes="64px" className="object-cover" />
+                      <Image unoptimized={true} src={image} alt={p.name} fill sizes="64px" className="object-cover" />
                     ) : null}
                   </div>
 

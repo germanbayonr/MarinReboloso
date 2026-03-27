@@ -289,7 +289,7 @@ export default function CheckoutPage() {
                           className="relative w-14 h-16 overflow-hidden bg-stone-100 flex-shrink-0 block"
                           suppressHydrationWarning
                         >
-                          <Image unoptimized src={image} alt={item.name} fill sizes="56px" className="object-cover" />
+                          <Image unoptimized={true} src={image} alt={item.name} fill sizes="56px" className="object-cover" />
                         </Link>
                         <div className="min-w-0 flex-1">
                           <Link href={productHref} className="block min-w-0" suppressHydrationWarning>

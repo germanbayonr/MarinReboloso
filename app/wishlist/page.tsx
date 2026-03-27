@@ -46,7 +46,7 @@ export default function WishlistPage() {
                   <div className="relative">
                     <Link href={item.href} className="group block" suppressHydrationWarning>
                       <div className="relative aspect-[3/4] overflow-hidden bg-stone-100">
-                        <Image unoptimized
+                        <Image unoptimized={true}
                           src={item.image}
                           alt={item.name}
                           fill

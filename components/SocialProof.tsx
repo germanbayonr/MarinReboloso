@@ -160,7 +160,7 @@ function InstagramPost({ post }: { post: typeof INSTAGRAM_POSTS[0] }) {
       rel="noopener noreferrer"
       className="relative aspect-square overflow-hidden bg-secondary/20 group cursor-pointer"
     >
-      <Image unoptimized
+      <Image unoptimized={true}
         src={post.imageUrl}
         alt="Instagram post"
         fill

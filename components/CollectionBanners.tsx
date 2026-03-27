@@ -32,7 +32,7 @@ export default function CollectionBanners() {
           className="group block w-full relative overflow-hidden h-[60svh] min-h-[60svh] sm:h-[70svh] sm:min-h-[70svh] lg:h-[80vh] lg:min-h-[80vh]"
           suppressHydrationWarning
         >
-          <Image unoptimized
+          <Image unoptimized={true}
             src={collection.image}
             alt={`Colección ${collection.title}`}
             fill

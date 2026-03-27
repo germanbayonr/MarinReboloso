@@ -91,7 +91,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         
         {/* Imagen Principal */}
         {mainImage ? (
-          <Image
+          <Image unoptimized={true}
             src={mainImage}
             alt={product.name}
             fill
@@ -108,7 +108,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Imagen Hover */}
         {hoverImage ? (
-          <Image
+          <Image unoptimized={true}
             src={hoverImage}
             alt={`${product.name} - vista alterna`}
             fill
