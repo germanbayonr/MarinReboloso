@@ -41,6 +41,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       
   const mainImage = images[0] || 'https://marebo.b-cdn.net/placeholder.jpg'
   const hoverImage = images[1] || null
+
+  if (mainImage) console.log(`[ProductCard] Cargando portada para ${product.name}:`, mainImage)
+  if (hoverImage) console.log(`[ProductCard] Cargando hover para ${product.name}:`, hoverImage)
   
   const price = typeof product.price === 'number' ? product.price : Number(product.price)
   const formattedPrice = Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'
@@ -84,11 +87,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         
         {/* Imagen Principal */}
         {mainImage ? (
-          <Image unoptimized
+          <Image
             src={mainImage}
             alt={product.name}
             fill
-            unoptimized
+            unoptimized={true}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
             className={cn(
@@ -100,11 +103,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Imagen Hover */}
         {hoverImage ? (
-          <Image unoptimized
+          <Image
             src={hoverImage}
             alt={`${product.name} - vista alterna`}
             fill
-            unoptimized
+            unoptimized={true}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
             className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100"
