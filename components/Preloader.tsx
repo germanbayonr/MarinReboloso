@@ -73,12 +73,12 @@ export default function Preloader() {
       aria-hidden
     >
       <div className="absolute inset-0">
-        <Image unoptimized={true}
-          src="https://marebo.b-cdn.net/assets/WhatsApp%20Image%202026-03-11%20at%2006.58.03.jpeg"
+        <Image
+          unoptimized={true}
+          src="https://marebo.b-cdn.net/PRODUCTOS/Mantones/Manton%20Dolores%203.jpeg"
           alt=""
           fill
           priority
-          unoptimized
           sizes="100vw"
           className="object-cover"
         />

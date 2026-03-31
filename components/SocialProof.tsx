@@ -28,14 +28,18 @@ const reviews = [
 ]
 
 const INSTAGRAM_POSTS = [
-  { id: 1, imageUrl: 'https://marebo.b-cdn.net/assets/Insta1.png', isVideo: false },
-  { id: 2, imageUrl: 'https://marebo.b-cdn.net/assets/Insta2.png', isVideo: false },
-  { id: 3, imageUrl: 'https://marebo.b-cdn.net/assets/WhatsApp%20Image%202026-03-11%20at%2006.55.57.jpeg', isVideo: false },
-  { id: 4, imageUrl: 'https://marebo.b-cdn.net/assets/Insta4.png', isVideo: true },
-  { id: 5, imageUrl: 'https://marebo.b-cdn.net/assets/Insta5.png', isVideo: false },
-  { id: 6, imageUrl: 'https://marebo.b-cdn.net/assets/Insta6%20.png', isVideo: false },
-  { id: 7, imageUrl: 'https://marebo.b-cdn.net/assets/Insta7.png', isVideo: false },
-  { id: 8, imageUrl: 'https://marebo.b-cdn.net/assets/Insta8.png', isVideo: true },
+  { id: 1, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta1.png', isVideo: false },
+  { id: 2, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta2.png', isVideo: false },
+  {
+    id: 3,
+    imageUrl: 'https://marebo.b-cdn.net/Logo/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg',
+    isVideo: false,
+  },
+  { id: 4, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta4.png', isVideo: false },
+  { id: 5, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta5.png', isVideo: false },
+  { id: 6, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta6%20.png', isVideo: false },
+  { id: 7, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta7.png', isVideo: false },
+  { id: 8, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta8.png', isVideo: false },
 ]
 
 export default function SocialProof() {

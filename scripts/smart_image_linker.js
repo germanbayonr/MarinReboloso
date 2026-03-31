@@ -72,9 +72,11 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
 async function smartImageLinker() {
   console.log('🚀 Iniciando Smart Image Linker (Fuzzy Matching)...');
 
-  // 1. Obtener productos de Supabase
+  // 1. Obtener productos de Supabase (especialmente los que tienen image_url vacío o roto)
   const { data: products, error } = await supabase.from('products').select('id, name, image_url');
   if (error) throw error;
+  
+  // Filtrar productos que necesitan reparación (opcional, pero procesamos todos para asegurar variantes)
   console.log(`📦 ${products.length} productos en Supabase.`);
 
   // 2. Escanear archivos locales
@@ -87,7 +89,7 @@ async function smartImageLinker() {
     const cleaned = fuzzyClean(p.name);
     if (cleaned) {
       if (!productFuzzyMap.has(cleaned)) {
-        productFuzzyMap.set(cleaned, { id: p.id, name: p.name, urls: [] });
+        productFuzzyMap.set(cleaned, { id: p.id, name: p.name, urls: [], currentUrls: p.image_url });
       }
     }
   });
@@ -98,13 +100,16 @@ async function smartImageLinker() {
     const cleanedFile = fuzzyClean(filename);
     
     // Verificamos si este archivo "limpio" coincide con algún producto "limpio"
-    if (productFuzzyMap.has(cleanedFile)) {
-      const relPath = path.relative(LOCAL_IMAGES_PATH, filePath);
-      // Solo encodeamos los segmentos del path para la URL final de Bunny
-      const bunnyPath = relPath.split(path.sep).map(s => encodeURIComponent(s)).join('/');
-      const finalUrl = `${CDN_BASE_URL}${bunnyPath}`;
-      
-      productFuzzyMap.get(cleanedFile).urls.push(finalUrl);
+    // O si el nombre del producto está contenido en el nombre del archivo (para casos como "Aura Carmin 2")
+    for (const [fuzzyName, data] of productFuzzyMap.entries()) {
+      if (cleanedFile === fuzzyName || cleanedFile.includes(fuzzyName) || fuzzyName.includes(cleanedFile)) {
+        const relPath = path.relative(LOCAL_IMAGES_PATH, filePath);
+        // Solo encodeamos los segmentos del path para la URL final de Bunny
+        const bunnyPath = relPath.split(path.sep).map(s => encodeURIComponent(s)).join('/');
+        const finalUrl = `${CDN_BASE_URL}${bunnyPath}`;
+        
+        data.urls.push(finalUrl);
+      }
     }
   });
 
@@ -115,23 +120,29 @@ async function smartImageLinker() {
 
   for (const [fuzzyName, data] of productFuzzyMap.entries()) {
     if (data.urls.length > 0) {
-      // Eliminamos duplicados si existen
-      const uniqueUrls = Array.from(new Set(data.urls));
+      // Eliminamos duplicados y ordenamos para consistencia
+      const uniqueUrls = Array.from(new Set(data.urls)).sort();
       
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ image_url: uniqueUrls })
-        .eq('id', data.id);
+      // Solo actualizamos si el array de URLs ha cambiado o si estaba vacío
+      const currentUrls = Array.isArray(data.currentUrls) ? data.currentUrls : (data.currentUrls ? [data.currentUrls] : []);
+      const hasChanged = JSON.stringify(uniqueUrls) !== JSON.stringify(currentUrls.sort());
 
-      if (updateError) {
-        console.error(`   ❌ Error en ${data.name}:`, updateError.message);
-      } else {
-        totalUpdated++;
-        updateTable.push({
-          Producto: data.name,
-          Fuzzy: fuzzyName,
-          Variantes: uniqueUrls.length
-        });
+      if (hasChanged || currentUrls.length === 0) {
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ image_url: uniqueUrls })
+          .eq('id', data.id);
+
+        if (updateError) {
+          console.error(`   ❌ Error en ${data.name}:`, updateError.message);
+        } else {
+          totalUpdated++;
+          updateTable.push({
+            Producto: data.name,
+            Variantes: uniqueUrls.length,
+            Estado: currentUrls.length === 0 ? 'Reparado' : 'Actualizado'
+          });
+        }
       }
     }
   }
