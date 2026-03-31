@@ -143,12 +143,12 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           <div className="lg:col-span-7 space-y-4">
             <div ref={imageRef} className="relative aspect-[4/5] bg-stone-100 overflow-hidden">
               {mainImageUrl ? (
-                <Image unoptimized={true}
+                <Image
+                  unoptimized={true}
                   src={mainImageUrl}
                   alt={product.name}
                   fill
                   priority={true}
-                  unoptimized={true}
                   onError={() => setImageErrors(prev => ({ ...prev, [activeImageIndex]: true }))}
                   sizes="(max-width: 1024px) 100vw, 50vw"
                   className="object-cover"
@@ -168,11 +168,11 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
                       activeImageIndex === idx ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100"
                     )}
                   >
-                    <Image unoptimized={true}
+                    <Image
+                      unoptimized={true}
                       src={imageErrors[idx] ? PLACEHOLDER_IMAGE : img}
                       alt={`${product.name} miniatura ${idx + 1}`}
                       fill
-                      unoptimized={true}
                       onError={() => setImageErrors(prev => ({ ...prev, [idx]: true }))}
                       sizes="15vw"
                       className="object-cover"
@@ -309,7 +309,9 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
             transition={{ type: 'tween', ease: 'easeInOut', duration: 0.7 }}
             className="pointer-events-none overflow-hidden"
           >
-            {mainImageUrl ? <Image unoptimized={true} src={mainImageUrl} alt="fly" fill unoptimized={true} className="object-cover" /> : null}
+            {mainImageUrl ? (
+              <Image unoptimized={true} src={mainImageUrl} alt="" fill className="object-cover" />
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>

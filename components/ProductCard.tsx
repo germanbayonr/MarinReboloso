@@ -91,11 +91,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         
         {/* Imagen Principal */}
         {mainImage ? (
-          <Image unoptimized={true}
+          <Image
+            unoptimized={true}
             src={mainImage}
             alt={product.name}
             fill
-            unoptimized={true}
             onError={() => setMainImgError(true)}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
@@ -108,11 +108,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Imagen Hover */}
         {hoverImage ? (
-          <Image unoptimized={true}
+          <Image
+            unoptimized={true}
             src={hoverImage}
             alt={`${product.name} - vista alterna`}
             fill
-            unoptimized={true}
             onError={() => setHoverImgError(true)}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"

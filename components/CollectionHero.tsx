@@ -1,9 +1,9 @@
 import Image from 'next/image'
 
 /**
- * Portadas alineadas con la Home:
- * - descara: mismo asset que el bloque izquierdo de HeroSection (lifestyle Descará)
- * - marebo, corales, filipa: mismas URLs que CollectionsGrid ("Nuestras Colecciones")
+ * Portadas por slug (cabecera /coleccion/[slug]).
+ * Cubre al menos: descara, marebo, corales. Filipa se mantiene para la ruta homónima.
+ * Corales: URL temporal acordada con la clienta (sustituible en CDN).
  */
 const HERO_ASSETS: Record<
   string,
@@ -20,7 +20,7 @@ const HERO_ASSETS: Record<
   },
   corales: {
     image:
-      'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.PNG',
+      'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Ivory.PNG',
   },
   filipa: {
     image: 'https://marebo.b-cdn.net/Colecciones/Filipa/Collar%20Filipa.PNG',
