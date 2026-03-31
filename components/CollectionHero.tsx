@@ -1,22 +1,29 @@
 import Image from 'next/image'
 
+/**
+ * Portadas alineadas con la Home:
+ * - descara: mismo asset que el bloque izquierdo de HeroSection (lifestyle Descará)
+ * - marebo, corales, filipa: mismas URLs que CollectionsGrid ("Nuestras Colecciones")
+ */
 const HERO_ASSETS: Record<
   string,
   {
     image: string
   }
 > = {
-  corales: {
-    image: 'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Sky%202.JPG',
+  descara: {
+    image:
+      'https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Pasion%202.jpg',
   },
   marebo: {
-    image: 'https://marebo.b-cdn.net/Colecciones/MAREBO/Flor%20MAREBO%20Dore.jpg',
+    image: 'https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Flor%20MAREBO%20Dore.png',
+  },
+  corales: {
+    image:
+      'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.PNG',
   },
   filipa: {
-    image: 'https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes-Linaje-Carmesi%202.png',
-  },
-  descara: {
-    image: 'https://marebo.b-cdn.net/Colecciones/Drop%20_Descar%C3%A1_/Pendientes%20Descara%20Alhambra.PNG',
+    image: 'https://marebo.b-cdn.net/Colecciones/Filipa/Collar%20Filipa.PNG',
   },
 }
 
@@ -38,9 +45,10 @@ export default function CollectionHero({
 
   return (
     <section aria-label={`Portada de colección ${title}`} className="w-full">
-      <div className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] overflow-hidden">
+      <div className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] overflow-hidden bg-stone-200">
         {asset?.image ? (
-          <Image unoptimized={true}
+          <Image
+            unoptimized={true}
             src={asset.image}
             alt={`Colección ${title}`}
             fill
