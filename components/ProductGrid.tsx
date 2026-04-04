@@ -4,6 +4,9 @@ export type ProductGridProduct = {
   id: string
   name: string
   price: number | string
+  original_price?: number | string | null
+  discount_percent?: number | string | null
+  in_stock?: boolean | null
   image_url: string[] | string | null
   category?: string | null
   collection?: string | null

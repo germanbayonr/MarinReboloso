@@ -71,7 +71,7 @@ export default function Footer() {
           <ul className="space-y-2.5" suppressHydrationWarning>
             <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>marebo.meri@gmail.com</li>
             <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>+34 657 46 04 46</li>
-            <li className="font-sans text-sm text-muted-foreground mt-1" suppressHydrationWarning>Sevilla, España</li>
+            <li className="font-sans text-sm text-muted-foreground mt-1" suppressHydrationWarning>Santa Marta, España</li>
           </ul>
         </div>
       </div>

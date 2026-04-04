@@ -1,167 +1,223 @@
 'use client'
 
 import { useState } from 'react'
-import { User, Mail, Lock, ChevronDown, LogIn } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
+import Link from 'next/link'
+import { User, Mail, Lock, ChevronDown, LogIn, Eye, EyeOff } from 'lucide-react'
+import { useAuth, isAdminUser } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { toast } from 'sonner'
+
+const inputClass =
+  'w-full pl-9 pr-3 py-2.5 text-sm bg-white/80 text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-foreground/20 transition-[box-shadow,background] rounded-none border-0 border-b border-foreground/15 focus:border-foreground/40'
 
 export default function AdminAuthDropdown() {
-  const { isAuthenticated, login, logout, email } = useAuth()
+  const { user, loading, login, logout } = useAuth()
   const router = useRouter()
+  const [open, setOpen] = useState(false)
   const [emailInput, setEmailInput] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleLogin = (setOpen: (open: boolean) => void) => {
-    const result = login(emailInput, passwordInput)
-    if (result === 'admin') {
-      setOpen(false)
-      setError('')
-      setEmailInput('')
-      setPasswordInput('')
-      router.push('/admin/productos')
-    } else if (result === 'user') {
-      setOpen(false)
-      setError('')
-    } else {
-      setError('Correo o contraseña incorrectos.')
+  const isAuthenticated = Boolean(user)
+  const admin = isAdminUser(user)
+
+  const handleLogin = async () => {
+    setError('')
+    setSubmitting(true)
+    try {
+      const result = await login(emailInput, passwordInput)
+      if (result === 'admin') {
+        toast.success('Sesión iniciada')
+        setOpen(false)
+        setEmailInput('')
+        setPasswordInput('')
+        window.location.href = '/admin'
+      } else if (result === 'user') {
+        toast.success('Bienvenida/o')
+        setOpen(false)
+        setEmailInput('')
+        setPasswordInput('')
+      } else {
+        setError('Correo o contraseña incorrectos.')
+      }
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const handleLogout = (setOpen: (open: boolean) => void) => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     setOpen(false)
+    toast.message('Sesión cerrada')
     router.push('/')
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           suppressHydrationWarning
-          className="flex items-center gap-1.5 hover:opacity-60 transition-opacity outline-none"
-          aria-label="Cuenta de usuario"
-        >
-          <User className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          {isAuthenticated && (
-            <ChevronDown className="w-3 h-3 transition-transform" strokeWidth={1.5} />
+          className={cn(
+            'flex items-center gap-1.5 outline-none transition-opacity hover:opacity-70',
+            loading && 'pointer-events-none opacity-50',
           )}
+          aria-label="Cuenta de usuario"
+          type="button"
+        >
+          <User className="h-[18px] w-[18px]" strokeWidth={1.25} />
+          {isAuthenticated && <ChevronDown className="h-3 w-3" strokeWidth={1.25} />}
         </button>
       </PopoverTrigger>
 
-      <PopoverContent align="end" sideOffset={8} className="w-72 bg-white text-gray-900 border border-gray-200 shadow-xl p-5">
-        {/* Usamos un wrapper para pasar setOpen si es necesario, o manejamos el estado internamente si Radix lo permite */}
-        {/* Para simplificar con Popover de Radix, usaremos el estado controlado si necesitamos cerrar manualmente */}
-        <AuthContent 
-          isAuthenticated={isAuthenticated}
-          email={email}
-          emailInput={emailInput}
-          setEmailInput={setEmailInput}
-          passwordInput={passwordInput}
-          setPasswordInput={setPasswordInput}
-          error={error}
-          setError={setError}
-          handleLogin={handleLogin}
-          handleLogout={handleLogout}
-          router={router}
-        />
+      <PopoverContent
+        align="end"
+        sideOffset={10}
+        className={cn(
+          'w-[min(100vw-2rem,20rem)] border-0 bg-[#faf9f7] p-0 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.18)]',
+          'ring-1 ring-foreground/8',
+        )}
+      >
+        <div className="p-6">
+          {loading ? (
+            <p className="font-serif text-sm tracking-wide text-muted-foreground">Cargando…</p>
+          ) : isAuthenticated ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 border-b border-foreground/10 pb-4">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                  <User className="h-4 w-4" strokeWidth={1.25} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-sm tracking-[0.12em] text-foreground">
+                    {admin ? 'Administración' : 'Tu cuenta'}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+              </div>
+              {!admin && (
+                <Link
+                  href="/mi-cuenta"
+                  onClick={() => setOpen(false)}
+                  className="block text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Mi cuenta y datos
+                </Link>
+              )}
+              {admin && (
+                <Link
+                  href="/admin/productos"
+                  onClick={() => setOpen(false)}
+                  className="block text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Panel de administración
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                suppressHydrationWarning
+                className="w-full text-left text-sm text-muted-foreground transition-colors hover:text-destructive"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <p className="font-serif text-base tracking-[0.14em] text-foreground">Acceso</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Inicia sesión para guardar tu perfil y seguir tu experiencia en la boutique.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Correo electrónico</label>
+                <div className="relative">
+                  <Mail
+                    className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
+                    strokeWidth={1.25}
+                  />
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => {
+                      setEmailInput(e.target.value)
+                      setError('')
+                    }}
+                    placeholder="correo@ejemplo.com"
+                    className={inputClass}
+                    suppressHydrationWarning
+                    onKeyDown={(e) => e.key === 'Enter' && void handleLogin()}
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Contraseña</label>
+                <div className="relative">
+                  <Lock
+                    className="pointer-events-none absolute left-0 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
+                    strokeWidth={1.25}
+                  />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value)
+                      setError('')
+                    }}
+                    placeholder="••••••••"
+                    className={cn(inputClass, 'pr-10')}
+                    suppressHydrationWarning
+                    onKeyDown={(e) => e.key === 'Enter' && void handleLogin()}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-0 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-muted-foreground/70 transition-colors hover:text-foreground"
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" strokeWidth={1.25} />
+                    ) : (
+                      <Eye className="h-4 w-4" strokeWidth={1.25} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {error ? <p className="text-xs text-destructive">{error}</p> : null}
+
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => void handleLogin()}
+                suppressHydrationWarning
+                className="flex w-full items-center justify-center gap-2 bg-foreground py-3 text-xs uppercase tracking-[0.2em] text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <LogIn className="h-4 w-4" strokeWidth={1.25} />
+                {submitting ? 'Entrando…' : 'Iniciar sesión'}
+              </button>
+
+              <p className="text-center text-xs text-muted-foreground">
+                ¿No tienes cuenta?{' '}
+                <Link
+                  href="/registro"
+                  onClick={() => setOpen(false)}
+                  className="underline decoration-foreground/30 underline-offset-4 transition-colors hover:text-foreground"
+                >
+                  Crear cuenta
+                </Link>
+              </p>
+            </div>
+          )}
+        </div>
       </PopoverContent>
     </Popover>
-  )
-}
-
-function AuthContent({ 
-  isAuthenticated, email, emailInput, setEmailInput, 
-  passwordInput, setPasswordInput, error, setError, 
-  handleLogin, handleLogout, router 
-}: any) {
-  // Radix Popover no pasa setOpen fácilmente a los hijos sin Contexto, 
-  // pero para este caso el contenido es estático o redirige.
-  return (
-    <div style={{ mixBlendMode: 'normal' }}>
-      {isAuthenticated ? (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 pb-3 border-b border-border">
-            <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center">
-              <User className="w-4 h-4 text-background" strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-foreground">Administrador</p>
-              <p className="text-xs text-muted-foreground truncate max-w-[180px]">{email}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => { router.push('/admin/productos') }}
-            suppressHydrationWarning
-            className="w-full text-sm text-left text-muted-foreground hover:text-foreground transition-colors py-1"
-          >
-            Panel de administración
-          </button>
-          <button
-            onClick={() => handleLogout(() => {})} // El Popover se cerrará por la navegación o clic fuera
-            suppressHydrationWarning
-            className="w-full text-sm text-left text-muted-foreground hover:text-destructive transition-colors py-1"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <p className="font-serif text-sm tracking-wide">Acceso</p>
-
-          <div className="space-y-1">
-            <label className="text-xs text-gray-500 uppercase tracking-wider">Correo electrónico</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-              <input
-                type="email"
-                value={emailInput}
-                onChange={e => { setEmailInput(e.target.value); setError('') }}
-                placeholder="correo@ejemplo.com"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-600 transition-colors"
-                suppressHydrationWarning
-                onKeyDown={e => e.key === 'Enter' && handleLogin(() => {})}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs text-gray-500 uppercase tracking-wider">Contraseña</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={e => { setPasswordInput(e.target.value); setError('') }}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-600 transition-colors"
-                suppressHydrationWarning
-                onKeyDown={e => e.key === 'Enter' && handleLogin(() => {})}
-              />
-            </div>
-          </div>
-
-          {error && <p className="text-xs text-destructive">{error}</p>}
-
-          <button
-            onClick={() => handleLogin(() => {})}
-            suppressHydrationWarning
-            className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white py-2.5 text-sm tracking-wider uppercase hover:bg-gray-700 transition-colors"
-          >
-            <LogIn className="w-4 h-4" strokeWidth={1.5} />
-            Iniciar sesión
-          </button>
-
-          <p className="text-center text-xs text-muted-foreground">
-            ¿No tienes cuenta?{' '}
-            <button suppressHydrationWarning className="underline hover:text-foreground transition-colors">
-              Crear cuenta
-            </button>
-          </p>
-        </div>
-      )}
-    </div>
   )
 }

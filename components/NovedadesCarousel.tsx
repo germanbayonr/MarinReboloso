@@ -35,6 +35,7 @@ export default function NovedadesCarousel() {
         const { data, error } = await supabase
           .from('products')
           .select('id,name,price,image_url,category,collection,is_new_arrival')
+          .eq('is_active', true)
           .eq('is_new_arrival', true)
           .limit(12)
         if (cancelled) return

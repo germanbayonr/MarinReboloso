@@ -89,6 +89,7 @@ export default function WishlistPage() {
                     const { data, error } = await supabase
                       .from('products')
                       .select('id,name,price,image_url,stripe_price_id')
+                      .eq('is_active', true)
                       .eq('id', item.id)
                       .maybeSingle()
                     if (error || !data?.id) return

@@ -10,12 +10,16 @@ import { useWishlist } from '@/lib/wishlist-context'
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
 
 export type SupabaseProduct = {
   id: string
   name: string
   description: string | null
   price: number | string
+  original_price?: number | string | null
+  discount_percent?: number | string | null
+  in_stock?: boolean | null
   image_url: string[] | string | null
   category: string | null
   collection?: string | null
@@ -41,8 +45,32 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({})
 
-  const price = useMemo(() => (product ? toNumber(product.price) : 0), [product])
-  const formattedPrice = useMemo(() => (Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'), [price])
+  const orig = useMemo(() => {
+    if (!product) return null
+    if (product.original_price == null || product.original_price === '') return null
+    return typeof product.original_price === 'number' ? product.original_price : Number(product.original_price)
+  }, [product])
+
+  const disc = useMemo(() => (product ? Number(product.discount_percent) || 0 : 0), [product])
+
+  const price = useMemo(() => {
+    if (!product) return 0
+    const p = toNumber(product.price)
+    if (Number.isFinite(p) && p >= 0) return p
+    if (orig != null && Number.isFinite(orig)) return computeFinalPrice(orig, disc)
+    return 0
+  }, [product, orig, disc])
+
+  const formattedPrice = useMemo(
+    () => (Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'),
+    [price],
+  )
+  const formattedOriginal = useMemo(() => {
+    if (orig == null || !Number.isFinite(orig)) return null
+    return Number.isInteger(orig) ? String(orig) : orig.toFixed(2)
+  }, [orig])
+  const showDiscount = product ? hasActiveDiscount(orig, disc) : false
+  const inStock = product?.in_stock !== false
   
   const PLACEHOLDER_IMAGE = 'https://marebo.b-cdn.net/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
 
@@ -89,6 +117,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const wishlisted = isInWishlist(product.id)
 
   const handleAddToCart = () => {
+    if (!inStock) return
     const cartIcon = document.getElementById('cart-icon-target')
     if (imageRef.current && cartIcon) {
       const originRect = imageRef.current.getBoundingClientRect()
@@ -108,7 +137,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           image: mainImageUrl,
           quantity,
           variant: selectedVariant,
-          stripe_price_id: product.stripe_product_id ?? null,
+          stripe_price_id: product.stripe_price_id ?? null,
         })
         setIsAnimating(false)
       }, 700)
@@ -122,7 +151,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
       image: mainImageUrl,
       quantity,
       variant: selectedVariant,
-      stripe_price_id: product.stripe_product_id ?? null,
+      stripe_price_id: product.stripe_price_id ?? null,
     })
   }
 
@@ -189,7 +218,22 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
                 <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl tracking-wide leading-tight">
                   {product.name}
                 </h1>
-                <p className="text-xl font-sans tracking-wider">{formattedPrice}€</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  {showDiscount && formattedOriginal ? (
+                    <p className="text-xl font-sans tracking-wider">
+                      <span className="text-muted-foreground line-through">{formattedOriginal}€</span>{' '}
+                      <span className="text-foreground">{formattedPrice}€</span>{' '}
+                      <span className="text-sm text-neutral-500">-{disc}%</span>
+                    </p>
+                  ) : (
+                    <p className="text-xl font-sans tracking-wider">{formattedPrice}€</p>
+                  )}
+                  {!inStock ? (
+                    <span className="bg-neutral-900 px-2 py-1 text-[10px] uppercase tracking-wider text-white">
+                      Sin stock
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-sm md:text-base leading-relaxed text-muted-foreground tracking-wide">
                   {product.description ||
                     'Esta pieza ha sido diseñada bajo los más altos estándares de artesanía. Un equilibrio perfecto entre tradición y modernidad que eleva cualquier conjunto.'}
@@ -247,11 +291,17 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
               <div className="grid grid-cols-1 gap-3 pt-2">
                 <button
                   type="button"
+                  disabled={!inStock}
                   onClick={handleAddToCart}
-                  className="w-full bg-foreground text-background py-4 text-base tracking-[0.3em] uppercase hover:bg-foreground/90 transition-all active:scale-[0.98]"
+                  className={cn(
+                    'w-full py-4 text-base tracking-[0.3em] uppercase transition-all active:scale-[0.98]',
+                    inStock
+                      ? 'bg-foreground text-background hover:bg-foreground/90'
+                      : 'cursor-not-allowed bg-neutral-300 text-neutral-600',
+                  )}
                   suppressHydrationWarning
                 >
-                  Añadir a la cesta
+                  {inStock ? 'Añadir a la cesta' : 'Sin stock'}
                 </button>
 
                 <button

@@ -16,6 +16,7 @@ export default async function CatalogoPage() {
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .eq('is_active', true)
     .order('is_new_arrival', { ascending: false })
     .order('name', { ascending: true })
     .limit(5000)

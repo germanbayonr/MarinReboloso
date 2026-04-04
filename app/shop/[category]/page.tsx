@@ -28,6 +28,7 @@ export default function ShopCollectionPage() {
         const { data, error } = await supabase
           .from('products')
           .select('id,name,price,image_url,category,is_new_arrival')
+          .eq('is_active', true)
           .limit(500)
         if (cancelled) return
         if (error) {

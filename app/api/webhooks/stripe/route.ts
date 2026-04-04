@@ -66,6 +66,80 @@ async function bestEffortUpsertOrder({
   return null
 }
 
+/** Construye items_json alineado con el catálogo Supabase (mismas fotos y nombres que la web). */
+async function buildStripeOrderItemsPayload(
+  stripe: Stripe,
+  sessionId: string,
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+): Promise<{ items_json: Record<string, unknown>[]; line_summary: string; customer_name: string | null } | null> {
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ['line_items.data.price'],
+  })
+  const lineItems = session.line_items?.data ?? []
+  if (lineItems.length === 0) return null
+
+  const priceIds = [...new Set(lineItems.map((li) => li.price?.id).filter(Boolean) as string[])]
+  if (priceIds.length === 0) return null
+
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('id,name,price,image_url,stripe_price_id')
+    .in('stripe_price_id', priceIds)
+
+  if (error) {
+    console.error('[stripe webhook] products:', error.message)
+  }
+
+  const byStripePrice = new Map(
+    (products ?? [])
+      .filter((p: { stripe_price_id?: string | null }) => Boolean(p?.stripe_price_id))
+      .map((p: { stripe_price_id?: string | null }) => [String(p.stripe_price_id), p]),
+  )
+
+  const items: Record<string, unknown>[] = []
+  const names: string[] = []
+  for (const li of lineItems) {
+    const priceStripeId = li.price?.id ? String(li.price.id) : null
+    const qty = typeof li.quantity === 'number' ? li.quantity : 1
+    const lineAmountEur = typeof li.amount_total === 'number' ? li.amount_total / 100 : null
+    const pr = priceStripeId ? byStripePrice.get(priceStripeId) : undefined
+    if (pr && typeof pr === 'object' && 'id' in pr) {
+      const prRow = pr as {
+        id: string
+        name?: string | null
+        price?: unknown
+        image_url?: string | null
+      }
+      const unit = typeof prRow.price === 'number' ? prRow.price : Number(prRow.price)
+      items.push({
+        id: String(prRow.id),
+        name: String(prRow.name ?? ''),
+        quantity: qty,
+        line_total: lineAmountEur ?? (Number.isFinite(unit) ? unit * qty : 0),
+        image_url: prRow.image_url ? String(prRow.image_url) : null,
+        price: typeof prRow.price === 'number' ? prRow.price : Number(prRow.price),
+      })
+      names.push(String(prRow.name ?? ''))
+    } else {
+      items.push({
+        name: li.description ?? 'Producto',
+        quantity: qty,
+        line_total: lineAmountEur,
+      })
+      names.push(li.description ?? 'Producto')
+    }
+  }
+
+  const shipName = (session as unknown as { shipping_details?: { name?: string | null } }).shipping_details?.name
+  const customer_name = shipName?.trim() || session.customer_details?.name?.trim() || null
+
+  return {
+    items_json: items,
+    line_summary: names.join(' · '),
+    customer_name,
+  }
+}
+
 async function buildOrderEmailData({
   stripe,
   sessionId,
@@ -147,14 +221,30 @@ export async function POST(req: Request) {
 
   let orderRow: any = null
   if (supabase) {
+    let itemsPayload: Awaited<ReturnType<typeof buildStripeOrderItemsPayload>> = null
+    try {
+      itemsPayload = await buildStripeOrderItemsPayload(stripe, sessionId, supabase)
+    } catch (e) {
+      console.error('[stripe webhook] buildStripeOrderItemsPayload:', e)
+    }
+
+    const totalEur =
+      typeof session.amount_total === 'number' ? session.amount_total / 100 : null
     const payload: Record<string, unknown> = {
       stripe_session_id: sessionId,
       stripe_event_id: event.id,
       customer_email: session.customer_details?.email ?? session.customer_email ?? null,
-      amount_total: session.amount_total ?? null,
+      total_amount: totalEur,
       currency: session.currency ?? null,
-      status: 'paid',
+      status: 'pendiente',
       emails_sent: false,
+    }
+    if (itemsPayload) {
+      payload.items_json = itemsPayload.items_json
+      payload.line_summary = itemsPayload.line_summary
+      if (itemsPayload.customer_name) {
+        payload.customer_name = itemsPayload.customer_name
+      }
     }
     orderRow = await bestEffortUpsertOrder({ supabase, payload, sessionId })
   }

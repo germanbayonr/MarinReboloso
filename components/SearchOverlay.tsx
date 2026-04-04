@@ -49,6 +49,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
       const { data, error } = await supabase
         .from('products')
         .select('id,name,price,image_url')
+        .eq('is_active', true)
         .ilike('name', `%${term}%`)
         .order('name', { ascending: true })
         .limit(5)

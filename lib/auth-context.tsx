@@ -1,70 +1,114 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import type { Session, User } from '@supabase/supabase-js'
+import { ADMIN_PANEL_EMAIL, isAdminPanelEmail } from '@/lib/admin-config'
+import { supabase } from '@/lib/supabase'
 
-const ADMIN_EMAIL = 'marebo.meri@gmail.com'
-const ADMIN_PASSWORD = 'admin123'
-const SESSION_KEY = 'marebo_session'
+export const ADMIN_EMAIL = ADMIN_PANEL_EMAIL
+
+export function isAdminUser(user: User | null | undefined) {
+  return isAdminPanelEmail(user?.email)
+}
 
 interface AuthContextType {
+  user: User | null
+  session: Session | null
+  loading: boolean
   isAuthenticated: boolean
   isAdmin: boolean
-  login: (email: string, password: string) => 'admin' | 'user' | false
-  logout: () => void
   email: string | null
+  /** @deprecated use signInWithPassword */
+  login: (email: string, password: string) => Promise<'admin' | 'user' | false>
+  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [email, setEmail] = useState<string | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Restore session from localStorage on mount
+  const refreshUser = useCallback(async () => {
+    const { data } = await supabase.auth.getUser()
+    setUser(data.user ?? null)
+  }, [])
+
   useEffect(() => {
-    try {
-      const session = localStorage.getItem(SESSION_KEY)
-      if (session) {
-        const parsed = JSON.parse(session)
-        if (parsed?.email) {
-          setIsAuthenticated(true)
-          setEmail(parsed.email)
-          setIsAdmin(parsed.email === ADMIN_EMAIL)
-        }
-      }
-    } catch {
-      localStorage.removeItem(SESSION_KEY)
+    let cancelled = false
+
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (cancelled) return
+      setSession(s)
+      setUser(s?.user ?? null)
+      setLoading(false)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s)
+      setUser(s?.user ?? null)
+    })
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
     }
   }, [])
 
-  const login = (emailInput: string, passwordInput: string): 'admin' | 'user' | false => {
-    if (emailInput === ADMIN_EMAIL && passwordInput === ADMIN_PASSWORD) {
-      const session = { email: emailInput, role: 'admin' }
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-      setIsAuthenticated(true)
-      setIsAdmin(true)
-      setEmail(emailInput)
-      return 'admin'
-    }
-    // Future non-admin users: authenticate but stay on public site
-    // For now only admin credentials are valid
-    return false
-  }
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    if (error) return { error: error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos.' : error.message }
+    return { error: null }
+  }, [])
 
-  const logout = () => {
-    localStorage.removeItem(SESSION_KEY)
-    setIsAuthenticated(false)
-    setIsAdmin(false)
-    setEmail(null)
-  }
-
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, isAdmin, login, logout, email }}>
-      {children}
-    </AuthContext.Provider>
+  const login = useCallback(
+    async (emailInput: string, passwordInput: string): Promise<'admin' | 'user' | false> => {
+      const { error } = await signInWithPassword(emailInput, passwordInput)
+      if (error) return false
+      const { data } = await supabase.auth.getUser()
+      const u = data.user
+      if (!u) return false
+      return isAdminUser(u) ? 'admin' : 'user'
+    },
+    [signInWithPassword],
   )
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setSession(null)
+  }, [])
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      session,
+      loading,
+      isAuthenticated: Boolean(user),
+      isAdmin: isAdminUser(user),
+      email: user?.email ?? null,
+      login,
+      signInWithPassword,
+      logout,
+      refreshUser,
+    }),
+    [user, session, loading, login, signInWithPassword, logout, refreshUser],
+  )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

@@ -59,6 +59,8 @@ export async function POST(req: Request) {
     const { data: rows, error: dbError } = await supabase
       .from('products')
       .select('id,stripe_price_id')
+      .eq('is_active', true)
+      .eq('in_stock', true)
       .in('id', productIds)
       .limit(5000)
 

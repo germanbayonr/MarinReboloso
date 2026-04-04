@@ -34,6 +34,7 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .eq('is_active', true)
     .ilike('collection', normalizedSlug)
     .order('name', { ascending: true })
     .limit(5000)

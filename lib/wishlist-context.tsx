@@ -77,7 +77,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false
     const run = async () => {
-      const { data, error } = await supabase.from('products').select('id,name,price').in('id', ids)
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,name,price')
+        .eq('is_active', true)
+        .in('id', ids)
       if (cancelled) return
       if (error) return
 

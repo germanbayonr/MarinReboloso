@@ -99,6 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('products')
         .select('id,name,price,stripe_price_id')
+        .eq('is_active', true)
         .in('id', missingIds)
       if (cancelled) return
       if (error) return

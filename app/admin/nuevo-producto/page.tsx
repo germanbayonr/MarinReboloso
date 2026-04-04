@@ -3,8 +3,12 @@
 import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Image as ImageIcon, UploadCloud, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { Switch } from '@/components/ui/switch'
+import { createProduct } from '@/app/admin/actions'
+import { computeFinalPrice } from '@/lib/pricing'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
@@ -21,9 +25,11 @@ export default function NuevoProductoPage() {
   const [form, setForm] = useState({
     name: '',
     description: '',
-    price: '',
+    original_price: '',
+    discount_percent: '0',
     category: 'pendientes',
     is_new_arrival: false,
+    in_stock: true,
   })
 
   const [images, setImages] = useState<UploadedImage[]>([])
@@ -61,7 +67,7 @@ export default function NuevoProductoPage() {
   const validate = () => {
     const next: Record<string, string> = {}
     if (!form.name.trim()) next.name = 'El nombre es obligatorio'
-    if (!form.price || isNaN(Number(form.price))) next.price = 'Introduce un precio válido'
+    if (!form.original_price || isNaN(Number(form.original_price))) next.original_price = 'Introduce un precio original válido'
     if (images.length === 0) next.images = 'Sube al menos una imagen'
     setErrors(next)
     return Object.keys(next).length === 0
@@ -141,24 +147,24 @@ export default function NuevoProductoPage() {
       }
 
       const image_url = imageUrls[0] || null
-      const { error: insertError } = await supabase.from('products').insert([
-        {
-          name: form.name,
-          description: form.description || null,
-          price: Number(form.price),
-          image_url,
-          category: form.category,
-          is_new_arrival: form.is_new_arrival,
-          stripe_product_id: null,
-          stripe_price_id: null,
-        },
-      ])
-
-      if (insertError) throw insertError
+      const original_price = Number(form.original_price)
+      const discount_percent = Math.min(100, Math.max(0, Number(form.discount_percent) || 0))
+      const res = await createProduct({
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        category: form.category,
+        image_url,
+        is_new_arrival: form.is_new_arrival,
+        in_stock: form.in_stock,
+        original_price,
+        discount_percent,
+      })
+      if (!res.ok) throw new Error(res.error)
       setSaved(true)
       setTimeout(() => router.push('/admin/productos'), 1200)
-    } catch (error: any) {
-      alert(`Error al guardar el producto: ${error?.message || 'Error desconocido'}`)
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Error desconocido'
+      toast.error(`Error al guardar el producto: ${msg}`)
     } finally {
       setIsSaving(false)
     }
@@ -201,36 +207,55 @@ export default function NuevoProductoPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground uppercase tracking-wider">Precio (€) *</label>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">Precio original (€) *</label>
                 <input
                   type="number"
-                  value={form.price}
-                  onChange={(e) => handleField('price', e.target.value)}
+                  value={form.original_price}
+                  onChange={(e) => handleField('original_price', e.target.value)}
                   suppressHydrationWarning
                   min="0"
                   step="0.01"
                   className={cn(
                     'w-full px-3 py-2.5 text-sm border bg-background focus:outline-none focus:border-foreground transition-colors',
-                    errors.price ? 'border-destructive' : 'border-border',
+                    errors.original_price ? 'border-destructive' : 'border-border',
                   )}
                 />
-                {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
+                {errors.original_price ? <p className="text-xs text-destructive">{errors.original_price}</p> : null}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground uppercase tracking-wider">Categoría</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => handleField('category', e.target.value)}
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">Descuento (%)</label>
+                <input
+                  type="number"
+                  value={form.discount_percent}
+                  onChange={(e) => handleField('discount_percent', e.target.value)}
                   suppressHydrationWarning
+                  min="0"
+                  max="100"
+                  step="1"
                   className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c.charAt(0).toUpperCase() + c.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
+            </div>
+            <p className="text-sm text-foreground">
+              Precio final calculado:{' '}
+              <span className="font-medium">
+                {computeFinalPrice(Number(form.original_price) || 0, Number(form.discount_percent) || 0).toFixed(2)}€
+              </span>
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider">Categoría</label>
+              <select
+                value={form.category}
+                onChange={(e) => handleField('category', e.target.value)}
+                suppressHydrationWarning
+                className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c.charAt(0).toUpperCase() + c.slice(1)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1.5">
@@ -244,16 +269,26 @@ export default function NuevoProductoPage() {
               />
             </div>
 
-            <label className="flex items-center gap-2.5 cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2.5">
               <input
                 type="checkbox"
                 checked={form.is_new_arrival}
                 onChange={(e) => handleField('is_new_arrival', e.target.checked)}
-                className="w-3.5 h-3.5 accent-foreground"
+                className="h-3.5 w-3.5 accent-foreground"
                 suppressHydrationWarning
               />
               <span className="text-sm text-muted-foreground">Marcar como novedad</span>
             </label>
+            <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+              <div>
+                <p className="text-sm text-foreground">Disponible en tienda</p>
+                <p className="text-xs text-muted-foreground">Desactiva si está agotado</p>
+              </div>
+              <Switch
+                checked={form.in_stock}
+                onCheckedChange={(v) => handleField('in_stock', v)}
+              />
+            </div>
           </div>
         </div>
 

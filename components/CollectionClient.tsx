@@ -23,6 +23,7 @@ export default function CollectionClient({ collectionSlug, title, description }:
         const { data, error } = await supabase
           .from('products')
           .select('id,name,price,image_url,category,is_new_arrival')
+          .eq('is_active', true)
           .limit(500)
         if (cancelled) return
         if (error) {

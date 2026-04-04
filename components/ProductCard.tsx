@@ -6,12 +6,16 @@ import Link from 'next/link'
 import { Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWishlist } from '@/lib/wishlist-context'
+import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
 
 interface ProductCardProps {
   product: {
     id: string
     name: string
     price: number | string
+    original_price?: number | string | null
+    discount_percent?: number | string | null
+    in_stock?: boolean | null
     image_url: string[] | string | null
     category?: string | null
     collection?: string | null
@@ -46,16 +50,34 @@ export default function ProductCard({ product }: ProductCardProps) {
   const mainImage = mainImgError ? PLACEHOLDER_IMAGE : (images[0] || PLACEHOLDER_IMAGE)
   const hoverImage = hoverImgError ? null : (images[1] || null)
 
-  if (mainImage && !mainImgError) console.log(`[ProductCard] Cargando portada para ${product.name}:`, mainImage)
-  if (hoverImage && !hoverImgError) console.log(`[ProductCard] Cargando hover para ${product.name}:`, hoverImage)
-  
-  const price = typeof product.price === 'number' ? product.price : Number(product.price)
+  const rawPrice = typeof product.price === 'number' ? product.price : Number(product.price)
+  const orig =
+    product.original_price != null && product.original_price !== ''
+      ? typeof product.original_price === 'number'
+        ? product.original_price
+        : Number(product.original_price)
+      : null
+  const disc = Number(product.discount_percent) || 0
+  const price = Number.isFinite(rawPrice)
+    ? rawPrice
+    : orig != null && Number.isFinite(orig)
+      ? computeFinalPrice(orig, disc)
+      : NaN
+  const showDiscount = hasActiveDiscount(orig ?? (Number.isFinite(rawPrice) ? rawPrice : null), disc)
   const formattedPrice = Number.isFinite(price) ? (Number.isInteger(price) ? String(price) : price.toFixed(2)) : '—'
+  const formattedOriginal =
+    orig != null && Number.isFinite(orig) ? (Number.isInteger(orig) ? String(orig) : orig.toFixed(2)) : null
+  const inStock = product.in_stock !== false
   const wishlisted = isInWishlist(product.id)
 
   return (
     <Link href={`/producto/${product.id}`} className="group block" suppressHydrationWarning>
       <div className="relative aspect-[4/5] overflow-hidden bg-stone-100 mb-4">
+        {!inStock ? (
+          <span className="absolute left-3 top-3 z-20 bg-neutral-900 px-2 py-1 text-[10px] uppercase tracking-wider text-white">
+            Sin stock
+          </span>
+        ) : null}
         <button
           type="button"
           aria-label={wishlisted ? 'Quitar de wishlist' : 'Añadir a wishlist'}
@@ -125,9 +147,17 @@ export default function ProductCard({ product }: ProductCardProps) {
         <h3 className="font-serif text-lg text-foreground group-hover:text-foreground/60 transition-colors">
           {product.name}
         </h3>
-        <p className="text-sm text-muted-foreground tracking-wide">
-          {formattedPrice}€
-        </p>
+        <div className="flex flex-wrap items-baseline gap-2 text-sm tracking-wide">
+          {showDiscount && formattedOriginal ? (
+            <>
+              <span className="text-muted-foreground line-through">{formattedOriginal}€</span>
+              <span className="text-foreground">{formattedPrice}€</span>
+              <span className="text-xs text-neutral-500">-{disc}%</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">{formattedPrice}€</span>
+          )}
+        </div>
       </div>
     </Link>
   )

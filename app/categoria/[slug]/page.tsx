@@ -26,6 +26,7 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .eq('is_active', true)
     .ilike('category', slug)
     .order('is_new_arrival', { ascending: false })
     .order('name', { ascending: true })

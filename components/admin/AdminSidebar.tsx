@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
+  LayoutDashboard,
   Package,
   FolderOpen,
   ShoppingCart,
@@ -14,10 +15,11 @@ import { useAuth } from '@/lib/auth-context'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/admin/productos',   label: 'Productos',   icon: Package      },
+  { href: '/admin',             label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/admin/productos',   label: 'Productos',   icon: Package },
   { href: '/admin/pedidos',     label: 'Pedidos',     icon: ShoppingCart },
-  { href: '/admin/colecciones', label: 'Colecciones', icon: FolderOpen   },
-  { href: '/admin/ajustes',     label: 'Ajustes',     icon: Settings     },
+  { href: '/admin/colecciones', label: 'Colecciones', icon: FolderOpen },
+  { href: '/admin/ajustes',     label: 'Ajustes',     icon: Settings },
 ]
 
 export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
@@ -25,8 +27,8 @@ export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const router = useRouter()
   const { logout } = useAuth()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push('/')
   }
 
@@ -34,7 +36,7 @@ export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
     <aside className="w-60 h-full bg-white border-r border-border flex flex-col flex-shrink-0">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-border">
-        <Link href="/admin/productos" className="block" suppressHydrationWarning onClick={onClose}>
+        <Link href="/admin" className="block" suppressHydrationWarning onClick={onClose}>
           <p className="font-serif text-base tracking-[0.18em] uppercase text-foreground leading-tight">
             MAREBO :)
           </p>
@@ -47,7 +49,8 @@ export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5" aria-label="Navegación del panel">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname.startsWith(href)
+          const isActive =
+            href === '/admin' ? pathname === '/admin' || pathname === '/admin/' : pathname.startsWith(href)
           return (
             <Link
               key={href}
@@ -80,7 +83,8 @@ export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
           Ver tienda
         </Link>
         <button
-          onClick={handleLogout}
+          type="button"
+          onClick={() => void handleLogout()}
           suppressHydrationWarning
           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors rounded-sm text-left"
         >

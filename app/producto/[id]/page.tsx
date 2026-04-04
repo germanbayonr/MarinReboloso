@@ -11,8 +11,8 @@ export default async function ProductoPage({ params }: { params: Promise<{ id: s
   // Intentar buscar por UUID primero, si falla o no es un UUID válido, intentar por nombre/slug
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
   
-  let query = supabase.from('products').select('*')
-  
+  let query = supabase.from('products').select('*').eq('is_active', true)
+
   if (isUUID) {
     query = query.eq('id', id)
   } else {

@@ -37,6 +37,7 @@ export default function ProductListingClient({ category }: { category: string })
         const { data, error } = await supabase
           .from('products')
           .select('id,name,price,image_url,category')
+          .eq('is_active', true)
           .eq('category', category)
           .order('name', { ascending: true })
           .limit(5000)
