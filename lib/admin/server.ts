@@ -38,7 +38,10 @@ export async function ensureAdminOrRedirect() {
   return user
 }
 
-/** Solo tras comprobar admin en servidor. Nunca importar en Client Components. */
+/**
+ * Cliente Supabase con **service role** (bypass RLS).
+ * Obligatorio en webhooks, admin y cualquier escritura sin sesión de usuario (p. ej. pedidos Stripe).
+ */
 export function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY

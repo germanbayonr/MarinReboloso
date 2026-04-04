@@ -42,8 +42,12 @@ export function getOrderEmailSubject(stage: string, customerName: string): strin
   return `Pedido para ${n} - ${stage}`
 }
 
+/** Siempre URL absoluta basada en NEXT_PUBLIC_SITE_URL (vía getPublicSiteBaseUrl). */
 function trackingHref(siteUrl: string, orderId?: string | null): string {
-  const base = siteUrl.replace(/\/$/, '').trim() || getPublicSiteBaseUrl()
+  let base = siteUrl.replace(/\/$/, '').trim() || getPublicSiteBaseUrl()
+  if (!/^https?:\/\//i.test(base)) {
+    base = getPublicSiteBaseUrl()
+  }
   if (orderId?.trim()) return `${base}/pedido/${encodeURIComponent(orderId.trim())}`
   return `${base}/catalogo`
 }
@@ -161,11 +165,18 @@ function totalsTable(subtotalCents: number, shippingCents: number, totalCents: n
   `
 }
 
-function footerHtml() {
+function footerHtml(siteBase: string) {
+  const base = siteBase.replace(/\/$/, '').trim() || getPublicSiteBaseUrl()
+  const cuenta = escapeHtml(`${base}/mi-cuenta`)
+  const catalogo = escapeHtml(`${base}/catalogo`)
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:40px;border-top:1px solid ${BORDER};">
       <tr>
         <td style="padding:28px 0 0;text-align:center;font-family:${FONT_SANS};font-size:12px;line-height:1.6;color:${MUTED};">
+          <a href="${cuenta}" style="color:${TEXT};text-decoration:underline;">Tu cuenta</a>
+          <span style="color:${BORDER};">&nbsp;&nbsp;·&nbsp;&nbsp;</span>
+          <a href="${catalogo}" style="color:${TEXT};text-decoration:underline;">Tienda</a>
+          <span style="color:${BORDER};">&nbsp;&nbsp;·&nbsp;&nbsp;</span>
           <a href="${INSTAGRAM_URL}" style="color:${TEXT};text-decoration:underline;">Instagram · @marebo_jewelry</a>
         </td>
       </tr>
@@ -193,7 +204,10 @@ function ctaButton(href: string, label: string) {
 type ShellCtx = { siteUrl: string; orderId?: string | null }
 
 function mareboShell(inner: string, ctx: ShellCtx) {
-  const site = ctx.siteUrl?.trim() || getPublicSiteBaseUrl()
+  let site = ctx.siteUrl?.trim() || getPublicSiteBaseUrl()
+  if (!/^https?:\/\//i.test(site)) {
+    site = getPublicSiteBaseUrl()
+  }
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -210,7 +224,7 @@ function mareboShell(inner: string, ctx: ShellCtx) {
             <td style="padding:0 8px;">
               ${logoHeaderHtml(site, ctx.orderId)}
               ${inner}
-              ${footerHtml()}
+              ${footerHtml(site)}
             </td>
           </tr>
         </table>

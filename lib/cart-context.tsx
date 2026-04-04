@@ -1,7 +1,23 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth-context'
+import {
+  CART_LEGACY_LOCAL_KEY,
+  CART_SESSION_KEY,
+  cartStorageKeyForUser,
+  isProductUuid,
+} from '@/lib/shop-client-storage'
 
 export interface CartItem {
   id: string
@@ -24,8 +40,6 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | null>(null)
-
-const STORAGE_KEY = 'marebo_cart_v1'
 
 function normalizeCart(value: unknown): CartItem[] {
   if (!Array.isArray(value)) return []
@@ -61,51 +75,95 @@ function normalizeCart(value: unknown): CartItem[] {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const prevUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
+    if (authLoading) return
+
+    const prev = prevUserIdRef.current
+    const uid = user?.id
+
+    if (prev && !uid) {
+      try {
+        sessionStorage.removeItem(CART_SESSION_KEY)
+      } catch {}
+    }
+    prevUserIdRef.current = uid
+
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) {
-        setHydrated(true)
-        return
+      if (!uid) {
+        try {
+          localStorage.removeItem(CART_LEGACY_LOCAL_KEY)
+        } catch {}
+        const raw = sessionStorage.getItem(CART_SESSION_KEY)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          setCartItems(normalizeCart(parsed).filter((i) => isProductUuid(i.id)))
+        } else {
+          setCartItems([])
+        }
+      } else {
+        const raw = localStorage.getItem(cartStorageKeyForUser(uid))
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          setCartItems(normalizeCart(parsed).filter((i) => isProductUuid(i.id)))
+        } else {
+          setCartItems([])
+        }
       }
-      const parsed = JSON.parse(raw)
-      setCartItems(normalizeCart(parsed))
     } catch {
       setCartItems([])
     } finally {
       setHydrated(true)
     }
-  }, [])
+  }, [authLoading, user?.id])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (!hydrated || authLoading) return
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cartItems))
+      if (user?.id) {
+        localStorage.setItem(cartStorageKeyForUser(user.id), JSON.stringify(cartItems))
+      } else {
+        sessionStorage.setItem(CART_SESSION_KEY, JSON.stringify(cartItems))
+      }
     } catch {}
-  }, [cartItems, hydrated])
+  }, [cartItems, hydrated, authLoading, user?.id])
+
+  const cartIdsKey = useMemo(
+    () =>
+      [...new Set(cartItems.map((i) => i.id).filter(isProductUuid))]
+        .sort()
+        .join(','),
+    [cartItems],
+  )
 
   useEffect(() => {
-    if (!hydrated) return
-    const missingIds = Array.from(
-      new Set(cartItems.map((i) => i.id).filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))),
-    )
-    if (missingIds.length === 0) return
+    if (!hydrated || authLoading) return
 
+    if (!cartIdsKey) {
+      setCartItems((prev) => {
+        const next = prev.filter((i) => isProductUuid(i.id))
+        return next.length === prev.length ? prev : next
+      })
+      return
+    }
+
+    const ids = cartIdsKey.split(',').filter(Boolean)
     let cancelled = false
+
     const run = async () => {
       const { data, error } = await supabase
         .from('products')
         .select('id,name,price,stripe_price_id')
         .eq('is_active', true)
-        .in('id', missingIds)
-      if (cancelled) return
-      if (error) return
+        .in('id', ids)
+      if (cancelled || error) return
 
       const map = new Map(
-        (data ?? []).map((r: any) => [
+        (data ?? []).map((r: { id: string; name?: string; price?: unknown; stripe_price_id?: string | null }) => [
           String(r.id),
           {
             name: String(r.name ?? ''),
@@ -114,44 +172,41 @@ export function CartProvider({ children }: { children: ReactNode }) {
           },
         ]),
       )
+
       setCartItems((prev) => {
-        let changed = false
-        const next = prev.map((item) => {
-          const next = map.get(item.id)
-          if (!next) return item
-
-          const nextPrice = Number.isFinite(next.price) ? next.price : item.price
-          const nextName = next.name ? next.name : item.name
-          const nextStripePriceId = next.stripe_price_id ?? item.stripe_price_id ?? null
-
-          if (nextPrice === item.price && nextName === item.name && nextStripePriceId === item.stripe_price_id) {
+        const next = prev.filter((item) => isProductUuid(item.id) && map.has(item.id))
+        return next.map((item) => {
+          const row = map.get(item.id)!
+          const nextPrice = Number.isFinite(row.price) ? row.price : item.price
+          const nextName = row.name ? row.name : item.name
+          const nextStripe = row.stripe_price_id ?? item.stripe_price_id ?? null
+          if (nextPrice === item.price && nextName === item.name && nextStripe === item.stripe_price_id) {
             return item
           }
-
-          changed = true
-          return { ...item, price: nextPrice, name: nextName, stripe_price_id: nextStripePriceId }
+          return { ...item, price: nextPrice, name: nextName, stripe_price_id: nextStripe }
         })
-        return changed ? next : prev
       })
     }
+
     run()
     return () => {
       cancelled = true
     }
-  }, [cartItems, hydrated])
+  }, [cartIdsKey, hydrated, authLoading])
 
   const addToCart = useCallback((newItem: CartItem) => {
-    setCartItems(prev => {
-      const existing = prev.find(item => item.id === newItem.id && item.variant === newItem.variant)
+    if (!isProductUuid(newItem.id)) return
+    setCartItems((prev) => {
+      const existing = prev.find((item) => item.id === newItem.id && item.variant === newItem.variant)
       if (existing) {
-        return prev.map(item => 
-          item.id === newItem.id && item.variant === newItem.variant 
-            ? { 
-                ...item, 
+        return prev.map((item) =>
+          item.id === newItem.id && item.variant === newItem.variant
+            ? {
+                ...item,
                 quantity: item.quantity + Math.max(1, newItem.quantity || 1),
                 stripe_price_id: item.stripe_price_id ?? newItem.stripe_price_id ?? null,
-              } 
-            : item
+              }
+            : item,
         )
       }
       return [...prev, newItem]
@@ -159,17 +214,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const removeFromCart = useCallback((id: string, variant?: string) => {
-    setCartItems(prev => prev.filter(item => !(item.id === id && item.variant === variant)))
+    setCartItems((prev) => prev.filter((item) => !(item.id === id && item.variant === variant)))
   }, [])
 
   const updateQuantity = useCallback((id: string, quantity: number, variant?: string) => {
     const nextQty = Math.floor(quantity)
 
-    setCartItems(prev => {
+    setCartItems((prev) => {
       if (nextQty <= 0) {
-        return prev.filter(item => !(item.id === id && item.variant === variant))
+        return prev.filter((item) => !(item.id === id && item.variant === variant))
       }
-      return prev.map(item => (item.id === id && item.variant === variant ? { ...item, quantity: nextQty } : item))
+      return prev.map((item) => (item.id === id && item.variant === variant ? { ...item, quantity: nextQty } : item))
     })
   }, [])
 

@@ -1,7 +1,14 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth-context'
+import {
+  isProductUuid,
+  WISHLIST_LEGACY_LOCAL_KEY,
+  WISHLIST_SESSION_KEY,
+  wishlistStorageKeyForUser,
+} from '@/lib/shop-client-storage'
 
 export type WishlistItem = {
   id: string
@@ -17,8 +24,6 @@ type WishlistContextValue = {
   removeFromWishlist: (id: string) => void
   isInWishlist: (id: string) => boolean
 }
-
-const STORAGE_KEY = 'marebo_wishlist_v1'
 
 const WishlistContext = createContext<WishlistContextValue | null>(null)
 
@@ -44,49 +49,95 @@ function normalizeItems(value: unknown): WishlistItem[] {
 }
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth()
   const [items, setItems] = useState<WishlistItem[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const prevUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
+    if (authLoading) return
+
+    const prev = prevUserIdRef.current
+    const uid = user?.id
+
+    if (prev && !uid) {
+      try {
+        sessionStorage.removeItem(WISHLIST_SESSION_KEY)
+      } catch {}
+    }
+    prevUserIdRef.current = uid
+
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) {
-        setHydrated(true)
-        return
+      if (!uid) {
+        try {
+          localStorage.removeItem(WISHLIST_LEGACY_LOCAL_KEY)
+        } catch {}
+        const raw = sessionStorage.getItem(WISHLIST_SESSION_KEY)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          setItems(normalizeItems(parsed).filter((i) => isProductUuid(i.id)))
+        } else {
+          setItems([])
+        }
+      } else {
+        const raw = localStorage.getItem(wishlistStorageKeyForUser(uid))
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          setItems(normalizeItems(parsed).filter((i) => isProductUuid(i.id)))
+        } else {
+          setItems([])
+        }
       }
-      const parsed = JSON.parse(raw)
-      setItems(normalizeItems(parsed))
     } catch {
       setItems([])
     } finally {
       setHydrated(true)
     }
-  }, [])
+  }, [authLoading, user?.id])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (!hydrated || authLoading) return
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+      if (user?.id) {
+        localStorage.setItem(wishlistStorageKeyForUser(user.id), JSON.stringify(items))
+      } else {
+        sessionStorage.setItem(WISHLIST_SESSION_KEY, JSON.stringify(items))
+      }
     } catch {}
-  }, [items, hydrated])
+  }, [items, hydrated, authLoading, user?.id])
+
+  const wishlistIdsKey = useMemo(
+    () =>
+      [...new Set(items.map((i) => i.id).filter(isProductUuid))]
+        .sort()
+        .join(','),
+    [items],
+  )
 
   useEffect(() => {
-    if (!hydrated) return
-    const ids = Array.from(new Set(items.map((i) => i.id).filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))))
-    if (ids.length === 0) return
+    if (!hydrated || authLoading) return
 
+    if (!wishlistIdsKey) {
+      setItems((prev) => {
+        const next = prev.filter((i) => isProductUuid(i.id))
+        return next.length === prev.length ? prev : next
+      })
+      return
+    }
+
+    const ids = wishlistIdsKey.split(',').filter(Boolean)
     let cancelled = false
+
     const run = async () => {
       const { data, error } = await supabase
         .from('products')
         .select('id,name,price')
         .eq('is_active', true)
         .in('id', ids)
-      if (cancelled) return
-      if (error) return
+      if (cancelled || error) return
 
       const map = new Map(
-        (data ?? []).map((r: any) => [
+        (data ?? []).map((r: { id: string; name?: string; price?: unknown }) => [
           String(r.id),
           {
             name: String(r.name ?? ''),
@@ -96,17 +147,14 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       )
 
       setItems((prev) => {
-        let changed = false
-        const next = prev.map((item) => {
-          const next = map.get(item.id)
-          if (!next) return item
-          const nextPrice = Number.isFinite(next.price) ? next.price : item.price
-          const nextName = next.name ? next.name : item.name
+        const kept = prev.filter((item) => isProductUuid(item.id) && map.has(item.id))
+        return kept.map((item) => {
+          const row = map.get(item.id)!
+          const nextPrice = Number.isFinite(row.price) ? row.price : item.price
+          const nextName = row.name ? row.name : item.name
           if (nextPrice === item.price && nextName === item.name) return item
-          changed = true
           return { ...item, price: nextPrice, name: nextName }
         })
-        return changed ? next : prev
       })
     }
 
@@ -114,20 +162,21 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [hydrated, items])
+  }, [wishlistIdsKey, hydrated, authLoading])
 
   const addToWishlist = useCallback((item: WishlistItem) => {
-    setItems(prev => {
-      if (prev.some(p => p.id === item.id)) return prev
+    if (!isProductUuid(item.id)) return
+    setItems((prev) => {
+      if (prev.some((p) => p.id === item.id)) return prev
       return [item, ...prev]
     })
   }, [])
 
   const removeFromWishlist = useCallback((id: string) => {
-    setItems(prev => prev.filter(p => p.id !== id))
+    setItems((prev) => prev.filter((p) => p.id !== id))
   }, [])
 
-  const ids = useMemo(() => new Set(items.map(i => i.id)), [items])
+  const ids = useMemo(() => new Set(items.map((i) => i.id)), [items])
 
   const isInWishlist = useCallback((id: string) => ids.has(id), [ids])
 

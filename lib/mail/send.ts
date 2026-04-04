@@ -2,18 +2,20 @@ import { getMailTransporter } from '@/lib/mail/transporter'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
 import { getWelcomeTemplate } from '@/lib/mail/templates'
 
+function smtpFromAddress() {
+  return String(
+    process.env.SMTP_USER || process.env.EMAIL_USER || '',
+  ).trim()
+}
+
 export async function sendMareboMail(params: { to: string; subject: string; html: string }) {
   const transport = getMailTransporter()
   if (!transport) {
-    console.error('[mail] SMTP no configurado: faltan SMTP_USER o SMTP_PASSWORD')
+    console.error('[mail] SMTP no configurado: faltan SMTP_USER o SMTP_PASSWORD (o alias SMTP_PASS / EMAIL_USER)')
     return
   }
-  const from = process.env.SMTP_USER?.trim()
-  const fromName = process.env.SMTP_FROM_NAME?.trim() || 'Marebo'
-  if (!from) {
-    console.error('[mail] SMTP_USER vacío')
-    return
-  }
+  const from = smtpFromAddress()
+  const fromName = String(process.env.SMTP_FROM_NAME || 'Marebo').trim() || 'Marebo'
   try {
     await transport.sendMail({
       from: `"${fromName}" <${from}>`,
@@ -34,16 +36,13 @@ export async function sendMareboMailResult(params: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const transport = getMailTransporter()
   if (!transport) {
-    const msg = 'SMTP no configurado: faltan SMTP_USER o SMTP_PASSWORD'
+    const msg =
+      'SMTP no configurado: revisa SMTP_USER y SMTP_PASSWORD en .env.local (reinicia next dev) o usa SMTP_PASS / EMAIL_USER'
     console.error('[mail]', msg)
     return { ok: false, error: msg }
   }
-  const from = process.env.SMTP_USER?.trim()
-  const fromName = process.env.SMTP_FROM_NAME?.trim() || 'Marebo'
-  if (!from) {
-    console.error('[mail] SMTP_USER vacío')
-    return { ok: false, error: 'SMTP_USER vacío' }
-  }
+  const from = smtpFromAddress()
+  const fromName = String(process.env.SMTP_FROM_NAME || 'Marebo').trim() || 'Marebo'
   try {
     await transport.sendMail({
       from: `"${fromName}" <${from}>`,
