@@ -5,6 +5,8 @@ export type AdminProduct = {
   original_price: number | null
   discount_percent: number
   category: string | null
+  /** Slug de colección (ej. descara, marebo); null si no aplica */
+  collection: string | null
   image_url: string | null
   is_new_arrival: boolean
   in_stock: boolean

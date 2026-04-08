@@ -16,6 +16,7 @@ import {
   updateProduct,
 } from '@/app/admin/actions'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
+import { labelForCollectionSlug, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import type { AdminProduct } from '@/lib/admin/types'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
@@ -36,10 +37,13 @@ function EditModal({
     original_price: String(origBase),
     discount_percent: String(product.discount_percent ?? 0),
     category: product.category ?? 'accesorios',
+    collection: product.collection ?? '',
     image_url: product.image_url ?? '',
     is_new_arrival: product.is_new_arrival,
     in_stock: product.in_stock,
   })
+  const collectionUnknownInList =
+    !!form.collection && !PRODUCT_COLLECTION_OPTIONS.some((o) => o.slug === form.collection)
   const [saved, setSaved] = useState(false)
 
   const o = Number(form.original_price) || 0
@@ -51,6 +55,7 @@ function EditModal({
       name: form.name.trim(),
       description: form.description.trim() || null,
       category: form.category,
+      collection: form.collection.trim() || null,
       image_url: form.image_url.trim() || null,
       is_new_arrival: form.is_new_arrival,
       in_stock: form.in_stock,
@@ -69,6 +74,7 @@ function EditModal({
       discount_percent: d,
       price: finalPreview,
       category: form.category,
+      collection: form.collection.trim() || null,
       image_url: form.image_url.trim() || null,
       is_new_arrival: form.is_new_arrival,
       in_stock: form.in_stock,
@@ -149,6 +155,24 @@ function EditModal({
             </select>
           </div>
           <div className="space-y-1">
+            <label className="text-[10px] uppercase tracking-wider text-neutral-500">Colección</label>
+            <select
+              value={form.collection}
+              onChange={(e) => setForm((f) => ({ ...f, collection: e.target.value }))}
+              className="w-full border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-400 focus:outline-none"
+            >
+              <option value="">Sin colección</option>
+              {collectionUnknownInList ? (
+                <option value={form.collection}>{form.collection} (en BD)</option>
+              ) : null}
+              {PRODUCT_COLLECTION_OPTIONS.map((o) => (
+                <option key={o.slug} value={o.slug}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-wider text-neutral-500">Imagen (URL)</label>
             <input
               type="url"
@@ -217,6 +241,8 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
       (p) =>
         p.name.toLowerCase().includes(q) ||
         (p.category ?? '').toLowerCase().includes(q) ||
+        (p.collection ?? '').toLowerCase().includes(q) ||
+        labelForCollectionSlug(p.collection).toLowerCase().includes(q) ||
         p.id.toLowerCase().includes(q),
     )
   }, [products, search])
@@ -254,6 +280,13 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
         accessorKey: 'category',
         header: 'Categoría',
         cell: ({ getValue }) => <span className="text-neutral-600">{(getValue() as string) ?? '—'}</span>,
+      },
+      {
+        id: 'collection',
+        header: 'Colección',
+        cell: ({ row }) => (
+          <span className="text-neutral-600 text-xs">{labelForCollectionSlug(row.original.collection)}</span>
+        ),
       },
       {
         id: 'pricing',

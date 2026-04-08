@@ -22,6 +22,10 @@ const HERO_ASSETS: Record<
     image:
       'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Ivory.PNG',
   },
+  jaipur: {
+    image:
+      'https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Coral%20Jaipur(1).jpg',
+  },
   filipa: {
     image: 'https://marebo.b-cdn.net/Colecciones/Filipa/Collar%20Filipa.PNG',
   },
@@ -39,6 +43,8 @@ export default function CollectionHero({
   const objectPositionClass =
     key === 'corales'
       ? 'object-[center_45%]'
+      : key === 'jaipur'
+        ? 'object-[center_35%]'
       : key === 'filipa'
         ? 'object-[center_40%]'
         : 'object-[center_25%]'

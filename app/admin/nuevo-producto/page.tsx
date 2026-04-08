@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { Switch } from '@/components/ui/switch'
 import { createProduct } from '@/app/admin/actions'
+import { PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import { computeFinalPrice } from '@/lib/pricing'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
@@ -28,6 +29,7 @@ export default function NuevoProductoPage() {
     original_price: '',
     discount_percent: '0',
     category: 'pendientes',
+    collection: '' as string,
     is_new_arrival: false,
     in_stock: true,
   })
@@ -153,6 +155,7 @@ export default function NuevoProductoPage() {
         name: form.name.trim(),
         description: form.description.trim() || null,
         category: form.category,
+        collection: form.collection.trim() || null,
         image_url,
         is_new_arrival: form.is_new_arrival,
         in_stock: form.in_stock,
@@ -253,6 +256,23 @@ export default function NuevoProductoPage() {
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c.charAt(0).toUpperCase() + c.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider">Colección</label>
+              <select
+                value={form.collection}
+                onChange={(e) => handleField('collection', e.target.value)}
+                suppressHydrationWarning
+                className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
+              >
+                <option value="">Sin colección</option>
+                {PRODUCT_COLLECTION_OPTIONS.map((o) => (
+                  <option key={o.slug} value={o.slug}>
+                    {o.label}
                   </option>
                 ))}
               </select>

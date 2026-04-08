@@ -1,7 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
 import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
+import {
+  isLikelyRowLevelSecurityMessage,
+  logAdminSupabaseIssue,
+  RLS_BLOCK_USER_MESSAGE,
+} from '@/lib/admin/supabase-admin-log'
 import { computeFinalPrice } from '@/lib/pricing'
 import { mapProductRow } from '@/lib/admin/map-product'
 import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
@@ -18,6 +24,42 @@ function revalidateCatalogPaths() {
   revalidatePath('/admin/productos')
   revalidatePath('/catalogo')
   revalidatePath('/')
+}
+
+function getServiceSupabaseForAction():
+  | { ok: true; client: ReturnType<typeof getServiceSupabase> }
+  | { ok: false; error: string } {
+  try {
+    return { ok: true, client: getServiceSupabase() }
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : 'Cliente Supabase (service role) no disponible.'
+    return { ok: false, error: errorMessage }
+  }
+}
+
+function productMutationErrorResult(
+  operation: 'create' | 'update' | 'delete',
+  rawMessage: string,
+): { ok: false; error: string } {
+  if (isLikelyRowLevelSecurityMessage(rawMessage)) {
+    const code =
+      operation === 'create'
+        ? 'PRODUCT_CREATE_RLS'
+        : operation === 'update'
+          ? 'PRODUCT_UPDATE_RLS'
+          : 'PRODUCT_DELETE_RLS'
+    logAdminSupabaseIssue(code, 'PostgREST devolvió error típico de RLS en products.', {
+      operation,
+      supabaseMessage: rawMessage,
+      hint: 'Con service_role no debería aplicarse RLS; revisar env en runtime, misma URL de proyecto y reinicio de dev server.',
+    })
+    return { ok: false as const, error: `${RLS_BLOCK_USER_MESSAGE}${rawMessage}` }
+  }
+  logAdminSupabaseIssue('PRODUCT_MUTATION_DB', `Error en products (${operation}).`, {
+    operation,
+    supabaseMessage: rawMessage,
+  })
+  return { ok: false as const, error: rawMessage }
 }
 
 /** `image_url` en Supabase puede ser string o array de URLs (JSON). */
@@ -51,6 +93,8 @@ export type ProductInput = {
   name: string
   description: string | null
   category: string
+  /** Slug permitido o null (sin colección) */
+  collection: string | null
   image_url: string | null
   is_new_arrival: boolean
   in_stock: boolean
@@ -60,14 +104,18 @@ export type ProductInput = {
 
 export async function updateProduct(id: string, input: ProductInput) {
   await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false as const, error: sup.error }
+  const sb = sup.client
   const price = computeFinalPrice(input.original_price, input.discount_percent)
+  const collection = normalizeProductCollectionInput(input.collection)
   const { error } = await sb
     .from('products')
     .update({
       name: input.name,
       description: input.description,
       category: input.category,
+      collection,
       image_url: input.image_url,
       is_new_arrival: input.is_new_arrival,
       in_stock: input.in_stock,
@@ -76,30 +124,36 @@ export async function updateProduct(id: string, input: ProductInput) {
       price,
     })
     .eq('id', id)
-  if (error) return { ok: false as const, error: error.message }
+  if (error) return productMutationErrorResult('update', error.message)
   revalidateCatalogPaths()
   return { ok: true as const }
 }
 
 export async function deleteProduct(id: string) {
   await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false as const, error: sup.error }
+  const sb = sup.client
   const { error } = await sb.from('products').delete().eq('id', id)
-  if (error) return { ok: false as const, error: error.message }
+  if (error) return productMutationErrorResult('delete', error.message)
   revalidateCatalogPaths()
   return { ok: true as const }
 }
 
 export async function createProduct(input: ProductInput) {
   await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false as const, error: sup.error }
+  const sb = sup.client
   const price = computeFinalPrice(input.original_price, input.discount_percent)
+  const collection = normalizeProductCollectionInput(input.collection)
   const { data, error } = await sb
     .from('products')
     .insert({
       name: input.name,
       description: input.description,
       category: input.category,
+      collection,
       image_url: input.image_url,
       is_new_arrival: input.is_new_arrival,
       in_stock: input.in_stock,
@@ -112,7 +166,7 @@ export async function createProduct(input: ProductInput) {
     })
     .select('id')
     .single()
-  if (error) return { ok: false as const, error: error.message }
+  if (error) return productMutationErrorResult('create', error.message)
   revalidateCatalogPaths()
   return { ok: true as const, id: data.id as string }
 }

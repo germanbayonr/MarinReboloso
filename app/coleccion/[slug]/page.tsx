@@ -20,6 +20,8 @@ function getCollectionTitle(slug: string) {
     corales: 'Corales',
     descara: 'Descará',
     filipa: 'Filipa',
+    jaipur: 'Jaipur',
+    'lost-in-jaipur': 'Jaipur',
     marebo: 'Marebo',
   }
   return map[normalized] ?? normalized

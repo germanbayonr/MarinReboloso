@@ -8,6 +8,7 @@ export function mapProductRow(p: Record<string, unknown>): AdminProduct {
     original_price: p.original_price != null ? Number(p.original_price) : null,
     discount_percent: Number(p.discount_percent) || 0,
     category: (p.category as string) ?? null,
+    collection: (p.collection as string) ?? null,
     image_url: (p.image_url as string) ?? null,
     is_new_arrival: Boolean(p.is_new_arrival),
     in_stock: typeof p.in_stock === 'boolean' ? p.in_stock : true,
