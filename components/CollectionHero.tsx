@@ -44,7 +44,7 @@ export default function CollectionHero({
     key === 'corales'
       ? 'object-[center_45%]'
       : key === 'jaipur'
-        ? 'object-[center_35%]'
+        ? 'object-[center_56%]'
       : key === 'filipa'
         ? 'object-[center_40%]'
         : 'object-[center_25%]'
