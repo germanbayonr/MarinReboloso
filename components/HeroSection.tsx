@@ -98,7 +98,7 @@ export default function HeroSection() {
           alt="Colección Descará"
           fill
           sizes="100vw"
-          className="object-cover object-[center_56%] transition-transform duration-700 ease-out scale-[2.12] group-hover:scale-[2.16]"
+          className="object-cover object-[center_56%] transition-transform duration-700 ease-out scale-[1.7] group-hover:scale-[1.74]"
         />
         <div className="absolute inset-0 bg-black/35" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-6 text-center">
