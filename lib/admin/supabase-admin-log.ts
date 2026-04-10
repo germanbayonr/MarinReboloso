@@ -9,6 +9,8 @@ export type AdminSupabaseIssueCode =
   | 'PRODUCT_UPDATE_RLS'
   | 'PRODUCT_DELETE_RLS'
   | 'PRODUCT_MUTATION_DB'
+  | 'STORAGE_UPLOAD_FAILED'
+  | 'STORAGE_DELETE_FAILED'
 
 /**
  * Registra un problema de configuración o de mutación admin↔Supabase.

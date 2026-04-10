@@ -853,7 +853,10 @@ export async function POST(req: Request) {
       usedGlobal.add(best.row.id)
 
       if (!dryRun) {
-        const patch: any = { name: item.name, image_url: item.image_url }
+        const patch: Record<string, unknown> = {
+          name: item.name,
+          image_url: item.image_url ? [item.image_url] : null,
+        }
         if (group.scope_type === 'collection') patch.collection = scopeValue
         else patch.category = scopeValue
         const { error: updateError } = await supabase

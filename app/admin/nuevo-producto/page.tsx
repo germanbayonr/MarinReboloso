@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation'
 import { CheckCircle, Image as ImageIcon, UploadCloud, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
 import { Switch } from '@/components/ui/switch'
-import { createProduct } from '@/app/admin/actions'
+import { createProductWithImages } from '@/app/admin/actions'
 import { PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import { computeFinalPrice } from '@/lib/pricing'
 
@@ -126,42 +125,23 @@ export default function NuevoProductoPage() {
     setIsSaving(true)
 
     try {
-      const imageUrls: string[] = []
+      const fd = new FormData()
+      fd.append('name', form.name.trim())
+      fd.append('description', form.description.trim())
+      fd.append('category', form.category)
+      fd.append('collection', form.collection.trim())
+      fd.append('original_price', String(Number(form.original_price)))
+      fd.append('discount_percent', String(Math.min(100, Math.max(0, Number(form.discount_percent) || 0))))
+      fd.append('is_new_arrival', form.is_new_arrival ? 'true' : 'false')
+      fd.append('in_stock', form.in_stock ? 'true' : 'false')
 
       for (const img of images) {
         if (!img.file) continue
-
-        // Optimizar imagen antes de subir
         const compressedBlob = await compressImage(img.file)
-        const fileName = `${crypto.randomUUID()}.webp`
-        const filePath = `products/${fileName}`
-
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, compressedBlob, {
-          contentType: 'image/webp',
-          cacheControl: '3600',
-          upsert: false,
-        })
-        if (uploadError) throw uploadError
-
-        // Generamos la URL de Bunny directamente en lugar de usar getPublicUrl de Supabase
-        const bunnyUrl = `https://marebo.b-cdn.net/${filePath}`
-        imageUrls.push(bunnyUrl)
+        fd.append('images', new File([compressedBlob], 'img.webp', { type: 'image/webp' }))
       }
 
-      const image_url = imageUrls[0] || null
-      const original_price = Number(form.original_price)
-      const discount_percent = Math.min(100, Math.max(0, Number(form.discount_percent) || 0))
-      const res = await createProduct({
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        category: form.category,
-        collection: form.collection.trim() || null,
-        image_url,
-        is_new_arrival: form.is_new_arrival,
-        in_stock: form.in_stock,
-        original_price,
-        discount_percent,
-      })
+      const res = await createProductWithImages(fd)
       if (!res.ok) throw new Error(res.error)
       setSaved(true)
       setTimeout(() => router.push('/admin/productos'), 1200)

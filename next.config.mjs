@@ -5,6 +5,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverActions: {
+      /** Varias imágenes WebP en FormData (createProductWithImages). */
+      bodySizeLimit: '12mb',
+    },
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

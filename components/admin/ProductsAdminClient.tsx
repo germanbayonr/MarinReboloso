@@ -7,6 +7,16 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { Pencil, PlusCircle, Trash2, Search, X, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
@@ -233,6 +243,8 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
   const [products, setProducts] = useState(initialProducts ?? [])
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<AdminProduct | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null)
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -388,16 +400,7 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
               </button>
               <button
                 type="button"
-                onClick={async () => {
-                  if (!confirm('¿Eliminar producto?')) return
-                  const res = await deleteProduct(p.id)
-                  if (!res.ok) {
-                    toast.error(res.error)
-                    return
-                  }
-                  setProducts((prev) => prev.filter((x) => x.id !== p.id))
-                  toast.success('Eliminado')
-                }}
+                onClick={() => setDeleteTarget(p)}
                 className="p-1.5 text-neutral-500 hover:text-red-600"
                 aria-label="Eliminar"
               >
@@ -450,6 +453,55 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
       </div>
 
       <AdminDataTable data={filtered} columns={columns} pageSize={12} />
+
+      <AlertDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingProduct) setDeleteTarget(null)
+        }}
+      >
+        <AlertDialogContent className="border-neutral-200 bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif tracking-wide text-neutral-900">
+              ¿Eliminar este producto?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-neutral-600">
+              Se borrará por completo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel
+              disabled={isDeletingProduct}
+              className="border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isDeletingProduct}
+              onClick={async () => {
+                if (!deleteTarget) return
+                setIsDeletingProduct(true)
+                try {
+                  const res = await deleteProduct(deleteTarget.id)
+                  if (!res.ok) {
+                    toast.error(res.error)
+                    return
+                  }
+                  setProducts((prev) => prev.filter((x) => x.id !== deleteTarget.id))
+                  toast.success('Producto e imágenes eliminados')
+                  setDeleteTarget(null)
+                } finally {
+                  setIsDeletingProduct(false)
+                }
+              }}
+            >
+              {isDeletingProduct ? 'Eliminando…' : 'Eliminar'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

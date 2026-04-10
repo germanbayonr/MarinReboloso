@@ -1,6 +1,9 @@
 'use server'
 
+import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
+import { allImageUrlsFromDatabase, imageUrlsForDatabaseColumn } from '@/lib/admin/product-image-db'
+import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
 import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
 import {
@@ -96,6 +99,8 @@ export type ProductInput = {
   /** Slug permitido o null (sin colección) */
   collection: string | null
   image_url: string | null
+  /** Varias URLs para la columna Postgres `text[]`; si se omite, se usa solo `image_url`. */
+  image_urls?: string[] | null
   is_new_arrival: boolean
   in_stock: boolean
   original_price: number
@@ -116,7 +121,7 @@ export async function updateProduct(id: string, input: ProductInput) {
       description: input.description,
       category: input.category,
       collection,
-      image_url: input.image_url,
+      image_url: imageUrlsForDatabaseColumn(input),
       is_new_arrival: input.is_new_arrival,
       in_stock: input.in_stock,
       original_price: input.original_price,
@@ -134,6 +139,22 @@ export async function deleteProduct(id: string) {
   const sup = getServiceSupabaseForAction()
   if (!sup.ok) return { ok: false as const, error: sup.error }
   const sb = sup.client
+
+  const { data: row, error: fetchErr } = await sb.from('products').select('image_url').eq('id', id).maybeSingle()
+  if (fetchErr) return { ok: false as const, error: fetchErr.message }
+  if (!row) return { ok: false as const, error: 'Producto no encontrado' }
+
+  const imageUrls = allImageUrlsFromDatabase((row as { image_url?: unknown }).image_url)
+  if (imageUrls.length > 0) {
+    const rm = await removeProductImagesFromSupabaseStorage(sb, imageUrls)
+    if (!rm.ok) {
+      logAdminSupabaseIssue('STORAGE_DELETE_FAILED', 'No se pudieron borrar imágenes en Storage antes de eliminar el producto.', {
+        supabaseMessage: rm.error,
+      })
+      return { ok: false as const, error: `No se pudieron borrar las imágenes en Storage: ${rm.error}` }
+    }
+  }
+
   const { error } = await sb.from('products').delete().eq('id', id)
   if (error) return productMutationErrorResult('delete', error.message)
   revalidateCatalogPaths()
@@ -154,7 +175,7 @@ export async function createProduct(input: ProductInput) {
       description: input.description,
       category: input.category,
       collection,
-      image_url: input.image_url,
+      image_url: imageUrlsForDatabaseColumn(input),
       is_new_arrival: input.is_new_arrival,
       in_stock: input.in_stock,
       is_active: true,
@@ -169,6 +190,92 @@ export async function createProduct(input: ProductInput) {
   if (error) return productMutationErrorResult('create', error.message)
   revalidateCatalogPaths()
   return { ok: true as const, id: data.id as string }
+}
+
+const PRODUCT_IMAGES_BUCKET = 'product-images'
+
+function parseFormBoolean(value: FormDataEntryValue | null): boolean {
+  if (value == null) return false
+  const s = String(value).toLowerCase()
+  return s === 'true' || s === '1' || s === 'on'
+}
+
+/**
+ * Crea un producto subiendo las imágenes con **service_role** (evita RLS de Storage en el navegador).
+ * Requiere `SUPABASE_SERVICE_ROLE_KEY` y la misma URL de proyecto que en el cliente.
+ */
+export async function createProductWithImages(
+  formData: FormData,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await ensureAdminOrRedirect()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false, error: sup.error }
+  const sb = sup.client
+
+  const files = formData.getAll('images').filter((x): x is File => x instanceof File && x.size > 0)
+  if (files.length === 0) return { ok: false, error: 'Sube al menos una imagen' }
+
+  const name = String(formData.get('name') ?? '').trim()
+  if (!name) return { ok: false, error: 'El nombre es obligatorio' }
+
+  const originalPriceRaw = String(formData.get('original_price') ?? '')
+  const original_price = Number(originalPriceRaw)
+  if (!Number.isFinite(original_price) || original_price < 0) {
+    return { ok: false, error: 'Introduce un precio original válido' }
+  }
+
+  const discount_percent = Math.min(100, Math.max(0, Number(formData.get('discount_percent')) || 0))
+  const descriptionRaw = String(formData.get('description') ?? '').trim()
+  const description = descriptionRaw || null
+  const category = String(formData.get('category') ?? 'pendientes').trim() || 'pendientes'
+  const collectionRaw = String(formData.get('collection') ?? '').trim()
+  const collection = collectionRaw || null
+
+  const imageUrls: string[] = []
+  for (const file of files) {
+    const fileName = `${randomUUID()}.webp`
+    const filePath = `products/${fileName}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGES_BUCKET).upload(filePath, buffer, {
+      contentType: file.type || 'image/webp',
+      cacheControl: '3600',
+      upsert: false,
+    })
+    if (uploadError) {
+      logAdminSupabaseIssue('STORAGE_UPLOAD_FAILED', 'Fallo al subir imagen a Storage con service role.', {
+        supabaseMessage: uploadError.message,
+      })
+      if (isLikelyRowLevelSecurityMessage(uploadError.message)) {
+        return {
+          ok: false,
+          error:
+            'Storage bloqueó la subida (RLS). Con la clave service_role no debería ocurrir: revisa SUPABASE_SERVICE_ROLE_KEY y que sea del mismo proyecto que NEXT_PUBLIC_SUPABASE_URL. ' +
+            uploadError.message,
+        }
+      }
+      return { ok: false, error: uploadError.message }
+    }
+    const { data: publicData } = sb.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(filePath)
+    const publicUrl = publicData?.publicUrl?.trim()
+    if (!publicUrl) {
+      logAdminSupabaseIssue('STORAGE_UPLOAD_FAILED', 'getPublicUrl no devolvió URL tras subida.', {})
+      return { ok: false, error: 'No se pudo obtener la URL pública de la imagen en Storage.' }
+    }
+    imageUrls.push(publicUrl)
+  }
+
+  return createProduct({
+    name,
+    description,
+    category,
+    collection,
+    image_url: imageUrls[0] ?? null,
+    image_urls: imageUrls,
+    is_new_arrival: parseFormBoolean(formData.get('is_new_arrival')),
+    in_stock: parseFormBoolean(formData.get('in_stock')),
+    original_price,
+    discount_percent,
+  })
 }
 
 export async function adminSetProductStock(id: string, in_stock: boolean) {
@@ -193,6 +300,7 @@ export async function adminSetProductCatalogVisible(id: string, is_active: boole
 export const adminUpdateProduct = updateProduct
 export const adminDeleteProduct = deleteProduct
 export const adminCreateProduct = createProduct
+export const adminCreateProductWithImages = createProductWithImages
 
 export async function adminGetOrders(): Promise<AdminOrder[]> {
   await ensureAdminOrRedirect()

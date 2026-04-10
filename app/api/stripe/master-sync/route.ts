@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { imageUrlFirstFromDatabase } from '@/lib/admin/product-image-db'
 
 function getStripeClient() {
   const key =
@@ -305,7 +306,8 @@ export async function POST(req: Request) {
 
       const stripeUpdate: Stripe.ProductUpdateParams = {}
       if (softMatched) stripeUpdate.name = String(db.name ?? '').trim()
-      if (isValidImageUrl(db.image_url)) stripeUpdate.images = [String(db.image_url).trim()]
+      const dbImgUrl = imageUrlFirstFromDatabase(db.image_url)
+      if (isValidImageUrl(dbImgUrl)) stripeUpdate.images = [String(dbImgUrl).trim()]
 
       if (Object.keys(stripeUpdate).length > 0) {
         try {

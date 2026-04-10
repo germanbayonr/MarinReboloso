@@ -217,7 +217,7 @@ export async function POST(req: Request) {
       name: p.name,
       description: p.description,
       price: p.price,
-      image_url: p.image_url,
+      image_url: p.image_url ? [p.image_url] : null,
       category: p.category,
       is_new_arrival: p.is_new_arrival,
       stripe_product_id: null,

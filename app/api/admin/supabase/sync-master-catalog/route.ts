@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { imageUrlFirstFromDatabase } from '@/lib/admin/product-image-db'
 import { masterCatalog } from '@/lib/data/master-catalog'
 
 function getSupabaseServiceClient(): any {
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
     }
 
     const before = {
-      image_url: (row as any).image_url ?? null,
+      image_url: imageUrlFirstFromDatabase((row as any).image_url),
       collection: (row as any).collection ?? null,
       category: (row as any).category ?? null,
     }
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
       const { error: updateError } = await supabase
         .from('products')
         .update({
-          image_url: item.after.image_url,
+          image_url: item.after.image_url ? [item.after.image_url.trim()] : null,
           collection: item.after.collection,
           category: item.after.category,
         })
