@@ -2,11 +2,12 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { FlaskConical, Mail, Trash2 } from 'lucide-react'
+import { FlaskConical, Mail, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
   adminDeleteOrder,
+  adminSyncOrdersFromStripe,
   adminUpdateOrderStatus,
   sendTestEmail,
   simulateRealPurchase,
@@ -147,6 +148,7 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
   const [submitting, setSubmitting] = useState(false)
   const [isTestingEmail, setIsTestingEmail] = useState(false)
   const [isSimulatingPurchase, setIsSimulatingPurchase] = useState(false)
+  const [isSyncingStripe, setIsSyncingStripe] = useState(false)
   const [orderToDelete, setOrderToDelete] = useState<AdminOrder | null>(null)
   const [isDeletingOrder, setIsDeletingOrder] = useState(false)
 
@@ -336,7 +338,42 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
             type="button"
             variant="outline"
             className="gap-2"
-            disabled={isTestingEmail || isSimulatingPurchase}
+            disabled={isSyncingStripe || isTestingEmail || isSimulatingPurchase}
+            onClick={async () => {
+              setIsSyncingStripe(true)
+              try {
+                const res = await adminSyncOrdersFromStripe({ daysBack: 365 })
+                if (!res.ok) {
+                  toast.error(res.error)
+                  return
+                }
+                setOrders((prev) => {
+                  const byId = new Map(prev.map((order) => [order.id, order]))
+                  for (const order of res.importedOrders) byId.set(order.id, order)
+                  return [...byId.values()].sort(
+                    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+                  )
+                })
+                if (res.importedCount === 0) {
+                  toast.success('Stripe ya estaba sincronizado. No había pedidos nuevos que importar.')
+                } else {
+                  toast.success(
+                    `Sincronización completada: ${res.importedCount} pedido(s) importado(s) de Stripe.`,
+                  )
+                }
+              } finally {
+                setIsSyncingStripe(false)
+              }
+            }}
+          >
+            <RefreshCw className={`h-4 w-4 ${isSyncingStripe ? 'animate-spin' : ''}`} />
+            {isSyncingStripe ? 'Sincronizando…' : 'Sincronizar Stripe'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            disabled={isSyncingStripe || isTestingEmail || isSimulatingPurchase}
             onClick={async () => {
               setIsSimulatingPurchase(true)
               try {
@@ -357,7 +394,7 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
           <Button
             type="button"
             className="gap-2"
-            disabled={isTestingEmail || isSimulatingPurchase}
+            disabled={isSyncingStripe || isTestingEmail || isSimulatingPurchase}
             onClick={async () => {
               setIsTestingEmail(true)
               try {

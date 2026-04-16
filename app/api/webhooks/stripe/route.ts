@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { revalidatePath } from 'next/cache'
 import { getServiceSupabase } from '@/lib/admin/server'
 import type { AdminOrder } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
@@ -8,6 +9,23 @@ import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
 import { sendMareboMailResult } from '@/lib/mail/send'
 
 export const dynamic = 'force-dynamic'
+
+function webhookLog(
+  level: 'info' | 'warn' | 'error',
+  message: string,
+  data?: Record<string, unknown>,
+) {
+  const payload = data ? JSON.stringify(data) : ''
+  if (level === 'error') {
+    console.error('[stripe webhook]', message, payload)
+    return
+  }
+  if (level === 'warn') {
+    console.warn('[stripe webhook]', message, payload)
+    return
+  }
+  console.log('[stripe webhook]', message, payload)
+}
 
 /**
  * Firma del webhook: **solo** STRIPE_WEBHOOK_SECRET (whsec_…) vía
@@ -25,6 +43,18 @@ function stripeSecretKey(): string {
     process.env.NEXT_STRIPE_SECRET_KEY ||
     ''
   ).trim()
+}
+
+function stripeSecretMode(secret: string): 'live' | 'test' | 'unknown' {
+  if (secret.startsWith('sk_live_')) return 'live'
+  if (secret.startsWith('sk_test_')) return 'test'
+  return 'unknown'
+}
+
+function isEventModeMismatched(event: Stripe.Event, secret: string): boolean {
+  const mode = stripeSecretMode(secret)
+  if (mode === 'unknown') return false
+  return event.livemode !== (mode === 'live')
 }
 
 function shortOrderRef(orderId: string) {
@@ -88,6 +118,31 @@ async function insertOrderRow(
     return null
   }
 
+  return null
+}
+
+async function findOrderIdByStripeEventId(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  eventId: string,
+): Promise<string | null> {
+  const res = await supabase
+    .from('orders')
+    .select('id')
+    .eq('stripe_event_id', eventId)
+    .maybeSingle()
+
+  if (!res.error && res.data?.id) return String(res.data.id)
+  if (!res.error) return null
+
+  const msg = String(res.error.message ?? '')
+  if (
+    msg.includes("Could not find the 'stripe_event_id' column") ||
+    (msg.includes('column') && msg.includes('stripe_event_id') && msg.includes('does not exist'))
+  ) {
+    return null
+  }
+
+  webhookLog('warn', 'Error comprobando idempotencia por stripe_event_id', { eventId, error: msg })
   return null
 }
 
@@ -282,12 +337,12 @@ export async function POST(req: Request) {
   const webhookSecret = stripeWebhookSecret()
 
   if (!secret) {
-    console.error('[stripe webhook] Falta STRIPE_SECRET_KEY (API) para ampliar sesiones')
+    webhookLog('error', 'Falta STRIPE_SECRET_KEY (API) para ampliar sesiones')
     return NextResponse.json({ error: 'Stripe API no configurada' }, { status: 503 })
   }
 
   if (!webhookSecret) {
-    console.error('[stripe webhook] Falta STRIPE_WEBHOOK_SECRET para validar la firma del webhook')
+    webhookLog('error', 'Falta STRIPE_WEBHOOK_SECRET para validar la firma del webhook')
     return NextResponse.json({ error: 'Webhook secret no configurado' }, { status: 503 })
   }
 
@@ -300,13 +355,31 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
   } catch (e) {
-    console.error('[stripe webhook] Firma inválida (STRIPE_WEBHOOK_SECRET incorrecto o cuerpo alterado):', e)
+    webhookLog('error', 'Firma inválida (STRIPE_WEBHOOK_SECRET incorrecto o cuerpo alterado)', {
+      error: e instanceof Error ? e.message : String(e),
+    })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  console.log('[stripe webhook] Webhook recibido:', event.type, event.id)
+  webhookLog('info', 'Webhook recibido', {
+    eventType: event.type,
+    eventId: event.id,
+    livemode: event.livemode,
+    secretMode: stripeSecretMode(secret),
+  })
+
+  if (isEventModeMismatched(event, secret)) {
+    webhookLog('warn', 'Evento ignorado por mismatch live/test entre evento y STRIPE_SECRET_KEY', {
+      eventId: event.id,
+      eventType: event.type,
+      eventLivemode: event.livemode,
+      secretMode: stripeSecretMode(secret),
+    })
+    return NextResponse.json({ received: true, ignored: 'livemode-mismatch' })
+  }
 
   if (event.type !== 'checkout.session.completed') {
+    webhookLog('info', 'Evento ignorado: tipo no soportado', { eventType: event.type, eventId: event.id })
     return NextResponse.json({ received: true })
   }
 
@@ -318,8 +391,19 @@ export async function POST(req: Request) {
   try {
     supabase = getServiceSupabase()
   } catch (e) {
-    console.error('[stripe webhook] Supabase: falta SUPABASE_SERVICE_ROLE_KEY o URL:', e)
+    webhookLog('error', 'Supabase: falta SUPABASE_SERVICE_ROLE_KEY o URL', {
+      error: e instanceof Error ? e.message : String(e),
+    })
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 503 })
+  }
+
+  const byEventId = await findOrderIdByStripeEventId(supabase, event.id)
+  if (byEventId) {
+    webhookLog('info', 'Evento ya procesado (idempotencia por event id)', {
+      eventId: event.id,
+      orderId: byEventId,
+    })
+    return NextResponse.json({ received: true, duplicate: true, orderId: byEventId })
   }
 
   const { data: existing } = await supabase
@@ -329,7 +413,11 @@ export async function POST(req: Request) {
     .maybeSingle()
 
   if (existing?.id) {
-    console.log('[stripe webhook] Pedido ya existía para sesión', sessionId)
+    webhookLog('info', 'Pedido ya existía para session id', {
+      eventId: event.id,
+      sessionId,
+      orderId: existing.id,
+    })
     return NextResponse.json({ received: true, duplicate: true })
   }
 
@@ -337,11 +425,16 @@ export async function POST(req: Request) {
   try {
     built = await buildItemsAndSummary(stripe, sessionId, supabase)
   } catch (e) {
-    console.error('[stripe webhook] Error recuperando sesión / líneas:', e)
+    webhookLog('error', 'Error recuperando sesión / líneas', {
+      eventId: event.id,
+      sessionId,
+      error: e instanceof Error ? e.message : String(e),
+    })
     return NextResponse.json({ error: 'retrieve failed' }, { status: 500 })
   }
 
   if (!built) {
+    webhookLog('error', 'No se pudieron construir line_items', { eventId: event.id, sessionId })
     return NextResponse.json({ error: 'No line items' }, { status: 500 })
   }
 
@@ -381,15 +474,27 @@ export async function POST(req: Request) {
 
   const inserted = await insertOrderRow(supabase, payload)
   if (!inserted?.id) {
+    webhookLog('error', 'Fallo insertando pedido en orders', { eventId: event.id, sessionId })
     return NextResponse.json({ error: 'Insert failed' }, { status: 500 })
   }
 
-  console.log('[stripe webhook] Pedido guardado en DB:', inserted.id)
+  webhookLog('info', 'Pedido guardado en DB', {
+    eventId: event.id,
+    sessionId,
+    orderId: inserted.id,
+    customerEmail: customer_email || null,
+  })
+  revalidatePath('/admin')
+  revalidatePath('/admin/pedidos')
 
   const { data: orderRow, error: readErr } = await supabase.from('orders').select('*').eq('id', inserted.id).maybeSingle()
 
   if (readErr || !orderRow) {
-    console.error('[stripe webhook] No se pudo releer pedido:', readErr?.message)
+    webhookLog('error', 'No se pudo releer pedido tras insert', {
+      eventId: event.id,
+      orderId: inserted.id,
+      error: readErr?.message ?? null,
+    })
     return NextResponse.json({ received: true, warning: 'no read order' })
   }
 
@@ -399,20 +504,32 @@ export async function POST(req: Request) {
 
   const mail = await sendCustomerConfirmationMail(inserted.id, row, displayName)
   if (mail.ok) {
-    console.log('[stripe webhook] Correo real enviado al cliente:', customer_email)
+    webhookLog('info', 'Correo cliente enviado', { eventId: event.id, orderId: inserted.id })
   } else {
-    console.error('[stripe webhook] Fallo correo cliente:', mail.error)
+    webhookLog('error', 'Fallo correo cliente', {
+      eventId: event.id,
+      orderId: inserted.id,
+      error: mail.error,
+    })
   }
 
   const internal = await sendShopNotificationMail(row, displayName, orderRef)
   if (!internal.ok) {
-    console.error('[stripe webhook] Fallo correo tienda:', internal.error)
+    webhookLog('error', 'Fallo correo tienda', {
+      eventId: event.id,
+      orderId: inserted.id,
+      error: internal.error,
+    })
   }
 
   if (mail.ok) {
     const { error: upErr } = await supabase.from('orders').update({ emails_sent: true }).eq('id', inserted.id)
     if (upErr) {
-      console.warn('[stripe webhook] No se pudo marcar emails_sent (¿columna ausente?):', upErr.message)
+      webhookLog('warn', 'No se pudo marcar emails_sent (¿columna ausente?)', {
+        eventId: event.id,
+        orderId: inserted.id,
+        error: upErr.message,
+      })
     }
   }
 

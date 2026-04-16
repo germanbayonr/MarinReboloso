@@ -1,10 +1,7 @@
-'use client'
-
 import Image from 'next/image'
-import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Clock } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { adminGetOrders } from '@/app/admin/actions'
-import { supabase } from '@/lib/supabase'
+import { ArrowUpRight, Clock, Package, ShoppingCart, TrendingUp, Users } from 'lucide-react'
+import { adminGetOrders, adminGetProducts } from '@/app/admin/actions'
+import { allImageUrlsFromDatabase } from '@/lib/admin/product-image-db'
 
 function ProductThumb({ imageUrl, name }: { imageUrl: string | null | undefined; name: string }) {
   const src = typeof imageUrl === 'string' ? imageUrl.trim() : ''
@@ -71,116 +68,58 @@ function statusClass(status: string) {
   return STATUS_STYLES[status] ?? 'bg-secondary text-muted-foreground'
 }
 
-export default function AdminDashboardPage() {
-  const [products, setProducts] = useState<
-    Array<{
-      id: string
-      name: string
-      price: number | string
-      image_url: string | null
-      category: string | null
-      stripe_price_id: string | null
-    }>
-  >([])
-  const [orders, setOrders] = useState<DashboardOrderRow[]>([])
-  const [orderTotalCount, setOrderTotalCount] = useState(0)
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
-  useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      const [productsRes, adminOrders] = await Promise.all([
-        supabase
-          .from('products')
-          .select('id,name,price,image_url,category,stripe_price_id')
-          .order('name', { ascending: true })
-          .limit(5000),
-        adminGetOrders(),
-      ])
+export default async function AdminDashboardPage() {
+  const [ordersRaw, productsRaw] = await Promise.all([adminGetOrders(), adminGetProducts()])
 
-      if (cancelled) return
-
-      if (productsRes.error) {
-        setProducts([])
-      } else {
-        const rows = Array.isArray(productsRes.data) ? productsRes.data : []
-        setProducts(
-          rows.map((p: Record<string, unknown>) => {
-            const raw = p.price
-            const price =
-              typeof raw === 'number'
-                ? raw
-                : typeof raw === 'string'
-                  ? raw
-                  : Number(raw) || 0
-            return {
-              id: String(p.id),
-              name: String(p.name ?? ''),
-              price,
-              image_url: p.image_url != null && String(p.image_url).trim() ? String(p.image_url).trim() : null,
-              category: p.category != null ? String(p.category) : null,
-              stripe_price_id: p.stripe_price_id ? String(p.stripe_price_id) : null,
-            }
-          }),
-        )
-      }
-
-      const mapped: DashboardOrderRow[] = (adminOrders ?? []).slice(0, 20).map((row) => {
-          const id = String(row.id ?? '')
-          const lineSummary = row.line_summary != null ? String(row.line_summary).trim() : ''
-          const fromJson = firstItemLabel(row.items_json)
-          const product = lineSummary || fromJson || 'Sin detalle de producto'
-          const totalAmt = row.total_amount
-          const amountNum =
-            typeof totalAmt === 'number' && Number.isFinite(totalAmt) ? totalAmt : null
-          const amountLabel =
-            amountNum != null
-              ? new Intl.NumberFormat('es-ES', {
-                  style: 'currency',
-                  currency: 'EUR',
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }).format(amountNum)
-              : '—'
-          const name =
-            row.customer_name != null && String(row.customer_name).trim()
-              ? String(row.customer_name).trim()
-              : null
-          const email =
-            row.customer_email != null && String(row.customer_email).trim()
-              ? String(row.customer_email).trim()
-              : null
-          const customer =
-            name && email ? `${name} · ${email}` : name ?? email ?? 'Cliente desconocido'
-          return {
-            key: id || Math.random().toString(36),
-            ref: id ? shortOrderId(id) : '—',
-            customer,
-            product,
-            amountLabel,
-            status: String(row.status ?? ''),
-            dateLabel: formatOrderDate(row.created_at != null ? String(row.created_at) : null),
-          }
-      })
-      setOrders(mapped)
-      setOrderTotalCount(adminOrders.length)
+  const orders: DashboardOrderRow[] = ordersRaw.slice(0, 20).map((row) => {
+    const id = String(row.id ?? '')
+    const lineSummary = row.line_summary != null ? String(row.line_summary).trim() : ''
+    const fromJson = firstItemLabel(row.items_json)
+    const product = lineSummary || fromJson || 'Sin detalle de producto'
+    const totalAmt = row.total_amount
+    const amountNum = typeof totalAmt === 'number' && Number.isFinite(totalAmt) ? totalAmt : null
+    const amountLabel =
+      amountNum != null
+        ? new Intl.NumberFormat('es-ES', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(amountNum)
+        : '—'
+    const name = row.customer_name != null && String(row.customer_name).trim() ? String(row.customer_name).trim() : null
+    const email = row.customer_email != null && String(row.customer_email).trim() ? String(row.customer_email).trim() : null
+    const customer = name && email ? `${name} · ${email}` : name ?? email ?? 'Cliente desconocido'
+    return {
+      key: id || Math.random().toString(36),
+      ref: id ? shortOrderId(id) : '—',
+      customer,
+      product,
+      amountLabel,
+      status: String(row.status ?? ''),
+      dateLabel: formatOrderDate(row.created_at != null ? String(row.created_at) : null),
     }
-    void run()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  })
 
-  const syncedCount = useMemo(() => products.filter((p) => !!p.stripe_price_id).length, [products])
+  const products = productsRaw.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    image_url: allImageUrlsFromDatabase(p.image_urls ?? p.image_url)[0] ?? p.image_url ?? null,
+    category: p.category,
+    stripe_price_id: p.stripe_price_id,
+  }))
+  const syncedCount = products.filter((p) => !!p.stripe_price_id).length
 
-  const STATS = useMemo(
-    () => [
-      { label: 'Ingresos este mes', value: '1.240€', change: '+12%', icon: TrendingUp },
-      { label: 'Pedidos totales', value: String(orderTotalCount), change: '+5 esta semana', icon: ShoppingCart },
-      { label: 'Clientes', value: '38', change: '+3 nuevos', icon: Users },
-      { label: 'Productos', value: String(products.length), change: `${syncedCount} con Stripe`, icon: Package },
-    ],
-    [orderTotalCount, products.length, syncedCount],
-  )
+  const STATS = [
+    { label: 'Ingresos este mes', value: '1.240€', change: '+12%', icon: TrendingUp },
+    { label: 'Pedidos totales', value: String(ordersRaw.length), change: '+5 esta semana', icon: ShoppingCart },
+    { label: 'Clientes', value: '38', change: '+3 nuevos', icon: Users },
+    { label: 'Productos', value: String(products.length), change: `${syncedCount} con Stripe`, icon: Package },
+  ]
 
   return (
     <div className="space-y-6">
