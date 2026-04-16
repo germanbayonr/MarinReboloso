@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Pencil, PlusCircle, Trash2, Search, X, CheckCircle } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckCircle, Pencil, PlusCircle, Search, Trash2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -22,6 +22,7 @@ import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
   adminSetProductCatalogVisible,
   adminSetProductStock,
+  adminUploadProductImages,
   deleteProduct,
   updateProduct,
 } from '@/app/admin/actions'
@@ -40,6 +41,12 @@ function EditModal({
   onClose: () => void
   onSaved: (p: AdminProduct) => void
 }) {
+  const initialImages =
+    product.image_urls && product.image_urls.length > 0
+      ? product.image_urls
+      : product.image_url
+        ? [product.image_url]
+        : []
   const origBase = product.original_price ?? product.price
   const [form, setForm] = useState({
     name: product.name,
@@ -52,6 +59,9 @@ function EditModal({
     is_new_arrival: product.is_new_arrival,
     in_stock: product.in_stock,
   })
+  const [images, setImages] = useState<string[]>(initialImages)
+  const [newImageUrl, setNewImageUrl] = useState('')
+  const [uploadingImages, setUploadingImages] = useState(false)
   const collectionUnknownInList =
     !!form.collection && !PRODUCT_COLLECTION_OPTIONS.some((o) => o.slug === form.collection)
   const [saved, setSaved] = useState(false)
@@ -61,12 +71,17 @@ function EditModal({
   const finalPreview = computeFinalPrice(o, d)
 
   const handleSave = async () => {
+    const cleanedImages = images.map((url) => url.trim()).filter(Boolean)
+    // #region agent log
+    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bc8ce7'},body:JSON.stringify({sessionId:'bc8ce7',runId:'pre-fix',hypothesisId:'H2',location:'components/admin/ProductsAdminClient.tsx:66',message:'handleSave payload preview',data:{productId:product.id,cleanedImagesCount:cleanedImages.length,hasFallbackImageUrl:Boolean(form.image_url?.trim())},timestamp:Date.now()})}).catch(()=>{})
+    // #endregion
     const res = await updateProduct(product.id, {
       name: form.name.trim(),
       description: form.description.trim() || null,
       category: form.category,
       collection: form.collection.trim() || null,
-      image_url: form.image_url.trim() || null,
+      image_url: cleanedImages[0] ?? (form.image_url.trim() || null),
+      image_urls: cleanedImages,
       is_new_arrival: form.is_new_arrival,
       in_stock: form.in_stock,
       original_price: o,
@@ -85,13 +100,59 @@ function EditModal({
       price: finalPreview,
       category: form.category,
       collection: form.collection.trim() || null,
-      image_url: form.image_url.trim() || null,
+      image_url: cleanedImages[0] ?? null,
+      image_urls: cleanedImages,
       is_new_arrival: form.is_new_arrival,
       in_stock: form.in_stock,
     })
     setSaved(true)
     toast.success('Producto actualizado')
     setTimeout(onClose, 600)
+  }
+
+  const handleAppendImageUrl = () => {
+    const trimmed = newImageUrl.trim()
+    if (!trimmed) return
+    if (images.includes(trimmed)) {
+      toast.error('Esa imagen ya está en la galería')
+      return
+    }
+    setImages((prev) => [...prev, trimmed])
+    setNewImageUrl('')
+  }
+
+  const moveImage = (index: number, direction: 'up' | 'down') => {
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === images.length - 1)) return
+    setImages((prev) => {
+      const next = [...prev]
+      const targetIndex = direction === 'up' ? index - 1 : index + 1
+      const current = next[index]
+      next[index] = next[targetIndex]
+      next[targetIndex] = current
+      return next
+    })
+  }
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleUploadImages = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const formData = new FormData()
+    Array.from(files).forEach((file) => formData.append('images', file))
+    setUploadingImages(true)
+    try {
+      const res = await adminUploadProductImages(formData)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      setImages((prev) => [...prev, ...res.urls])
+      toast.success(`${res.urls.length} imagen(es) subida(s)`)
+    } finally {
+      setUploadingImages(false)
+    }
   }
 
   return (
@@ -190,6 +251,89 @@ function EditModal({
               onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
               className="w-full border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-400 focus:outline-none"
             />
+          </div>
+          <div className="space-y-2 border-t border-neutral-100 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-wider text-neutral-500">Galería de fotos</p>
+              <label className="inline-flex cursor-pointer items-center gap-1 border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:border-neutral-400">
+                <Upload className="h-3.5 w-3.5" />
+                {uploadingImages ? 'Subiendo…' : 'Subir'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploadingImages}
+                  className="hidden"
+                  onChange={(e) => void handleUploadImages(e.target.files)}
+                />
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="https://.../imagen.webp"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                className="w-full border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleAppendImageUrl}
+                className="border border-neutral-200 px-3 py-2 text-xs uppercase tracking-wider text-neutral-700 hover:border-neutral-400"
+              >
+                Añadir
+              </button>
+            </div>
+            {images.length === 0 ? (
+              <p className="text-xs text-neutral-500">No hay fotos en la galería.</p>
+            ) : (
+              <div className="space-y-2">
+                {images.map((image, index) => (
+                  <div key={`${image}-${index}`} className="flex items-center gap-2 border border-neutral-200 px-2 py-1.5">
+                    <Image
+                      src={image}
+                      alt=""
+                      width={44}
+                      height={44}
+                      unoptimized
+                      className="h-11 w-11 shrink-0 bg-neutral-100 object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs text-neutral-600">{image}</p>
+                      <p className="text-[10px] text-neutral-500">{index === 0 ? 'Portada principal' : `Imagen ${index + 1}`}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, 'up')}
+                        disabled={index === 0}
+                        className="p-1 text-neutral-500 disabled:opacity-30"
+                        aria-label="Subir posición"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, 'down')}
+                        disabled={index === images.length - 1}
+                        className="p-1 text-neutral-500 disabled:opacity-30"
+                        aria-label="Bajar posición"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="p-1 text-neutral-500 hover:text-red-600"
+                        aria-label="Eliminar imagen"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <label className="flex cursor-pointer items-center gap-2">
             <input

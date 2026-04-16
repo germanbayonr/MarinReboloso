@@ -3,8 +3,7 @@
 import Image from 'next/image'
 import { TrendingUp, ShoppingCart, Users, Package, ArrowUpRight, Clock } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
-import { sendTestEmail, simulateRealPurchase } from '@/app/admin/actions'
+import { adminGetOrders } from '@/app/admin/actions'
 import { supabase } from '@/lib/supabase'
 
 function ProductThumb({ imageUrl, name }: { imageUrl: string | null | undefined; name: string }) {
@@ -73,10 +72,6 @@ function statusClass(status: string) {
 }
 
 export default function AdminDashboardPage() {
-  const [mounted, setMounted] = useState(false)
-  const [testEmailLoading, setTestEmailLoading] = useState(false)
-  const [simulateLoading, setSimulateLoading] = useState(false)
-  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const [products, setProducts] = useState<
     Array<{
       id: string
@@ -91,24 +86,15 @@ export default function AdminDashboardPage() {
   const [orderTotalCount, setOrderTotalCount] = useState(0)
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
     let cancelled = false
     const run = async () => {
-      const [productsRes, ordersRes, countRes] = await Promise.all([
+      const [productsRes, adminOrders] = await Promise.all([
         supabase
           .from('products')
           .select('id,name,price,image_url,category,stripe_price_id')
           .order('name', { ascending: true })
           .limit(5000),
-        supabase
-          .from('orders')
-          .select('id,created_at,customer_email,customer_name,line_summary,items_json,total_amount,status')
-          .order('created_at', { ascending: false })
-          .limit(20),
-        supabase.from('orders').select('id', { count: 'exact', head: true }),
+        adminGetOrders(),
       ])
 
       if (cancelled) return
@@ -138,11 +124,7 @@ export default function AdminDashboardPage() {
         )
       }
 
-      if (ordersRes.error) {
-        setOrders([])
-      } else {
-        const raw = Array.isArray(ordersRes.data) ? ordersRes.data : []
-        const mapped: DashboardOrderRow[] = raw.map((row: Record<string, unknown>) => {
+      const mapped: DashboardOrderRow[] = (adminOrders ?? []).slice(0, 20).map((row) => {
           const id = String(row.id ?? '')
           const lineSummary = row.line_summary != null ? String(row.line_summary).trim() : ''
           const fromJson = firstItemLabel(row.items_json)
@@ -178,21 +160,15 @@ export default function AdminDashboardPage() {
             status: String(row.status ?? ''),
             dateLabel: formatOrderDate(row.created_at != null ? String(row.created_at) : null),
           }
-        })
-        setOrders(mapped)
-      }
-
-      if (!countRes.error && typeof countRes.count === 'number') {
-        setOrderTotalCount(countRes.count)
-      } else {
-        setOrderTotalCount(Array.isArray(ordersRes.data) ? ordersRes.data.length : 0)
-      }
+      })
+      setOrders(mapped)
+      setOrderTotalCount(adminOrders.length)
     }
     void run()
     return () => {
       cancelled = true
     }
-  }, [dashboardRefreshKey])
+  }, [])
 
   const syncedCount = useMemo(() => products.filter((p) => !!p.stripe_price_id).length, [products])
 
@@ -209,56 +185,6 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="order-first sm:order-last flex flex-shrink-0 flex-col gap-2 self-start sm:items-end">
-          <button
-            type="button"
-            disabled={simulateLoading || testEmailLoading}
-            suppressHydrationWarning
-            onClick={async () => {
-              setSimulateLoading(true)
-              try {
-                const res = await simulateRealPurchase()
-                if (res.ok) {
-                  toast.success('Compra simulada: pedido creado y correo enviado')
-                  setDashboardRefreshKey((k) => k + 1)
-                } else {
-                  toast.error(res.error)
-                }
-              } finally {
-                setSimulateLoading(false)
-              }
-            }}
-            className="border border-foreground bg-white px-4 py-2.5 text-xs font-medium tracking-wide text-foreground hover:bg-secondary disabled:opacity-50 disabled:pointer-events-none transition-colors"
-          >
-            {mounted
-              ? simulateLoading
-                ? 'Simulando…'
-                : 'Simular Compra Real'
-              : 'Simular compra'}
-          </button>
-          <button
-            type="button"
-            disabled={testEmailLoading || simulateLoading}
-            suppressHydrationWarning
-            onClick={async () => {
-              setTestEmailLoading(true)
-              try {
-                const res = await sendTestEmail()
-                if (res.ok) {
-                  toast.success('Correo enviado, revisa tu bandeja de entrada')
-                  setDashboardRefreshKey((k) => k + 1)
-                } else {
-                  toast.error(res.error)
-                }
-              } finally {
-                setTestEmailLoading(false)
-              }
-            }}
-            className="border border-foreground bg-foreground px-4 py-2.5 text-xs font-medium tracking-wide text-background hover:bg-foreground/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-          >
-            {mounted ? (testEmailLoading ? 'Enviando…' : '🚀 Probar Envío de Email') : 'Probar envío de email'}
-          </button>
-        </div>
         <div className="min-w-0 flex-1">
           <h1 className="font-serif text-2xl tracking-wide text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Resumen general de tu tienda</p>

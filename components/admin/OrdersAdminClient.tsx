@@ -2,9 +2,16 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
+import { FlaskConical, Mail, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import AdminDataTable from '@/components/admin/AdminDataTable'
-import { adminUpdateOrderStatus, type AdminOrderStatusPayload } from '@/app/admin/actions'
+import {
+  adminDeleteOrder,
+  adminUpdateOrderStatus,
+  sendTestEmail,
+  simulateRealPurchase,
+  type AdminOrderStatusPayload,
+} from '@/app/admin/actions'
 import { ORDER_STATUSES, type AdminOrder, type OrderStatus } from '@/lib/admin/types'
 import {
   Dialog,
@@ -18,6 +25,16 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const STATUS_LABEL: Record<string, string> = {
   pendiente: 'Pendiente',
@@ -128,6 +145,10 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
   const [trackingInput, setTrackingInput] = useState('')
   const [packlinkInput, setPacklinkInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [isTestingEmail, setIsTestingEmail] = useState(false)
+  const [isSimulatingPurchase, setIsSimulatingPurchase] = useState(false)
+  const [orderToDelete, setOrderToDelete] = useState<AdminOrder | null>(null)
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false)
 
   const filtered = useMemo(() => {
     if (!statusFilter) return orders
@@ -281,6 +302,22 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
           )
         },
       },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setOrderToDelete(row.original)}
+              className="p-1.5 text-neutral-500 hover:text-red-600"
+              aria-label="Eliminar pedido"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ),
+      },
     ],
     [handleSelectChange],
   )
@@ -289,9 +326,56 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-2xl tracking-wide text-neutral-900">Pedidos</h1>
-        <p className="mt-0.5 text-sm text-neutral-500">{orders.length} pedidos</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-serif text-2xl tracking-wide text-neutral-900">Pedidos</h1>
+          <p className="mt-0.5 text-sm text-neutral-500">{orders.length} pedidos</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            disabled={isTestingEmail || isSimulatingPurchase}
+            onClick={async () => {
+              setIsSimulatingPurchase(true)
+              try {
+                const res = await simulateRealPurchase()
+                if (!res.ok) {
+                  toast.error(res.error)
+                  return
+                }
+                toast.success('Compra simulada: pedido creado y correo enviado')
+              } finally {
+                setIsSimulatingPurchase(false)
+              }
+            }}
+          >
+            <FlaskConical className="h-4 w-4" />
+            {isSimulatingPurchase ? 'Simulando…' : 'Simular compra real'}
+          </Button>
+          <Button
+            type="button"
+            className="gap-2"
+            disabled={isTestingEmail || isSimulatingPurchase}
+            onClick={async () => {
+              setIsTestingEmail(true)
+              try {
+                const res = await sendTestEmail()
+                if (!res.ok) {
+                  toast.error(res.error)
+                  return
+                }
+                toast.success('Correo enviado, revisa tu bandeja de entrada')
+              } finally {
+                setIsTestingEmail(false)
+              }
+            }}
+          >
+            <Mail className="h-4 w-4" />
+            {isTestingEmail ? 'Enviando…' : 'Probar envío de email'}
+          </Button>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-xs text-neutral-500">
@@ -391,6 +475,47 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={orderToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingOrder) setOrderToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar pedido?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el pedido de la tabla de pedidos del panel de administración.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingOrder}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeletingOrder}
+              onClick={async (event) => {
+                event.preventDefault()
+                if (!orderToDelete) return
+                setIsDeletingOrder(true)
+                try {
+                  const res = await adminDeleteOrder(orderToDelete.id)
+                  if (!res.ok) {
+                    toast.error(res.error)
+                    return
+                  }
+                  setOrders((prev) => prev.filter((order) => order.id !== orderToDelete.id))
+                  toast.success('Pedido eliminado')
+                  setOrderToDelete(null)
+                } finally {
+                  setIsDeletingOrder(false)
+                }
+              }}
+            >
+              {isDeletingOrder ? 'Eliminando…' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { imageUrlFirstFromDatabase } from '@/lib/admin/product-image-db'
+import { allImageUrlsFromDatabase, imageUrlFirstFromDatabase } from '@/lib/admin/product-image-db'
 import type { AdminProduct } from '@/lib/admin/types'
 
 export function mapProductRow(p: Record<string, unknown>): AdminProduct {
@@ -11,6 +11,7 @@ export function mapProductRow(p: Record<string, unknown>): AdminProduct {
     category: (p.category as string) ?? null,
     collection: (p.collection as string) ?? null,
     image_url: imageUrlFirstFromDatabase(p.image_url),
+    image_urls: allImageUrlsFromDatabase(p.image_url),
     is_new_arrival: Boolean(p.is_new_arrival),
     in_stock: typeof p.in_stock === 'boolean' ? p.in_stock : true,
     is_active: typeof p.is_active === 'boolean' ? p.is_active : true,

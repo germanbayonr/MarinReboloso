@@ -8,6 +8,7 @@ export type AdminProduct = {
   /** Slug de colección (ej. descara, marebo); null si no aplica */
   collection: string | null
   image_url: string | null
+  image_urls?: string[] | null
   is_new_arrival: boolean
   in_stock: boolean
   /** Si false, no se muestra en catálogo público */

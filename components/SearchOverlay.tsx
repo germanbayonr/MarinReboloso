@@ -6,6 +6,20 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
+const cachedSearchPreviewImages = new Set<string>()
+
+function firstImageUrl(raw: unknown): string | null {
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    return trimmed || null
+  }
+  if (Array.isArray(raw)) {
+    const first = raw.find((item) => typeof item === 'string' && item.trim())
+    return typeof first === 'string' ? first.trim() : null
+  }
+  return null
+}
+
 export default function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [results, setResults] = useState<Array<{ id: string; name: string; price: number | string; image_url: string | null }>>([])
@@ -65,7 +79,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
           id: String(p.id),
           name: String(p.name ?? ''),
           price: p.price,
-          image_url: p.image_url ?? null,
+          image_url: firstImageUrl(p.image_url),
         })),
       )
     }, 180)
@@ -75,6 +89,16 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
       clearTimeout(t)
     }
   }, [open, term])
+
+  useEffect(() => {
+    for (const row of results) {
+      const src = row.image_url?.trim()
+      if (!src || cachedSearchPreviewImages.has(src)) continue
+      const preloadImage = new window.Image()
+      preloadImage.src = src
+      cachedSearchPreviewImages.add(src)
+    }
+  }, [results])
 
   if (!open) return null
 
@@ -122,7 +146,15 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
                 >
                   <div className="relative w-16 h-16 overflow-hidden bg-stone-100 flex-shrink-0">
                     {image ? (
-                      <Image unoptimized={true} src={image} alt={p.name} fill sizes="64px" className="object-cover" />
+                      <img
+                        src={image}
+                        alt={p.name}
+                        width={64}
+                        height={64}
+                        loading="eager"
+                        decoding="async"
+                        className="h-16 w-16 object-cover"
+                      />
                     ) : null}
                   </div>
 

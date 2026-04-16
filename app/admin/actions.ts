@@ -200,37 +200,10 @@ function parseFormBoolean(value: FormDataEntryValue | null): boolean {
   return s === 'true' || s === '1' || s === 'on'
 }
 
-/**
- * Crea un producto subiendo las imágenes con **service_role** (evita RLS de Storage en el navegador).
- * Requiere `SUPABASE_SERVICE_ROLE_KEY` y la misma URL de proyecto que en el cliente.
- */
-export async function createProductWithImages(
-  formData: FormData,
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false, error: sup.error }
-  const sb = sup.client
-
-  const files = formData.getAll('images').filter((x): x is File => x instanceof File && x.size > 0)
-  if (files.length === 0) return { ok: false, error: 'Sube al menos una imagen' }
-
-  const name = String(formData.get('name') ?? '').trim()
-  if (!name) return { ok: false, error: 'El nombre es obligatorio' }
-
-  const originalPriceRaw = String(formData.get('original_price') ?? '')
-  const original_price = Number(originalPriceRaw)
-  if (!Number.isFinite(original_price) || original_price < 0) {
-    return { ok: false, error: 'Introduce un precio original válido' }
-  }
-
-  const discount_percent = Math.min(100, Math.max(0, Number(formData.get('discount_percent')) || 0))
-  const descriptionRaw = String(formData.get('description') ?? '').trim()
-  const description = descriptionRaw || null
-  const category = String(formData.get('category') ?? 'pendientes').trim() || 'pendientes'
-  const collectionRaw = String(formData.get('collection') ?? '').trim()
-  const collection = collectionRaw || null
-
+async function uploadFilesToProductImagesBucket(
+  sb: ReturnType<typeof getServiceSupabase>,
+  files: File[],
+): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
   const imageUrls: string[] = []
   for (const file of files) {
     const fileName = `${randomUUID()}.webp`
@@ -263,6 +236,43 @@ export async function createProductWithImages(
     }
     imageUrls.push(publicUrl)
   }
+  return { ok: true, urls: imageUrls }
+}
+
+/**
+ * Crea un producto subiendo las imágenes con **service_role** (evita RLS de Storage en el navegador).
+ * Requiere `SUPABASE_SERVICE_ROLE_KEY` y la misma URL de proyecto que en el cliente.
+ */
+export async function createProductWithImages(
+  formData: FormData,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await ensureAdminOrRedirect()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false, error: sup.error }
+  const sb = sup.client
+
+  const files = formData.getAll('images').filter((x): x is File => x instanceof File && x.size > 0)
+  if (files.length === 0) return { ok: false, error: 'Sube al menos una imagen' }
+
+  const name = String(formData.get('name') ?? '').trim()
+  if (!name) return { ok: false, error: 'El nombre es obligatorio' }
+
+  const originalPriceRaw = String(formData.get('original_price') ?? '')
+  const original_price = Number(originalPriceRaw)
+  if (!Number.isFinite(original_price) || original_price < 0) {
+    return { ok: false, error: 'Introduce un precio original válido' }
+  }
+
+  const discount_percent = Math.min(100, Math.max(0, Number(formData.get('discount_percent')) || 0))
+  const descriptionRaw = String(formData.get('description') ?? '').trim()
+  const description = descriptionRaw || null
+  const category = String(formData.get('category') ?? 'pendientes').trim() || 'pendientes'
+  const collectionRaw = String(formData.get('collection') ?? '').trim()
+  const collection = collectionRaw || null
+
+  const uploadResult = await uploadFilesToProductImagesBucket(sb, files)
+  if (!uploadResult.ok) return uploadResult
+  const imageUrls = uploadResult.urls
 
   return createProduct({
     name,
@@ -276,6 +286,16 @@ export async function createProductWithImages(
     original_price,
     discount_percent,
   })
+}
+
+export async function adminUploadProductImages(formData: FormData): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
+  await ensureAdminOrRedirect()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false, error: sup.error }
+  const sb = sup.client
+  const files = formData.getAll('images').filter((x): x is File => x instanceof File && x.size > 0)
+  if (files.length === 0) return { ok: false, error: 'Selecciona al menos una imagen' }
+  return uploadFilesToProductImagesBucket(sb, files)
 }
 
 export async function adminSetProductStock(id: string, in_stock: boolean) {
@@ -308,6 +328,16 @@ export async function adminGetOrders(): Promise<AdminOrder[]> {
   const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false }).limit(500)
   if (error) throw new Error(error.message)
   return (data ?? []) as AdminOrder[]
+}
+
+export async function adminDeleteOrder(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await ensureAdminOrRedirect()
+  const sb = getServiceSupabase()
+  const { error } = await sb.from('orders').delete().eq('id', id)
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/admin')
+  revalidatePath('/admin/pedidos')
+  return { ok: true }
 }
 
 function shortOrderRef(orderId: string) {
