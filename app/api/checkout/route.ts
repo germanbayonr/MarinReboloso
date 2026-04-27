@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { validatePromoCodePublic } from '@/lib/promotions'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -14,6 +15,7 @@ const cartItemSchema = z.object({
 
 const requestSchema = z.object({
   cartItems: z.array(cartItemSchema).min(1),
+  promoCode: z.string().optional(),
   customer: z
     .object({
       email: z.string().email().optional(),
@@ -37,7 +39,7 @@ const requestSchema = z.object({
 export async function POST(req: Request) {
   try {
     const json = await req.json()
-    const { customer, customerData, customerDetails, cartItems } = requestSchema.parse(json)
+    const { customer, customerData, customerDetails, cartItems, promoCode } = requestSchema.parse(json)
 
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY ||
@@ -102,6 +104,28 @@ export async function POST(req: Request) {
       ? `${forwardedProto ?? 'https'}://${forwardedHost}`
       : req.headers.get('origin') || new URL(req.url).origin
 
+    let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined
+    if (promoCode) {
+      const promo = await validatePromoCodePublic(promoCode)
+      if (promo.isValid && promo.discountPercentage) {
+        const coupon = await stripe.coupons.create({
+          percent_off: promo.discountPercentage,
+          duration: 'once',
+          name: `Promo ${promo.code}`,
+        })
+        discounts = [{ coupon: coupon.id }]
+      }
+    }
+
+    const metadata = cartItems.reduce(
+      (acc, item, idx) => {
+        if (item.id) acc[`supabase_product_${idx}`] = item.id
+        return acc
+      },
+      {} as Record<string, string>,
+    )
+    if (promoCode) metadata.promo_code = String(promoCode).trim().toUpperCase()
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -122,13 +146,8 @@ export async function POST(req: Request) {
         },
       ],
       line_items,
-      metadata: cartItems.reduce(
-        (acc, item, idx) => {
-          if (item.id) acc[`supabase_product_${idx}`] = item.id
-          return acc
-        },
-        {} as Record<string, string>,
-      ),
+      discounts,
+      metadata,
     })
 
     if (!session.url) {

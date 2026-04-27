@@ -11,9 +11,10 @@ import SearchOverlay from '@/components/SearchOverlay'
 
 interface ChameleonHeaderProps {
   onMenuClick?: () => void
+  topOffsetClassName?: string
 }
 
-export function ChameleonHeader({ onMenuClick }: ChameleonHeaderProps) {
+export function ChameleonHeader({ onMenuClick, topOffsetClassName = 'top-0' }: ChameleonHeaderProps) {
   const { totalCount } = useCart()
   const { items } = useWishlist()
   const wishlistCount = items.length
@@ -21,7 +22,7 @@ export function ChameleonHeader({ onMenuClick }: ChameleonHeaderProps) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 w-full z-50 mix-blend-difference pointer-events-none" suppressHydrationWarning>
+      <header className={`fixed ${topOffsetClassName} left-0 w-full z-50 mix-blend-difference pointer-events-none`} suppressHydrationWarning>
       {/* Main navigation container - must be pure white text to work with difference blend mode */}
       <div 
         className="flex justify-between items-center w-full px-6 py-4 text-white"

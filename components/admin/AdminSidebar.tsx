@@ -7,6 +7,7 @@ import {
   Package,
   FolderOpen,
   ShoppingCart,
+  TicketPercent,
   Settings,
   Store,
   LogOut,
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/admin',             label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/productos',   label: 'Productos',   icon: Package },
   { href: '/admin/pedidos',     label: 'Pedidos',     icon: ShoppingCart },
+  { href: '/admin/promotions',  label: 'Promociones', icon: TicketPercent },
   { href: '/admin/colecciones', label: 'Colecciones', icon: FolderOpen },
   { href: '/admin/ajustes',     label: 'Ajustes',     icon: Settings },
 ]

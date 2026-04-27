@@ -21,6 +21,13 @@ export default function CheckoutPage() {
   const { cartItems, cartTotal } = useCart()
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [promoInput, setPromoInput] = useState('')
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [promoError, setPromoError] = useState<string | null>(null)
+  const [promoApplied, setPromoApplied] = useState<{
+    code: string
+    discountPercentage: number
+  } | null>(null)
 
   const defaultValues: CheckoutFormValues = useMemo(
     () => ({
@@ -74,6 +81,7 @@ export default function CheckoutPage() {
               stripe_price_id: item.stripe_price_id,
             })),
             customer: values,
+            promoCode: promoApplied?.code ?? null,
           }),
         })
 
@@ -111,7 +119,9 @@ export default function CheckoutPage() {
 
   const formattedSubtotal = `${cartTotal.toFixed(2)}€`
   const shipping = 5
-  const total = cartTotal + shipping
+  const discountAmount = promoApplied ? (cartTotal * promoApplied.discountPercentage) / 100 : 0
+  const discountedSubtotal = Math.max(0, cartTotal - discountAmount)
+  const total = discountedSubtotal + shipping
   const isPreparingPayment = useMemo(() => cartItems.some((i) => !i.stripe_price_id), [cartItems])
 
   return (
@@ -311,10 +321,72 @@ export default function CheckoutPage() {
                 <div className="h-px bg-gray-200" />
 
                 <div className="space-y-3 text-sm tracking-wide">
+                  <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+                    <p className="text-xs uppercase tracking-widest text-neutral-600">¿Tienes un código promocional?</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoInput}
+                        onChange={(event) => {
+                          setPromoInput(event.target.value.toUpperCase())
+                          setPromoError(null)
+                        }}
+                        placeholder="SPRING15"
+                        className="w-full border border-neutral-200 bg-white px-3 py-2 text-xs tracking-wider text-neutral-900 focus:border-neutral-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={isApplyingPromo}
+                        className="border border-neutral-300 px-3 py-2 text-xs uppercase tracking-wider text-neutral-700 hover:border-neutral-500 disabled:opacity-50"
+                        onClick={async () => {
+                          const code = promoInput.trim().toUpperCase()
+                          if (!code) {
+                            setPromoError('Introduce un código promocional.')
+                            return
+                          }
+                          setIsApplyingPromo(true)
+                          setPromoError(null)
+                          try {
+                            const response = await fetch('/api/promotions/validate', {
+                              method: 'POST',
+                              headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ code }),
+                            })
+                            const data = await response.json().catch(() => null)
+                            if (!response.ok || !data?.ok) {
+                              setPromoApplied(null)
+                              setPromoError(data?.error ?? 'Código no válido.')
+                              return
+                            }
+                            setPromoApplied({
+                              code: String(data.code),
+                              discountPercentage: Number(data.discountPercentage) || 0,
+                            })
+                          } finally {
+                            setIsApplyingPromo(false)
+                          }
+                        }}
+                      >
+                        {isApplyingPromo ? 'Aplicando…' : 'Aplicar'}
+                      </button>
+                    </div>
+                    {promoApplied ? (
+                      <p className="text-[11px] text-green-700">
+                        Código aplicado: <strong>{promoApplied.code}</strong> (-{promoApplied.discountPercentage}%)
+                      </p>
+                    ) : null}
+                    {promoError ? <p className="text-[11px] text-red-600">{promoError}</p> : null}
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Subtotal</span>
                     <span className="text-gray-900">{formattedSubtotal}</span>
                   </div>
+                  {promoApplied ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500">Descuento ({promoApplied.discountPercentage}%)</span>
+                      <span className="text-green-700">-{discountAmount.toFixed(2)}€</span>
+                    </div>
+                  ) : null}
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Envío</span>
                     <span className="text-gray-900">5€ (España)</span>

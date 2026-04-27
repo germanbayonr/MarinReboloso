@@ -4,13 +4,17 @@ import { ChevronDown, X, Instagram } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ChameleonHeader } from '@/components/ChameleonHeader'
+import PromoHeader, { type PromoHeaderData } from '@/components/PromoHeader'
+import PromoBannerPopup from '@/components/PromoBannerPopup'
+import { supabase } from '@/lib/supabase'
+import { WEB_COLLECTIONS } from '@/lib/web-collections'
 
 const NAV_COLLECTIONS = [
-  { label: 'Descará', href: '/coleccion/descara', isNew: true },
-  { label: 'Marebo', href: '/coleccion/marebo' },
-  { label: 'Corales', href: '/coleccion/corales' },
-  { label: 'Filipa', href: '/coleccion/filipa' },
-  { label: 'Jaipur', href: '/coleccion/jaipur' },
+  ...WEB_COLLECTIONS.map((item) => ({
+    label: item.label,
+    href: `/coleccion/${item.slug}`,
+    isNew: item.slug === 'descara',
+  })),
 ]
 
 const NAV_CATEGORIES = [
@@ -25,6 +29,7 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collectionsOpen, setCollectionsOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [headerPromotion, setHeaderPromotion] = useState<PromoHeaderData | null>(null)
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -32,10 +37,37 @@ export default function Navbar() {
     return () => { document.body.style.overflow = '' }
   }, [drawerOpen])
 
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      const { data, error } = await supabase
+        .from('promotions')
+        .select('id,announcement_text,code,discount_percentage')
+        .eq('is_active', true)
+        .eq('type', 'header_bar')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (cancelled || error || !data) return
+      setHeaderPromotion({
+        id: String(data.id),
+        announcement_text: data.announcement_text ? String(data.announcement_text) : null,
+        code: String(data.code),
+        discount_percentage: Number(data.discount_percentage) || 0,
+      })
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <>
+      {headerPromotion ? <PromoHeader promotion={headerPromotion} /> : null}
+      <PromoBannerPopup />
       {/* CHAMELEON HEADER - Auto-contrast logo and icons */}
-      <ChameleonHeader onMenuClick={() => setDrawerOpen(true)} />
+      <ChameleonHeader onMenuClick={() => setDrawerOpen(true)} topOffsetClassName={headerPromotion ? 'top-8' : 'top-0'} />
 
       {/* Off-canvas Drawer */}
       {/* Backdrop */}
