@@ -4,9 +4,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, CheckCircle, Pencil, PlusCircle, Search, Trash2, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckCircle, Download, Pencil, PlusCircle, Search, Trash2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -20,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
+  adminSyncProductsWithStripe,
   adminSetProductCatalogVisible,
   adminSetProductStock,
   adminUploadProductImages,
@@ -72,9 +74,6 @@ function EditModal({
 
   const handleSave = async () => {
     const cleanedImages = images.map((url) => url.trim()).filter(Boolean)
-    // #region agent log
-    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bc8ce7'},body:JSON.stringify({sessionId:'bc8ce7',runId:'pre-fix',hypothesisId:'H2',location:'components/admin/ProductsAdminClient.tsx:66',message:'handleSave payload preview',data:{productId:product.id,cleanedImagesCount:cleanedImages.length,hasFallbackImageUrl:Boolean(form.image_url?.trim())},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
     const res = await updateProduct(product.id, {
       name: form.name.trim(),
       description: form.description.trim() || null,
@@ -91,20 +90,7 @@ function EditModal({
       toast.error(res.error)
       return
     }
-    onSaved({
-      ...product,
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      original_price: o,
-      discount_percent: d,
-      price: finalPreview,
-      category: form.category,
-      collection: form.collection.trim() || null,
-      image_url: cleanedImages[0] ?? null,
-      image_urls: cleanedImages,
-      is_new_arrival: form.is_new_arrival,
-      in_stock: form.in_stock,
-    })
+    onSaved(res.product)
     setSaved(true)
     toast.success('Producto actualizado')
     setTimeout(onClose, 600)
@@ -303,6 +289,17 @@ function EditModal({
                       <p className="text-[10px] text-neutral-500">{index === 0 ? 'Portada principal' : `Imagen ${index + 1}`}</p>
                     </div>
                     <div className="flex items-center gap-1">
+                      <a
+                        href={image}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1 text-neutral-500 hover:text-neutral-900"
+                        aria-label="Descargar imagen"
+                        title="Descargar imagen"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
                       <button
                         type="button"
                         onClick={() => moveImage(index, 'up')}
@@ -386,6 +383,8 @@ function EditModal({
 export default function ProductsAdminClient({ initialProducts }: { initialProducts: AdminProduct[] }) {
   const [products, setProducts] = useState(initialProducts ?? [])
   const [search, setSearch] = useState('')
+  const [isSyncingWithStripe, setIsSyncingWithStripe] = useState(false)
+  const [syncFailures, setSyncFailures] = useState<Array<{ name: string; reason: string }>>([])
   const [editing, setEditing] = useState<AdminProduct | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null)
   const [isDeletingProduct, setIsDeletingProduct] = useState(false)
@@ -480,7 +479,7 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
                     toast.error(res.error)
                     return
                   }
-                  setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, in_stock: v } : x)))
+                  setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
                   toast.success(v ? 'Disponible' : 'Sin stock')
                 }}
               />
@@ -504,7 +503,7 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
                     toast.error(res.error)
                     return
                   }
-                  setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_active: v } : x)))
+                  setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
                   toast.success(v ? 'Visible en la tienda' : 'En pausa (no aparece en la web)')
                 }}
               />
@@ -576,14 +575,57 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
           <h1 className="font-serif text-2xl tracking-wide text-neutral-900">Productos</h1>
           <p className="mt-0.5 text-sm text-neutral-500">{products.length} productos</p>
         </div>
-        <Link
-          href="/admin/nuevo-producto"
-          className="inline-flex items-center gap-2 bg-neutral-900 px-4 py-2.5 text-xs uppercase tracking-wider text-white hover:bg-neutral-800"
-        >
-          <PlusCircle className="h-4 w-4" strokeWidth={1.5} />
-          Nuevo producto
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSyncingWithStripe}
+            onClick={async () => {
+              setIsSyncingWithStripe(true)
+              setSyncFailures([])
+              try {
+                const result = await adminSyncProductsWithStripe()
+                if (!result.success && result.failedSyncs.length === 0) {
+                  toast.error('No se pudo completar la sincronización con Stripe')
+                  return
+                }
+                setSyncFailures(result.failedSyncs)
+                if (result.failedSyncs.length > 0) {
+                  toast.error(`Sincronizados: ${result.syncedCount}. Revisa los errores.`)
+                  return
+                }
+                toast.success(`${result.syncedCount} producto(s) sincronizado(s) con Stripe`)
+              } finally {
+                setIsSyncingWithStripe(false)
+              }
+            }}
+          >
+            {isSyncingWithStripe ? 'Sincronizando…' : 'Sincronizar con Stripe'}
+          </Button>
+          <Link
+            href="/admin/nuevo-producto"
+            className="inline-flex items-center gap-2 bg-neutral-900 px-4 py-2.5 text-xs uppercase tracking-wider text-white hover:bg-neutral-800"
+          >
+            <PlusCircle className="h-4 w-4" strokeWidth={1.5} />
+            Nuevo producto
+          </Link>
+        </div>
       </div>
+
+      {syncFailures.length > 0 ? (
+        <Alert variant="destructive" className="border-red-300 bg-red-50 text-red-900">
+          <AlertTitle>Errores en la sincronización con Stripe</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc space-y-1 pl-4">
+              {syncFailures.map((item) => (
+                <li key={`${item.name}-${item.reason}`}>
+                  <span className="font-medium">{item.name}:</span> {item.reason}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" strokeWidth={1.5} />

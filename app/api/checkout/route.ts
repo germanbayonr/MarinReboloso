@@ -3,6 +3,7 @@ import { z } from 'zod'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { validatePromoCodePublic } from '@/lib/promotions'
+import { ensureStripePromotionCode } from '@/lib/stripe-promotions'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -107,14 +108,20 @@ export async function POST(req: Request) {
     let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined
     if (promoCode) {
       const promo = await validatePromoCodePublic(promoCode)
-      if (promo.isValid && promo.discountPercentage) {
-        const coupon = await stripe.coupons.create({
-          percent_off: promo.discountPercentage,
-          duration: 'once',
-          name: `Promo ${promo.code}`,
-        })
-        discounts = [{ coupon: coupon.id }]
+      if (!promo.isValid || !promo.discountPercentage || !promo.code) {
+        return NextResponse.json(
+          { error: { message: 'Código promocional no válido.' } },
+          { status: 400, headers: { 'Cache-Control': 'no-store' } },
+        )
       }
+      const stripePromotionCodeId = await ensureStripePromotionCode({
+        stripe,
+        code: promo.code,
+        discountPercentage: promo.discountPercentage,
+        promotionId: promo.promotionId,
+        isActive: true,
+      })
+      discounts = [{ promotion_code: stripePromotionCodeId }]
     }
 
     const metadata = cartItems.reduce(

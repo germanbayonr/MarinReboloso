@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import Stripe from 'stripe'
 import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
 import {
   PROMOTION_TYPES,
@@ -8,6 +9,7 @@ import {
   type PromotionRow,
   validatePromoCodePublic,
 } from '@/lib/promotions'
+import { disableStripePromotionCodesByCode, ensureStripePromotionCode } from '@/lib/stripe-promotions'
 
 function normalizeCode(value: string): string {
   return String(value || '')
@@ -15,6 +17,22 @@ function normalizeCode(value: string): string {
     .toUpperCase()
     .replace(/\s+/g, '')
     .replace(/[^A-Z0-9Ñ]/g, '')
+}
+
+function stripeSecretKey(): string {
+  return (
+    process.env.STRIPE_SECRET_KEY ||
+    process.env.STRIPE_API_KEY ||
+    process.env.STRIPE_SECRET ||
+    process.env.NEXT_STRIPE_SECRET_KEY ||
+    ''
+  ).trim()
+}
+
+function getStripeClient(): Stripe {
+  const secret = stripeSecretKey()
+  if (!secret) throw new Error('Falta STRIPE_SECRET_KEY para sincronizar promociones con Stripe.')
+  return new Stripe(secret)
 }
 
 export async function getPromotions(): Promise<PromotionRow[]> {
@@ -55,6 +73,19 @@ export async function createPromotion(
     .select('*')
     .single()
   if (error) return { ok: false, error: error.message }
+  try {
+    const stripe = getStripeClient()
+    await ensureStripePromotionCode({
+      stripe,
+      code,
+      discountPercentage: discount,
+      promotionId: String(inserted.id),
+      isActive: false,
+    })
+  } catch (stripeError) {
+    const message = stripeError instanceof Error ? stripeError.message : 'Error al sincronizar promoción en Stripe.'
+    return { ok: false, error: message }
+  }
   revalidatePath('/admin/promotions')
   revalidatePath('/checkout')
   revalidatePath('/')
@@ -92,6 +123,19 @@ export async function updatePromotion(
     .select('*')
     .single()
   if (error) return { ok: false, error: error.message }
+  try {
+    const stripe = getStripeClient()
+    await ensureStripePromotionCode({
+      stripe,
+      code,
+      discountPercentage: discount,
+      promotionId: String(updated.id),
+      isActive: Boolean(updated.is_active),
+    })
+  } catch (stripeError) {
+    const message = stripeError instanceof Error ? stripeError.message : 'Error al sincronizar promoción en Stripe.'
+    return { ok: false, error: message }
+  }
   revalidatePath('/admin/promotions')
   revalidatePath('/checkout')
   revalidatePath('/')
@@ -101,22 +145,56 @@ export async function updatePromotion(
 export async function togglePromotionActive(
   id: string,
   status: boolean,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; promotion: PromotionRow } | { ok: false; error: string }> {
   await ensureAdminOrRedirect()
   const sb = getServiceSupabase()
-  const { error } = await sb.from('promotions').update({ is_active: status }).eq('id', id)
+  const { data, error } = await sb
+    .from('promotions')
+    .update({ is_active: status })
+    .eq('id', id)
+    .select('*')
+    .single()
   if (error) return { ok: false, error: error.message }
+  try {
+    const stripe = getStripeClient()
+    await ensureStripePromotionCode({
+      stripe,
+      code: String(data.code),
+      discountPercentage: Number(data.discount_percentage),
+      promotionId: String(data.id),
+      isActive: status,
+    })
+  } catch (stripeError) {
+    const message = stripeError instanceof Error ? stripeError.message : 'Error al sincronizar activación en Stripe.'
+    return { ok: false, error: message }
+  }
   revalidatePath('/admin/promotions')
   revalidatePath('/checkout')
   revalidatePath('/')
-  return { ok: true }
+  return { ok: true, promotion: data as PromotionRow }
 }
 
 export async function deletePromotion(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   await ensureAdminOrRedirect()
   const sb = getServiceSupabase()
+  const { data: existingPromotion, error: fetchError } = await sb
+    .from('promotions')
+    .select('code')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchError) return { ok: false, error: fetchError.message }
   const { error } = await sb.from('promotions').delete().eq('id', id)
   if (error) return { ok: false, error: error.message }
+  try {
+    const stripe = getStripeClient()
+    await disableStripePromotionCodesByCode({
+      stripe,
+      code: String(existingPromotion?.code ?? ''),
+    })
+  } catch (stripeError) {
+    const message = stripeError instanceof Error ? stripeError.message : 'Error al desactivar promoción en Stripe.'
+    return { ok: false, error: message }
+  }
   revalidatePath('/admin/promotions')
   revalidatePath('/checkout')
   revalidatePath('/')

@@ -119,7 +119,7 @@ export default function PromotionsAdminClient({ initialPromotions }: { initialPr
                 return
               }
               setPromotions((prev) =>
-                prev.map((item) => (item.id === row.original.id ? { ...item, is_active: next } : item)),
+                prev.map((item) => (item.id === row.original.id ? res.promotion : item)),
               )
               toast.success(next ? 'Promoción activada' : 'Promoción desactivada')
             }}

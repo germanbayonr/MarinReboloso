@@ -95,12 +95,250 @@ function stripeSecretKey(): string {
   ).trim()
 }
 
+interface StripeProductForMatch {
+  id: string
+  name: string
+  description: string | null
+  defaultPriceId: string | null
+}
+
+interface StripeLinkResult {
+  stripeProductId: string
+  stripePriceId: string
+}
+
+interface StripeSyncFailedItem {
+  name: string
+  reason: string
+}
+
+function normalizeProductNameForMatch(raw: string): string {
+  return raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function buildBigrams(raw: string): Set<string> {
+  if (raw.length < 2) return new Set([raw])
+  const output = new Set<string>()
+  for (let index = 0; index < raw.length - 1; index += 1) {
+    output.add(raw.slice(index, index + 2))
+  }
+  return output
+}
+
+function stringSimilarity(left: string, right: string): number {
+  if (!left || !right) return 0
+  if (left === right) return 1
+  if (left.includes(right) || right.includes(left)) return 0.95
+  const leftBigrams = buildBigrams(left)
+  const rightBigrams = buildBigrams(right)
+  const intersectionCount = Array.from(leftBigrams).filter((item) => rightBigrams.has(item)).length
+  return (2 * intersectionCount) / (leftBigrams.size + rightBigrams.size)
+}
+
+function priceIdFromStripeProduct(product: Stripe.Product): string | null {
+  if (!product.default_price) return null
+  if (typeof product.default_price === 'string') return product.default_price
+  if (typeof product.default_price === 'object' && 'id' in product.default_price) return product.default_price.id
+  return null
+}
+
+async function listAllActiveStripeProducts(stripe: Stripe): Promise<StripeProductForMatch[]> {
+  const output: StripeProductForMatch[] = []
+  let startingAfter: string | undefined
+  while (true) {
+    const page = await stripe.products.list({
+      active: true,
+      limit: 100,
+      starting_after: startingAfter,
+      expand: ['data.default_price'],
+    })
+    for (const product of page.data) {
+      const name = product.name?.trim()
+      if (!name) continue
+      output.push({
+        id: product.id,
+        name,
+        description: product.description?.trim() || null,
+        defaultPriceId: priceIdFromStripeProduct(product),
+      })
+    }
+    if (!page.has_more) break
+    startingAfter = page.data[page.data.length - 1]?.id
+    if (!startingAfter) break
+  }
+  return output
+}
+
+function findStripeProductMatch({
+  supabaseProductName,
+  stripeProducts,
+}: {
+  supabaseProductName: string
+  stripeProducts: StripeProductForMatch[]
+}): { ok: true; product: StripeProductForMatch } | { ok: false; reason: string } {
+  const normalizedSupabaseName = normalizeProductNameForMatch(supabaseProductName)
+  if (!normalizedSupabaseName) return { ok: false, reason: 'Nombre vacío o inválido para comparar.' }
+
+  const exactMatches = stripeProducts.filter(
+    (stripeProduct) => normalizeProductNameForMatch(stripeProduct.name) === normalizedSupabaseName,
+  )
+  if (exactMatches.length === 1) return { ok: true, product: exactMatches[0] }
+  if (exactMatches.length > 1) {
+    return { ok: false, reason: 'Nombres ambiguos en Stripe (varias coincidencias exactas).' }
+  }
+
+  const candidateMatches = stripeProducts
+    .map((stripeProduct) => ({
+      product: stripeProduct,
+      similarity: stringSimilarity(normalizedSupabaseName, normalizeProductNameForMatch(stripeProduct.name)),
+    }))
+    .filter((item) => item.similarity >= 0.9)
+    .sort((left, right) => right.similarity - left.similarity)
+
+  const bestMatch = candidateMatches[0]
+  if (!bestMatch) return { ok: false, reason: 'No se encontró match aceptable por nombre.' }
+
+  const secondBestMatch = candidateMatches[1]
+  if (secondBestMatch && bestMatch.similarity - secondBestMatch.similarity < 0.03) {
+    return { ok: false, reason: 'Nombres parecidos en Stripe pero ambiguos.' }
+  }
+  return { ok: true, product: bestMatch.product }
+}
+
+async function createStripeProductAndPrice({
+  stripe,
+  name,
+  description,
+  imageUrl,
+  amountEur,
+}: {
+  stripe: Stripe
+  name: string
+  description: string | null
+  imageUrl: string | null
+  amountEur: number
+}): Promise<StripeLinkResult> {
+  const unitAmount = Math.round(amountEur * 100)
+  if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
+    throw new Error('Precio no válido para crear Stripe Price.')
+  }
+  const stripeProduct = await stripe.products.create({
+    name,
+    description: description?.trim() || undefined,
+    images: imageUrl?.trim() ? [imageUrl.trim()] : undefined,
+    active: true,
+  })
+  const stripePrice = await stripe.prices.create({
+    product: stripeProduct.id,
+    currency: 'eur',
+    unit_amount: unitAmount,
+    recurring: undefined,
+  })
+  return {
+    stripeProductId: stripeProduct.id,
+    stripePriceId: stripePrice.id,
+  }
+}
+
+async function ensureStripeProductHasOneTimeDefaultPrice({
+  stripe,
+  stripeProductId,
+  currentPriceId,
+  amountEur,
+}: {
+  stripe: Stripe
+  stripeProductId: string
+  currentPriceId: string
+  amountEur: number
+}): Promise<string> {
+  const currentPrice = await stripe.prices.retrieve(currentPriceId)
+  if (!currentPrice.recurring) return currentPrice.id
+
+  const unitAmount = Math.round(amountEur * 100)
+  if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
+    throw new Error('Precio no válido para reemplazar price recurrente por puntual.')
+  }
+
+  const oneTimePrice = await stripe.prices.create({
+    product: stripeProductId,
+    currency: (currentPrice.currency || 'eur').toLowerCase(),
+    unit_amount: unitAmount,
+    recurring: undefined,
+  })
+
+  await stripe.products.update(stripeProductId, { default_price: oneTimePrice.id })
+  return oneTimePrice.id
+}
+
+async function findOrCreateStripeProductLink({
+  stripe,
+  stripeProducts,
+  name,
+  description,
+  imageUrl,
+  amountEur,
+}: {
+  stripe: Stripe
+  stripeProducts: StripeProductForMatch[]
+  name: string
+  description: string | null
+  imageUrl: string | null
+  amountEur: number
+}): Promise<StripeLinkResult> {
+  const matchResult = findStripeProductMatch({ supabaseProductName: name, stripeProducts })
+  if (matchResult.ok) {
+    const matchedPriceId = matchResult.product.defaultPriceId
+    if (!matchedPriceId) {
+      throw new Error('Producto encontrado en Stripe sin default_price.')
+    }
+    const ensuredOneTimePriceId = await ensureStripeProductHasOneTimeDefaultPrice({
+      stripe,
+      stripeProductId: matchResult.product.id,
+      currentPriceId: matchedPriceId,
+      amountEur,
+    })
+    return { stripeProductId: matchResult.product.id, stripePriceId: ensuredOneTimePriceId }
+  }
+  if (matchResult.reason.includes('ambiguos')) {
+    throw new Error(matchResult.reason)
+  }
+
+  const createdStripeLink = await createStripeProductAndPrice({
+    stripe,
+    name,
+    description,
+    imageUrl,
+    amountEur,
+  })
+
+  stripeProducts.push({
+    id: createdStripeLink.stripeProductId,
+    name,
+    description: description?.trim() || null,
+    defaultPriceId: createdStripeLink.stripePriceId,
+  })
+
+  return createdStripeLink
+}
+
 function shippingBlockFromStripeSession(session: Stripe.Checkout.Session) {
   const s = session as Stripe.Checkout.Session & {
     shipping_details?: { name?: string | null; address?: Stripe.Address | null }
     shipping?: { name?: string | null; address?: Stripe.Address | null }
   }
   return s.shipping_details ?? s.shipping ?? null
+}
+
+function normalizeNullableText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed || null
 }
 
 function shippingFieldsFromStripeSession(session: Stripe.Checkout.Session) {
@@ -144,7 +382,7 @@ export async function updateProduct(id: string, input: ProductInput) {
   const sb = sup.client
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = normalizeProductCollectionInput(input.collection)
-  const { error } = await sb
+  const { data, error } = await sb
     .from('products')
     .update({
       name: input.name,
@@ -159,9 +397,11 @@ export async function updateProduct(id: string, input: ProductInput) {
       price,
     })
     .eq('id', id)
+    .select('*')
+    .single()
   if (error) return productMutationErrorResult('update', error.message)
   revalidateCatalogPaths()
-  return { ok: true as const }
+  return { ok: true as const, product: mapProductRow((data ?? {}) as Record<string, unknown>) }
 }
 
 export async function deleteProduct(id: string) {
@@ -195,9 +435,31 @@ export async function createProduct(input: ProductInput) {
   await ensureAdminOrRedirect()
   const sup = getServiceSupabaseForAction()
   if (!sup.ok) return { ok: false as const, error: sup.error }
+  const secret = stripeSecretKey()
+  if (!secret) return { ok: false as const, error: 'Falta STRIPE_SECRET_KEY para crear y enlazar producto en Stripe.' }
   const sb = sup.client
+  const stripe = new Stripe(secret)
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = normalizeProductCollectionInput(input.collection)
+  const primaryImageUrl =
+    imageUrlsForDatabaseColumn(input).find((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim()) ?? null
+
+  let stripeLink: StripeLinkResult
+  try {
+    const stripeProducts = await listAllActiveStripeProducts(stripe)
+    stripeLink = await findOrCreateStripeProductLink({
+      stripe,
+      stripeProducts,
+      name: input.name.trim(),
+      description: input.description,
+      imageUrl: primaryImageUrl,
+      amountEur: price,
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido al sincronizar con Stripe.'
+    return { ok: false as const, error: errorMessage }
+  }
+
   const { data, error } = await sb
     .from('products')
     .insert({
@@ -212,14 +474,150 @@ export async function createProduct(input: ProductInput) {
       original_price: input.original_price,
       discount_percent: input.discount_percent,
       price,
-      stripe_product_id: null,
-      stripe_price_id: null,
+      stripe_product_id: stripeLink.stripeProductId,
+      stripe_price_id: stripeLink.stripePriceId,
     })
     .select('id')
     .single()
   if (error) return productMutationErrorResult('create', error.message)
   revalidateCatalogPaths()
   return { ok: true as const, id: data.id as string }
+}
+
+export async function syncProductsWithStripe(): Promise<{
+  success: boolean
+  syncedCount: number
+  failedSyncs: StripeSyncFailedItem[]
+}> {
+  await ensureAdminOrRedirect()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { success: false, syncedCount: 0, failedSyncs: [{ name: 'Sistema', reason: sup.error }] }
+  const secret = stripeSecretKey()
+  if (!secret) {
+    return {
+      success: false,
+      syncedCount: 0,
+      failedSyncs: [{ name: 'Sistema', reason: 'Falta STRIPE_SECRET_KEY para sincronizar productos.' }],
+    }
+  }
+
+  const sb = sup.client
+  const stripe = new Stripe(secret)
+  const failedSyncs: StripeSyncFailedItem[] = []
+  let syncedCount = 0
+
+  const { data: unsyncedProducts, error: unsyncedProductsError } = await sb
+    .from('products')
+    .select('id,name,description,image_url,price')
+    .is('stripe_product_id', null)
+    .order('name', { ascending: true })
+
+  if (unsyncedProductsError) {
+    return {
+      success: false,
+      syncedCount: 0,
+      failedSyncs: [{ name: 'Sistema', reason: unsyncedProductsError.message }],
+    }
+  }
+
+  const stripeProducts = await listAllActiveStripeProducts(stripe)
+
+  for (const product of unsyncedProducts ?? []) {
+    const productName = typeof product.name === 'string' ? product.name.trim() : ''
+    if (!productName) {
+      failedSyncs.push({ name: '(sin nombre)', reason: 'Nombre vacío en Supabase.' })
+      continue
+    }
+
+    try {
+      const amountEur = Number(product.price)
+      const imageUrl = normalizeProductImageUrl(product.image_url)
+      const description = normalizeNullableText(product.description)
+
+      const stripeLink = await findOrCreateStripeProductLink({
+        stripe,
+        stripeProducts,
+        name: productName,
+        description,
+        imageUrl,
+        amountEur,
+      })
+
+      const { error: updateError } = await sb
+        .from('products')
+        .update({
+          stripe_product_id: stripeLink.stripeProductId,
+          stripe_price_id: stripeLink.stripePriceId,
+          description: description ?? stripeProducts.find((item) => item.id === stripeLink.stripeProductId)?.description ?? null,
+        })
+        .eq('id', String(product.id))
+
+      if (updateError) throw new Error(updateError.message)
+      syncedCount += 1
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Error de API'
+      failedSyncs.push({ name: productName, reason })
+    }
+  }
+
+  const { data: linkedProducts, error: linkedProductsError } = await sb
+    .from('products')
+    .select('id,name,price,description,stripe_product_id,stripe_price_id')
+    .not('stripe_product_id', 'is', null)
+    .not('stripe_price_id', 'is', null)
+
+  if (linkedProductsError) {
+    failedSyncs.push({
+      name: 'Sistema',
+      reason: `No se pudo validar precios puntuales en productos ya enlazados: ${linkedProductsError.message}`,
+    })
+  } else {
+    for (const linkedProduct of linkedProducts ?? []) {
+      try {
+        const stripeProductId = String(linkedProduct.stripe_product_id ?? '').trim()
+        const stripePriceId = String(linkedProduct.stripe_price_id ?? '').trim()
+        const amountEur = Number(linkedProduct.price)
+        const currentSupabaseDescription = normalizeNullableText(linkedProduct.description)
+        if (!stripeProductId || !stripePriceId) continue
+
+        const stripeProduct = await stripe.products.retrieve(stripeProductId)
+        const stripeDescription = normalizeNullableText(stripeProduct.description)
+        const ensuredOneTimePriceId = await ensureStripeProductHasOneTimeDefaultPrice({
+          stripe,
+          stripeProductId,
+          currentPriceId: stripePriceId,
+          amountEur,
+        })
+        const shouldUpdateDescription = !currentSupabaseDescription && !!stripeDescription
+        const shouldUpdatePriceId = ensuredOneTimePriceId !== stripePriceId
+        if (!shouldUpdateDescription && !shouldUpdatePriceId) continue
+
+        const { error: updateLinkedError } = await sb
+          .from('products')
+          .update({
+            stripe_price_id: ensuredOneTimePriceId,
+            description: shouldUpdateDescription ? stripeDescription : currentSupabaseDescription,
+          })
+          .eq('id', String(linkedProduct.id))
+
+        if (updateLinkedError) throw new Error(updateLinkedError.message)
+      } catch (error) {
+        const productName = String(linkedProduct.name ?? '(sin nombre)').trim() || '(sin nombre)'
+        const reason =
+          error instanceof Error
+            ? `No se pudo convertir a precio puntual: ${error.message}`
+            : 'No se pudo convertir a precio puntual'
+        failedSyncs.push({ name: productName, reason })
+      }
+    }
+  }
+
+  revalidateCatalogPaths()
+  return {
+    success: failedSyncs.length === 0,
+    syncedCount,
+    failedSyncs,
+  }
 }
 
 const PRODUCT_IMAGES_BUCKET = 'product-images'
@@ -331,26 +729,27 @@ export async function adminUploadProductImages(formData: FormData): Promise<{ ok
 export async function adminSetProductStock(id: string, in_stock: boolean) {
   await ensureAdminOrRedirect()
   const sb = getServiceSupabase()
-  const { error } = await sb.from('products').update({ in_stock }).eq('id', id)
+  const { data, error } = await sb.from('products').update({ in_stock }).eq('id', id).select('*').single()
   if (error) return { ok: false as const, error: error.message }
   revalidateCatalogPaths()
-  return { ok: true as const }
+  return { ok: true as const, product: mapProductRow((data ?? {}) as Record<string, unknown>) }
 }
 
 /** Visible en la web (listados y ficha). Independiente de `in_stock` (pausa vs. «sin stock»). */
 export async function adminSetProductCatalogVisible(id: string, is_active: boolean) {
   await ensureAdminOrRedirect()
   const sb = getServiceSupabase()
-  const { error } = await sb.from('products').update({ is_active }).eq('id', id)
+  const { data, error } = await sb.from('products').update({ is_active }).eq('id', id).select('*').single()
   if (error) return { ok: false as const, error: error.message }
   revalidateCatalogPaths()
-  return { ok: true as const }
+  return { ok: true as const, product: mapProductRow((data ?? {}) as Record<string, unknown>) }
 }
 
 export const adminUpdateProduct = updateProduct
 export const adminDeleteProduct = deleteProduct
 export const adminCreateProduct = createProduct
 export const adminCreateProductWithImages = createProductWithImages
+export const adminSyncProductsWithStripe = syncProductsWithStripe
 
 export async function adminGetOrders(): Promise<AdminOrder[]> {
   await ensureAdminOrRedirect()
