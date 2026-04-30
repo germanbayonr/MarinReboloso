@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import {
   createPromotion,
   deletePromotion,
+  syncAllPromotionsToStripe,
   togglePromotionActive,
   updatePromotion,
 } from '@/app/admin/promotions/actions'
@@ -61,7 +62,7 @@ function generatePromoCode() {
 
 function generatePromoCodeWithLength(length: number) {
   const size = Number.isFinite(length) ? Math.min(32, Math.max(3, Math.floor(length))) : 6
-  const alphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789'
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   return Array.from({ length: size })
     .map(() => alphabet[Math.floor(Math.random() * alphabet.length)])
     .join('')
@@ -72,6 +73,7 @@ export default function PromotionsAdminClient({ initialPromotions }: { initialPr
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<PromotionRow | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSyncingStripe, setIsSyncingStripe] = useState(false)
   const [codeLength, setCodeLength] = useState(6)
   const [toDelete, setToDelete] = useState<PromotionRow | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -176,6 +178,35 @@ export default function PromotionsAdminClient({ initialPromotions }: { initialPr
           <PlusCircle className="h-4 w-4" />
           Nueva promoción
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSyncingStripe}
+          onClick={async () => {
+            setIsSyncingStripe(true)
+            try {
+              const result = await syncAllPromotionsToStripe()
+              if (!result.ok) {
+                toast.error(result.error ?? 'No se pudieron sincronizar promociones con Stripe.')
+                return
+              }
+              if ((result.failed ?? 0) === 0) {
+                toast.success(`Sincronizadas ${result.synced ?? 0} promociones con Stripe.`)
+                return
+              }
+              const firstError = result.errors?.[0]
+              toast.error(
+                `Sincronizadas ${result.synced ?? 0}, con ${result.failed ?? 0} errores.` +
+                  (firstError ? ` Primera: ${firstError.code} (${firstError.message})` : ''),
+              )
+            } finally {
+              setIsSyncingStripe(false)
+            }
+          }}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {isSyncingStripe ? 'Sincronizando Stripe…' : 'Sincronizar Stripe'}
+        </Button>
       </div>
 
       <AdminDataTable data={promotions} columns={columns} pageSize={12} />
@@ -218,7 +249,13 @@ export default function PromotionsAdminClient({ initialPromotions }: { initialPr
                   onChange={(event) =>
                     setForm((prev) => ({
                       ...prev,
-                      code: event.target.value.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9Ñ]/g, ''),
+                      code: event.target.value
+                        .toUpperCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/Ñ/g, 'N')
+                        .replace(/\s+/g, '')
+                        .replace(/[^A-Z0-9_-]/g, ''),
                     }))
                   }
                   placeholder="SPRING15"

@@ -11,6 +11,7 @@ import { checkoutSchema, type CheckoutFormValues } from '@/lib/validation/checko
 import { COUNTRIES } from '@/lib/data/locations'
 import { useCart } from '@/lib/cart-context'
 import { ArrowLeft } from 'lucide-react'
+import { X } from 'lucide-react'
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
@@ -371,9 +372,23 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                     {promoApplied ? (
-                      <p className="text-[11px] text-green-700">
-                        Código aplicado: <strong>{promoApplied.code}</strong> (-{promoApplied.discountPercentage}%)
-                      </p>
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-green-200 bg-green-50 px-2 py-1.5">
+                        <p className="text-[11px] text-green-700">
+                          Código aplicado: <strong>{promoApplied.code}</strong> (-{promoApplied.discountPercentage}%)
+                        </p>
+                        <button
+                          type="button"
+                          aria-label="Quitar código promocional"
+                          className="inline-flex h-5 w-5 items-center justify-center rounded border border-green-300 text-green-700 hover:bg-green-100"
+                          onClick={() => {
+                            setPromoApplied(null)
+                            setPromoInput('')
+                            setPromoError(null)
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
                     ) : null}
                     {promoError ? <p className="text-[11px] text-red-600">{promoError}</p> : null}
                   </div>

@@ -9,7 +9,13 @@ interface EnsureStripePromotionInput {
 }
 
 function normalizePromoCode(value: string): string {
-  return String(value || '').trim().toUpperCase()
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/Ñ/g, 'N')
+    .replace(/[^A-Z0-9_-]/g, '')
 }
 
 function isSameDiscount({
@@ -23,7 +29,16 @@ function isSameDiscount({
 }
 
 async function resolvePromotionCodeCoupon(stripe: Stripe, stripePromotionCode: Stripe.PromotionCode): Promise<Stripe.Coupon | null> {
-  const couponId = typeof stripePromotionCode.coupon === 'string' ? stripePromotionCode.coupon : stripePromotionCode.coupon.id
+  const legacyCouponId =
+    typeof stripePromotionCode.coupon === 'string'
+      ? stripePromotionCode.coupon
+      : stripePromotionCode.coupon?.id
+  const nestedCoupon = (stripePromotionCode as Stripe.PromotionCode & {
+    promotion?: { coupon?: string | { id: string } | null } | null
+  }).promotion?.coupon
+  const nestedCouponId =
+    typeof nestedCoupon === 'string' ? nestedCoupon : nestedCoupon?.id
+  const couponId = legacyCouponId || nestedCouponId
   if (!couponId) return null
   return stripe.coupons.retrieve(couponId)
 }
@@ -83,7 +98,10 @@ export async function ensureStripePromotionCode({
 
   const createdPromotionCode = await stripe.promotionCodes.create({
     code: normalizedCode,
-    coupon: stripeCoupon.id,
+    promotion: {
+      type: 'coupon',
+      coupon: stripeCoupon.id,
+    },
     active: isActive,
     metadata: {
       supabase_promotion_id: promotionId ?? '',
@@ -91,6 +109,36 @@ export async function ensureStripePromotionCode({
   })
 
   return createdPromotionCode.id
+}
+
+export async function findStripePromotionCodeId({
+  stripe,
+  code,
+  discountPercentage,
+  isActive = true,
+}: {
+  stripe: Stripe
+  code: string
+  discountPercentage: number
+  isActive?: boolean
+}): Promise<string | null> {
+  const normalizedCode = normalizePromoCode(code)
+  if (!normalizedCode) return null
+
+  const existingPromotionCodes = await stripe.promotionCodes.list({
+    code: normalizedCode,
+    limit: 100,
+  })
+
+  for (const stripePromotionCode of existingPromotionCodes.data) {
+    if (stripePromotionCode.active !== isActive) continue
+    const stripeCoupon = await resolvePromotionCodeCoupon(stripe, stripePromotionCode)
+    if (!stripeCoupon) continue
+    if (!isSameDiscount({ stripeCoupon, discountPercentage })) continue
+    return stripePromotionCode.id
+  }
+
+  return null
 }
 
 export async function disableStripePromotionCodesByCode({

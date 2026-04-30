@@ -3,7 +3,7 @@ import { z } from 'zod'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { validatePromoCodePublic } from '@/lib/promotions'
-import { ensureStripePromotionCode } from '@/lib/stripe-promotions'
+import { findStripePromotionCodeId } from '@/lib/stripe-promotions'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -16,7 +16,7 @@ const cartItemSchema = z.object({
 
 const requestSchema = z.object({
   cartItems: z.array(cartItemSchema).min(1),
-  promoCode: z.string().optional(),
+  promoCode: z.string().nullable().optional(),
   customer: z
     .object({
       email: z.string().email().optional(),
@@ -41,6 +41,9 @@ export async function POST(req: Request) {
   try {
     const json = await req.json()
     const { customer, customerData, customerDetails, cartItems, promoCode } = requestSchema.parse(json)
+    // #region agent log
+    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H1',location:'app/api/checkout/route.ts:44',message:'Checkout request received',data:{hasPromoCode:Boolean(String(promoCode ?? '').trim()),cartItemsCount:Array.isArray(cartItems)?cartItems.length:0},timestamp:Date.now()})}).catch(()=>{})
+    // #endregion
 
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY ||
@@ -61,7 +64,7 @@ export async function POST(req: Request) {
     const productIds = Array.from(new Set(cartItems.map((i) => i.id)))
     const { data: rows, error: dbError } = await supabase
       .from('products')
-      .select('id,stripe_price_id')
+      .select('id,price,stripe_product_id,stripe_price_id')
       .eq('is_active', true)
       .eq('in_stock', true)
       .in('id', productIds)
@@ -74,9 +77,58 @@ export async function POST(req: Request) {
       )
     }
 
-    const byId = new Map(
-      (rows ?? []).map((r: any) => [String(r.id), r.stripe_price_id ? String(r.stripe_price_id) : null]),
-    )
+    const byId = new Map<string, string | null>()
+    const productRows = (rows ?? []) as Array<{
+      id: string
+      price: number | string
+      stripe_product_id: string | null
+      stripe_price_id: string | null
+    }>
+
+    for (const row of productRows) {
+      const productId = String(row.id)
+      const stripePriceId = row.stripe_price_id ? String(row.stripe_price_id) : ''
+      const stripeProductId = row.stripe_product_id ? String(row.stripe_product_id) : ''
+      const expectedUnitAmount = Math.round(Number(row.price) * 100)
+
+      if (!stripePriceId || !Number.isFinite(expectedUnitAmount) || expectedUnitAmount <= 0) {
+        byId.set(productId, stripePriceId || null)
+        continue
+      }
+
+      try {
+        const currentStripePrice = await stripe.prices.retrieve(stripePriceId)
+        if (currentStripePrice.active && currentStripePrice.currency === 'eur' && currentStripePrice.unit_amount === expectedUnitAmount) {
+          byId.set(productId, stripePriceId)
+          continue
+        }
+
+        if (!stripeProductId) {
+          byId.set(productId, stripePriceId)
+          continue
+        }
+
+        const freshStripePrice = await stripe.prices.create({
+          product: stripeProductId,
+          unit_amount: expectedUnitAmount,
+          currency: 'eur',
+        })
+
+        const { error: updateStripePriceError } = await supabase
+          .from('products')
+          .update({ stripe_price_id: freshStripePrice.id })
+          .eq('id', productId)
+
+        if (updateStripePriceError) {
+          byId.set(productId, stripePriceId)
+          continue
+        }
+
+        byId.set(productId, freshStripePrice.id)
+      } catch {
+        byId.set(productId, stripePriceId)
+      }
+    }
 
     const missingIds = productIds.filter((id) => !byId.has(id))
     if (missingIds.length > 0) {
@@ -114,13 +166,23 @@ export async function POST(req: Request) {
           { status: 400, headers: { 'Cache-Control': 'no-store' } },
         )
       }
-      const stripePromotionCodeId = await ensureStripePromotionCode({
+      const stripePromotionCodeId = await findStripePromotionCodeId({
         stripe,
         code: promo.code,
         discountPercentage: promo.discountPercentage,
-        promotionId: promo.promotionId,
         isActive: true,
       })
+      if (!stripePromotionCodeId) {
+        return NextResponse.json(
+          {
+            error: {
+              message:
+                'El código existe, pero no está sincronizado en Stripe. Actívalo de nuevo desde el panel de promociones.',
+            },
+          },
+          { status: 400, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
       discounts = [{ promotion_code: stripePromotionCodeId }]
     }
 
@@ -133,7 +195,8 @@ export async function POST(req: Request) {
     )
     if (promoCode) metadata.promo_code = String(promoCode).trim().toUpperCase()
 
-    const session = await stripe.checkout.sessions.create({
+    const hasDiscounts = Boolean(discounts?.length)
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
@@ -153,9 +216,16 @@ export async function POST(req: Request) {
         },
       ],
       line_items,
-      discounts,
       metadata,
-    })
+      ...(hasDiscounts ? { discounts } : { allow_promotion_codes: true }),
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H6',location:'app/api/checkout/route.ts:156',message:'Preparing Stripe session params',data:{hasDiscounts,hasAllowPromotionCodes:Object.prototype.hasOwnProperty.call(sessionParams,'allow_promotion_codes'),hasDiscountsProperty:Object.prototype.hasOwnProperty.call(sessionParams,'discounts'),hasPromoCode:Boolean(String(promoCode ?? '').trim())},timestamp:Date.now()})}).catch(()=>{})
+    // #endregion
+    const session = await stripe.checkout.sessions.create(sessionParams)
+    // #region agent log
+    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H4',location:'app/api/checkout/route.ts:172',message:'Stripe session created',data:{hasUrl:Boolean(session?.url),sessionId:session?.id?String(session.id):null},timestamp:Date.now()})}).catch(()=>{})
+    // #endregion
 
     if (!session.url) {
       return NextResponse.json({ error: { message: 'Failed to create Stripe session' } }, { status: 500 })
@@ -163,6 +233,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
+    // #region agent log
+    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H3',location:'app/api/checkout/route.ts:179',message:'Checkout error thrown',data:{errorMessage:err instanceof Error?err.message:'Unexpected error',errorName:err instanceof Error?err.name:'UnknownError'},timestamp:Date.now()})}).catch(()=>{})
+    // #endregion
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: { message: 'Invalid payload' } }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
     }

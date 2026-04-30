@@ -15,8 +15,11 @@ function normalizeCode(value: string): string {
   return String(value || '')
     .trim()
     .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/Ñ/g, 'N')
     .replace(/\s+/g, '')
-    .replace(/[^A-Z0-9Ñ]/g, '')
+    .replace(/[^A-Z0-9_-]/g, '')
 }
 
 function stripeSecretKey(): string {
@@ -83,6 +86,7 @@ export async function createPromotion(
       isActive: false,
     })
   } catch (stripeError) {
+    await sb.from('promotions').delete().eq('id', inserted.id)
     const message = stripeError instanceof Error ? stripeError.message : 'Error al sincronizar promoción en Stripe.'
     return { ok: false, error: message }
   }
@@ -90,6 +94,62 @@ export async function createPromotion(
   revalidatePath('/checkout')
   revalidatePath('/')
   return { ok: true, promotion: inserted as PromotionRow }
+}
+
+export async function syncAllPromotionsToStripe(): Promise<{
+  ok: boolean
+  synced?: number
+  failed?: number
+  errors?: Array<{ code: string; message: string }>
+  error?: string
+}> {
+  await ensureAdminOrRedirect()
+  const sb = getServiceSupabase()
+  const { data, error } = await sb
+    .from('promotions')
+    .select('id,code,discount_percentage,is_active')
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  if (error) return { ok: false, error: error.message }
+
+  const promotions = (data ?? []) as Array<{
+    id: string
+    code: string
+    discount_percentage: number
+    is_active: boolean
+  }>
+
+  if (promotions.length === 0) return { ok: true, synced: 0, failed: 0, errors: [] }
+
+  const stripe = getStripeClient()
+  let synced = 0
+  let failed = 0
+  const errors: Array<{ code: string; message: string }> = []
+
+  for (const promotion of promotions) {
+    try {
+      await ensureStripePromotionCode({
+        stripe,
+        code: String(promotion.code),
+        discountPercentage: Number(promotion.discount_percentage),
+        promotionId: String(promotion.id),
+        isActive: Boolean(promotion.is_active),
+      })
+      synced += 1
+    } catch (syncError) {
+      failed += 1
+      const message =
+        syncError instanceof Error ? syncError.message : 'Error desconocido al sincronizar promoción en Stripe.'
+      errors.push({ code: String(promotion.code), message })
+    }
+  }
+
+  revalidatePath('/admin/promotions')
+  revalidatePath('/checkout')
+  revalidatePath('/')
+
+  return { ok: true, synced, failed, errors }
 }
 
 export async function updatePromotion(
