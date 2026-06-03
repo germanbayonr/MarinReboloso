@@ -2,14 +2,18 @@
 
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
+import { PRELOADER_IMAGE } from '@/lib/home-page-images'
+import { preloadHomePageImages } from '@/lib/preload-home-images'
 
 const LOADER_MS = 1800
 const FADE_MS = 800
-const STORAGE_KEY = 'preloader-seen'
-const DONE_EVENT = 'marebo:preloader-done'
+import { PRELOADER_DONE_EVENT, PRELOADER_STORAGE_KEY } from '@/lib/preloader-events'
+
+const STORAGE_KEY = PRELOADER_STORAGE_KEY
 
 export default function Preloader() {
   const startedRef = useRef(false)
+  const preloadStartedRef = useRef(false)
   const [shouldSkip, setShouldSkip] = useState(true)
   const [progress, setProgress] = useState(0)
   const [isFading, setIsFading] = useState(false)
@@ -24,7 +28,17 @@ export default function Preloader() {
   }, [])
 
   useEffect(() => {
-    if (shouldSkip || startedRef.current) return
+    if (shouldSkip || preloadStartedRef.current) return
+    preloadStartedRef.current = true
+    void preloadHomePageImages()
+  }, [shouldSkip])
+
+  useEffect(() => {
+    if (shouldSkip) {
+      window.dispatchEvent(new Event(PRELOADER_DONE_EVENT))
+      return
+    }
+    if (startedRef.current) return
 
     startedRef.current = true
     let rafId = 0
@@ -42,7 +56,7 @@ export default function Preloader() {
         try {
           sessionStorage.setItem(STORAGE_KEY, '1')
         } catch {}
-        window.dispatchEvent(new Event(DONE_EVENT))
+        window.dispatchEvent(new Event(PRELOADER_DONE_EVENT))
       }
 
       if (elapsed >= LOADER_MS + FADE_MS) {
@@ -74,11 +88,12 @@ export default function Preloader() {
     >
       <div className="absolute inset-0">
         <Image
-          unoptimized={true}
-          src="https://marebo.b-cdn.net/PRODUCTOS/Mantones/Manton%20Dolores%203.jpeg"
+          unoptimized
+          src={PRELOADER_IMAGE}
           alt=""
           fill
           priority
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover"
         />

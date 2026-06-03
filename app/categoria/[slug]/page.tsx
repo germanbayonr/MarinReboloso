@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductCatalogClient from '@/components/ProductCatalogClient'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { filterProductsByCollectionVisibility } from '@/lib/product-collection-visibility'
 
 function toNumber(value: unknown) {
   const n = typeof value === 'number' ? value : Number(value)
@@ -56,9 +57,11 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
         in_stock: typeof row.in_stock === 'boolean' ? row.in_stock : null,
       }))
 
+  const visibleProducts = await filterProductsByCollectionVisibility(products)
+
   const title = titleize(String(slug ?? ''))
 
-  if (products.length === 0) {
+  if (visibleProducts.length === 0) {
     return (
       <main className="min-h-screen bg-background flex flex-col" suppressHydrationWarning>
         <Navbar />
@@ -92,7 +95,7 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
     <main className="min-h-screen bg-background" suppressHydrationWarning>
       <Navbar />
 
-      <ProductCatalogClient title={title} products={products} />
+      <ProductCatalogClient title={title} products={visibleProducts} />
 
       <Footer />
     </main>

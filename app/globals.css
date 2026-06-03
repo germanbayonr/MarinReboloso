@@ -150,3 +150,42 @@
 .animation-delay-300 {
   animation-delay: 300ms;
 }
+
+@keyframes novedades-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.novedades-marquee-track {
+  animation: novedades-marquee 50s linear infinite;
+  will-change: transform;
+}
+
+.novedades-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.novedades-marquee-mask {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 4%,
+    black 96%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .novedades-marquee-track {
+    animation: none;
+  }
+
+  .novedades-marquee-viewport {
+    overflow-x: auto;
+    mask-image: none;
+  }
+}

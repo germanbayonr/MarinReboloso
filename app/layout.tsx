@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import Preloader from '@/components/Preloader'
+import HomeImagePreloadHead from '@/components/HomeImagePreloadHead'
 import Providers from './providers'
+import WhatsAppFloatingButton from '@/components/WhatsAppFloatingButton'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -20,10 +22,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <HomeImagePreloadHead />
+      </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>
           <Preloader />
           {children}
+          <WhatsAppFloatingButton />
         </Providers>
         <Analytics />
       </body>

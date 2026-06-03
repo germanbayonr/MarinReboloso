@@ -4,20 +4,36 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import {
+  HERO_DESCARA,
+  HERO_JAIPUR_LEFT,
+  HERO_JAIPUR_RIGHT,
+} from '@/lib/home-page-images'
+import { PRELOADER_DONE_EVENT, PRELOADER_STORAGE_KEY } from '@/lib/preloader-events'
 
 export default function HeroSection() {
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    setIsReady(true)
+    const reveal = () => setIsReady(true)
+    let skipped = false
+    try {
+      skipped = sessionStorage.getItem(PRELOADER_STORAGE_KEY) !== null
+    } catch {
+      skipped = true
+    }
+    if (skipped) {
+      reveal()
+      return
+    }
+    window.addEventListener(PRELOADER_DONE_EVENT, reveal, { once: true })
+    return () => window.removeEventListener(PRELOADER_DONE_EVENT, reveal)
   }, [])
 
   return (
     <section className="bg-background w-full overflow-hidden">
       <div className="grid grid-cols-1 md:grid-cols-2">
-
-        {/* --- BLOQUE IZQUIERDO: LIFESTYLE --- */}
-        <Link 
+        <Link
           href="/coleccion/jaipur"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
         >
@@ -28,11 +44,12 @@ export default function HeroSection() {
             ].join(' ')}
           >
             <Image
-              unoptimized={true}
-              src="https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Coral%20Jaipur(1).jpg"
+              unoptimized
+              src={HERO_JAIPUR_LEFT}
               alt="Lifestyle Colección Jaipur"
               fill
               priority
+              fetchPriority="high"
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover object-center transition-transform duration-700 ease-out scale-[1.4] group-hover:scale-[1.44]"
             />
@@ -47,8 +64,7 @@ export default function HeroSection() {
           </div>
         </Link>
 
-        {/* --- BLOQUE DERECHO: PRODUCTO --- */}
-        <Link 
+        <Link
           href="/coleccion/jaipur"
           className="group relative block h-[50vh] md:h-screen overflow-hidden"
         >
@@ -59,11 +75,12 @@ export default function HeroSection() {
             ].join(' ')}
           >
             <Image
-              unoptimized={true}
-              src="https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Coral%20Jaipur.PNG"
+              unoptimized
+              src={HERO_JAIPUR_RIGHT}
               alt="Producto Colección Jaipur"
               fill
               priority
+              fetchPriority="high"
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
             />
@@ -74,9 +91,7 @@ export default function HeroSection() {
             <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight tracking-wide mb-6 md:mb-8">
               Colección Jaipur
             </h1>
-            <div
-              className="group/btn relative inline-flex items-center justify-center h-12 px-8 sm:px-10 md:h-14 md:px-14 text-[11px] sm:text-xs tracking-[0.35em] uppercase border border-white/80 overflow-hidden transition-all duration-300"
-            >
+            <div className="group/btn relative inline-flex items-center justify-center h-12 px-8 sm:px-10 md:h-14 md:px-14 text-[11px] sm:text-xs tracking-[0.35em] uppercase border border-white/80 overflow-hidden transition-all duration-300">
               <span className="relative z-10 transition-colors duration-300 group-hover/btn:text-gray-900">
                 VER COLECCIÓN
               </span>
@@ -84,19 +99,19 @@ export default function HeroSection() {
             </div>
           </div>
         </Link>
-
       </div>
 
-      {/* --- NUEVA SECCIÓN DE DESCARÁ (debajo de la hero principal) --- */}
       <Link
         href="/coleccion/descara"
         className="group relative block w-full overflow-hidden h-[60svh] min-h-[60svh] sm:h-[70svh] sm:min-h-[70svh] lg:h-[80vh] lg:min-h-[80vh]"
       >
         <Image
-          unoptimized={true}
-          src="https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Pasion%202.jpg"
+          unoptimized
+          src={HERO_DESCARA}
           alt="Colección Descará"
           fill
+          priority
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover object-[center_56%] transition-transform duration-700 ease-out scale-[1.7] group-hover:scale-[1.74]"
         />

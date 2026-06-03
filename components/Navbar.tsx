@@ -9,13 +9,11 @@ import PromoBannerPopup from '@/components/PromoBannerPopup'
 import { supabase } from '@/lib/supabase'
 import { WEB_COLLECTIONS } from '@/lib/web-collections'
 
-const NAV_COLLECTIONS = [
-  ...WEB_COLLECTIONS.map((item) => ({
-    label: item.label,
-    href: `/coleccion/${item.slug}`,
-    isNew: item.slug === 'descara',
-  })),
-]
+const DEFAULT_NAV_COLLECTIONS = WEB_COLLECTIONS.map((item) => ({
+  label: item.label,
+  href: `/coleccion/${item.slug}`,
+  isNew: item.slug === 'descara',
+}))
 
 const NAV_CATEGORIES = [
   { label: 'Pendientes', href: '/categoria/pendientes' },
@@ -25,7 +23,12 @@ const NAV_CATEGORIES = [
   { label: 'Bolsos', href: '/categoria/bolsos' },
 ]
 
-export default function Navbar() {
+export default function Navbar({
+  collections = DEFAULT_NAV_COLLECTIONS,
+}: {
+  collections?: { label: string; href: string; isNew?: boolean }[]
+}) {
+  const navCollections = collections
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collectionsOpen, setCollectionsOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
@@ -115,7 +118,7 @@ export default function Navbar() {
               className={`overflow-hidden transition-all duration-300 ${collectionsOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}
             >
               <div className="pl-4 pb-2 space-y-0.5">
-                {NAV_COLLECTIONS.map(col => (
+                {navCollections.map(col => (
                   <Link
                     key={col.href}
                     href={col.href}

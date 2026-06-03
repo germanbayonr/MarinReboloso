@@ -4,6 +4,7 @@ export const revalidate = 0
 import { notFound } from 'next/navigation'
 import ProductDetailClient from '@/components/ProductDetailClient'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { isProductInHiddenCollection } from '@/lib/product-collection-visibility'
 
 export default async function ProductoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -21,9 +22,11 @@ export default async function ProductoPage({ params }: { params: Promise<{ id: s
 
   const { data: product, error } = await query.maybeSingle()
 
-  if (error || !product) {
+  if (error || !product) notFound()
+
+  if (await isProductInHiddenCollection({ collection: (product as { collection?: string | null }).collection })) {
     notFound()
   }
 
-  return <ProductDetailClient product={product as any} />
+  return <ProductDetailClient product={product as Record<string, unknown>} />
 }

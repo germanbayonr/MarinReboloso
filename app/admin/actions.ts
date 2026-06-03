@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { allImageUrlsFromDatabase, imageUrlsForDatabaseColumn } from '@/lib/admin/product-image-db'
 import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
+import { getAllowedCollectionSlugs } from '@/lib/collections'
 import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
 import {
   isLikelyRowLevelSecurityMessage,
@@ -23,11 +24,18 @@ import { getMailTransporter } from '@/lib/mail/transporter'
 import { getOrderConfirmationTemplate, getOrderEmailSubject } from '@/lib/mail/templates'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
 
-function revalidateCatalogPaths() {
+function revalidateCatalogPaths(collectionSlug?: string | null) {
   revalidatePath('/admin')
   revalidatePath('/admin/productos')
+  revalidatePath('/admin/colecciones')
   revalidatePath('/catalogo')
   revalidatePath('/')
+  if (collectionSlug) revalidatePath(`/coleccion/${collectionSlug}`)
+}
+
+async function normalizeCollectionForProduct(raw: string | null | undefined): Promise<string | null> {
+  const allowed = await getAllowedCollectionSlugs()
+  return normalizeProductCollectionInput(raw, allowed)
 }
 
 function getServiceSupabaseForAction():
@@ -381,7 +389,7 @@ export async function updateProduct(id: string, input: ProductInput) {
   if (!sup.ok) return { ok: false as const, error: sup.error }
   const sb = sup.client
   const price = computeFinalPrice(input.original_price, input.discount_percent)
-  const collection = normalizeProductCollectionInput(input.collection)
+  const collection = await normalizeCollectionForProduct(input.collection)
   const { data, error } = await sb
     .from('products')
     .update({
@@ -400,7 +408,7 @@ export async function updateProduct(id: string, input: ProductInput) {
     .select('*')
     .single()
   if (error) return productMutationErrorResult('update', error.message)
-  revalidateCatalogPaths()
+  revalidateCatalogPaths(collection)
   return { ok: true as const, product: mapProductRow((data ?? {}) as Record<string, unknown>) }
 }
 
@@ -440,7 +448,7 @@ export async function createProduct(input: ProductInput) {
   const sb = sup.client
   const stripe = new Stripe(secret)
   const price = computeFinalPrice(input.original_price, input.discount_percent)
-  const collection = normalizeProductCollectionInput(input.collection)
+  const collection = await normalizeCollectionForProduct(input.collection)
   const primaryImageUrl =
     imageUrlsForDatabaseColumn(input).find((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim()) ?? null
 
@@ -480,7 +488,7 @@ export async function createProduct(input: ProductInput) {
     .select('id')
     .single()
   if (error) return productMutationErrorResult('create', error.message)
-  revalidateCatalogPaths()
+  revalidateCatalogPaths(collection)
   return { ok: true as const, id: data.id as string }
 }
 

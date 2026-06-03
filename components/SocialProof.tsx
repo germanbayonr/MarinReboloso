@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { Play, Instagram, ChevronLeft, ChevronRight } from 'lucide-react'
+import { INSTAGRAM_POST_IMAGES } from '@/lib/home-page-images'
 
 const INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/marebo_jewelry/'
 
@@ -27,20 +28,11 @@ const reviews = [
   },
 ]
 
-const INSTAGRAM_POSTS = [
-  { id: 1, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta1.png', isVideo: false },
-  { id: 2, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta2.png', isVideo: false },
-  {
-    id: 3,
-    imageUrl: 'https://marebo.b-cdn.net/Logo/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg',
-    isVideo: false,
-  },
-  { id: 4, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta4.png', isVideo: false },
-  { id: 5, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta5.png', isVideo: false },
-  { id: 6, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta6%20.png', isVideo: false },
-  { id: 7, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta7.png', isVideo: false },
-  { id: 8, imageUrl: 'https://marebo.b-cdn.net/Ima%CC%81genes%20Insta/Insta8.png', isVideo: false },
-]
+const INSTAGRAM_POSTS = INSTAGRAM_POST_IMAGES.map((imageUrl, index) => ({
+  id: index + 1,
+  imageUrl,
+  isVideo: false,
+}))
 
 export default function SocialProof() {
   const [currentReview, setCurrentReview] = useState(0)

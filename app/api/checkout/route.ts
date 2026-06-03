@@ -41,9 +41,6 @@ export async function POST(req: Request) {
   try {
     const json = await req.json()
     const { customer, customerData, customerDetails, cartItems, promoCode } = requestSchema.parse(json)
-    // #region agent log
-    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H1',location:'app/api/checkout/route.ts:44',message:'Checkout request received',data:{hasPromoCode:Boolean(String(promoCode ?? '').trim()),cartItemsCount:Array.isArray(cartItems)?cartItems.length:0},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
 
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY ||
@@ -219,13 +216,7 @@ export async function POST(req: Request) {
       metadata,
       ...(hasDiscounts ? { discounts } : { allow_promotion_codes: true }),
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H6',location:'app/api/checkout/route.ts:156',message:'Preparing Stripe session params',data:{hasDiscounts,hasAllowPromotionCodes:Object.prototype.hasOwnProperty.call(sessionParams,'allow_promotion_codes'),hasDiscountsProperty:Object.prototype.hasOwnProperty.call(sessionParams,'discounts'),hasPromoCode:Boolean(String(promoCode ?? '').trim())},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
     const session = await stripe.checkout.sessions.create(sessionParams)
-    // #region agent log
-    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H4',location:'app/api/checkout/route.ts:172',message:'Stripe session created',data:{hasUrl:Boolean(session?.url),sessionId:session?.id?String(session.id):null},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
 
     if (!session.url) {
       return NextResponse.json({ error: { message: 'Failed to create Stripe session' } }, { status: 500 })
@@ -233,9 +224,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
-    // #region agent log
-    fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'93a364'},body:JSON.stringify({sessionId:'93a364',runId:'checkout-submit',hypothesisId:'H3',location:'app/api/checkout/route.ts:179',message:'Checkout error thrown',data:{errorMessage:err instanceof Error?err.message:'Unexpected error',errorName:err instanceof Error?err.name:'UnknownError'},timestamp:Date.now()})}).catch(()=>{})
-    // #endregion
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: { message: 'Invalid payload' } }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
     }

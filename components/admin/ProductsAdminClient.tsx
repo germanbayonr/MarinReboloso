@@ -34,12 +34,14 @@ import type { AdminProduct } from '@/lib/admin/types'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
-function EditModal({
+export function ProductEditModal({
   product,
+  collectionOptions = PRODUCT_COLLECTION_OPTIONS,
   onClose,
   onSaved,
 }: {
   product: AdminProduct
+  collectionOptions?: { slug: string; label: string }[]
   onClose: () => void
   onSaved: (p: AdminProduct) => void
 }) {
@@ -65,7 +67,7 @@ function EditModal({
   const [newImageUrl, setNewImageUrl] = useState('')
   const [uploadingImages, setUploadingImages] = useState(false)
   const collectionUnknownInList =
-    !!form.collection && !PRODUCT_COLLECTION_OPTIONS.some((o) => o.slug === form.collection)
+    !!form.collection && !collectionOptions.some((o) => o.slug === form.collection)
   const [saved, setSaved] = useState(false)
 
   const o = Number(form.original_price) || 0
@@ -222,7 +224,7 @@ function EditModal({
               {collectionUnknownInList ? (
                 <option value={form.collection}>{form.collection} (en BD)</option>
               ) : null}
-              {PRODUCT_COLLECTION_OPTIONS.map((o) => (
+              {collectionOptions.map((o) => (
                 <option key={o.slug} value={o.slug}>
                   {o.label}
                 </option>
@@ -380,7 +382,17 @@ function EditModal({
   )
 }
 
-export default function ProductsAdminClient({ initialProducts }: { initialProducts: AdminProduct[] }) {
+export default function ProductsAdminClient({
+  initialProducts,
+  variant = 'full',
+  collectionLabel,
+  collectionOptions = PRODUCT_COLLECTION_OPTIONS,
+}: {
+  initialProducts: AdminProduct[]
+  variant?: 'full' | 'collection'
+  collectionLabel?: string
+  collectionOptions?: { slug: string; label: string }[]
+}) {
   const [products, setProducts] = useState(initialProducts ?? [])
   const [search, setSearch] = useState('')
   const [isSyncingWithStripe, setIsSyncingWithStripe] = useState(false)
@@ -397,7 +409,7 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
         p.name.toLowerCase().includes(q) ||
         (p.category ?? '').toLowerCase().includes(q) ||
         (p.collection ?? '').toLowerCase().includes(q) ||
-        labelForCollectionSlug(p.collection).toLowerCase().includes(q) ||
+        labelForCollectionSlug(p.collection, collectionOptions).toLowerCase().includes(q) ||
         p.id.toLowerCase().includes(q),
     )
   }, [products, search])
@@ -440,7 +452,7 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
         id: 'collection',
         header: 'Colección',
         cell: ({ row }) => (
-          <span className="text-neutral-600 text-xs">{labelForCollectionSlug(row.original.collection)}</span>
+          <span className="text-neutral-600 text-xs">{labelForCollectionSlug(row.original.collection, collectionOptions)}</span>
         ),
       },
       {
@@ -554,14 +566,17 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
         },
       },
     ],
-    [],
+    [collectionOptions],
   )
+
+  const isCollectionView = variant === 'collection'
 
   return (
     <div className="space-y-5">
       {editing ? (
-        <EditModal
+        <ProductEditModal
           product={editing}
+          collectionOptions={collectionOptions}
           onClose={() => setEditing(null)}
           onSaved={(next) => {
             setProducts((prev) => prev.map((x) => (x.id === next.id ? next : x)))
@@ -572,10 +587,13 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-serif text-2xl tracking-wide text-neutral-900">Productos</h1>
+          <h1 className="font-serif text-2xl tracking-wide text-neutral-900">
+            {isCollectionView ? `Colección ${collectionLabel ?? ''}` : 'Productos'}
+          </h1>
           <p className="mt-0.5 text-sm text-neutral-500">{products.length} productos</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {!isCollectionView ? (
           <Button
             type="button"
             variant="outline"
@@ -602,6 +620,7 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
           >
             {isSyncingWithStripe ? 'Sincronizando…' : 'Sincronizar con Stripe'}
           </Button>
+          ) : null}
           <Link
             href="/admin/nuevo-producto"
             className="inline-flex items-center gap-2 bg-neutral-900 px-4 py-2.5 text-xs uppercase tracking-wider text-white hover:bg-neutral-800"
@@ -612,7 +631,7 @@ export default function ProductsAdminClient({ initialProducts }: { initialProduc
         </div>
       </div>
 
-      {syncFailures.length > 0 ? (
+      {!isCollectionView && syncFailures.length > 0 ? (
         <Alert variant="destructive" className="border-red-300 bg-red-50 text-red-900">
           <AlertTitle>Errores en la sincronización con Stripe</AlertTitle>
           <AlertDescription>

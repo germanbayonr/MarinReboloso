@@ -1,24 +1,25 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { BANNER_CORALES, BANNER_FILIPA, BANNER_MAREBO } from '@/lib/home-page-images'
 
 const collections = [
   {
     title: 'Corales',
+    slug: 'corales',
     href: '/coleccion/corales',
-    image:
-      'https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Sky%202.JPG',
+    image: BANNER_CORALES,
   },
   {
     title: 'Marebo',
+    slug: 'marebo',
     href: '/coleccion/marebo',
-    image:
-      'https://marebo.b-cdn.net/Colecciones/MAREBO/Flor%20MAREBO%20Dore.jpg',
+    image: BANNER_MAREBO,
   },
   {
     title: 'Filipa',
+    slug: 'filipa',
     href: '/coleccion/filipa',
-    image:
-      'https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes-Linaje-Carmesi%202.png',
+    image: BANNER_FILIPA,
   },
 ]
 
@@ -32,19 +33,20 @@ export default function CollectionBanners() {
           className="group block w-full relative overflow-hidden h-[60svh] min-h-[60svh] sm:h-[70svh] sm:min-h-[70svh] lg:h-[80vh] lg:min-h-[80vh]"
           suppressHydrationWarning
         >
-          <Image unoptimized={true}
+          <Image
+            unoptimized
             src={collection.image}
             alt={`Colección ${collection.title}`}
             fill
+            priority
             sizes="100vw"
             className={
-              collection.title === 'Corales'
+              collection.slug === 'corales'
                 ? 'object-cover object-[center_45%] w-full h-full'
-                : collection.title === 'Filipa'
+                : collection.slug === 'filipa'
                   ? 'object-cover object-[center_46%] w-full h-full'
                   : 'object-cover object-[center_25%] w-full h-full'
             }
-            priority={collection.title === 'Marebo' || collection.title === 'Filipa'}
           />
           <div className="absolute inset-0 bg-black/40" />
 

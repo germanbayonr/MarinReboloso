@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductCatalogClient from '@/components/ProductCatalogClient'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { filterProductsByCollectionVisibility } from '@/lib/product-collection-visibility'
 
 function toNumber(value: unknown) {
   const n = typeof value === 'number' ? value : Number(value)
@@ -21,7 +22,7 @@ export default async function CatalogoPage() {
     .order('name', { ascending: true })
     .limit(5000)
 
-  const products: Array<{
+  const rawProducts: Array<{
     id: string
     name: string
     price: number
@@ -33,7 +34,7 @@ export default async function CatalogoPage() {
     in_stock?: boolean | null
   }> = error
     ? []
-    : (data ?? []).map((row: any) => ({
+    : (data ?? []).map((row: Record<string, unknown>) => ({
         id: String(row.id),
         name: String(row.name ?? ''),
         price: toNumber(row.price),
@@ -44,6 +45,8 @@ export default async function CatalogoPage() {
         stock: typeof row.stock === 'number' ? row.stock : null,
         in_stock: typeof row.in_stock === 'boolean' ? row.in_stock : null,
       }))
+
+  const products = await filterProductsByCollectionVisibility(rawProducts)
 
   return (
     <main className="min-h-screen bg-background" suppressHydrationWarning>

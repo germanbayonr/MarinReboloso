@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Image as ImageIcon, UploadCloud, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { createProductWithImages } from '@/app/admin/actions'
-import { PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
+import { buildProductCollectionOptions, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import { computeFinalPrice } from '@/lib/pricing'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
@@ -38,7 +38,22 @@ export default function NuevoProductoPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [collectionOptions, setCollectionOptions] = useState(PRODUCT_COLLECTION_OPTIONS)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void fetch('/api/collections')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: { slug: string; label: string }[]) => {
+        if (cancelled || !Array.isArray(rows) || rows.length === 0) return
+        setCollectionOptions(buildProductCollectionOptions(rows))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleField = (key: string, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -250,7 +265,7 @@ export default function NuevoProductoPage() {
                 className="w-full px-3 py-2.5 text-sm border border-border bg-background focus:outline-none focus:border-foreground transition-colors"
               >
                 <option value="">Sin colección</option>
-                {PRODUCT_COLLECTION_OPTIONS.map((o) => (
+                {collectionOptions.map((o) => (
                   <option key={o.slug} value={o.slug}>
                     {o.label}
                   </option>
