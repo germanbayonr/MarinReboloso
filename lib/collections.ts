@@ -1,4 +1,12 @@
 import { WEB_COLLECTIONS } from '@/lib/web-collections'
+import {
+  BANNER_CORALES,
+  BANNER_FILIPA,
+  BANNER_MAREBO,
+  HERO_DESCARA,
+  HERO_JAIPUR_LEFT,
+  HERO_JAIPUR_RIGHT,
+} from '@/lib/home-page-images'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getServiceSupabase } from '@/lib/admin/server'
 
@@ -26,19 +34,56 @@ export interface CollectionOption {
   label: string
 }
 
-const FALLBACK: CollectionRecord[] = WEB_COLLECTIONS.map((c, i) => ({
-  id: c.slug,
-  slug: c.slug,
-  label: c.label,
-  description: null,
-  hero_image_left: null,
-  hero_image_right: null,
-  is_active: true,
-  sort_order: (i + 1) * 10,
-  homepage_order: i + 1,
-  visible_on_homepage: true,
-  visible_on_site: true,
-}))
+const PORTADA_HERO_BY_SLUG: Record<string, { left?: string; right?: string }> = {
+  jaipur: { left: HERO_JAIPUR_LEFT, right: HERO_JAIPUR_RIGHT },
+  descara: { left: HERO_DESCARA },
+  corales: { left: BANNER_CORALES },
+  marebo: { left: BANNER_MAREBO },
+  filipa: { left: BANNER_FILIPA },
+}
+
+const FALLBACK: CollectionRecord[] = WEB_COLLECTIONS.map((c, i) => {
+  const hero = PORTADA_HERO_BY_SLUG[c.slug]
+  return {
+    id: c.slug,
+    slug: c.slug,
+    label: c.label,
+    description: null,
+    hero_image_left: hero?.left ?? null,
+    hero_image_right: hero?.right ?? null,
+    is_active: true,
+    sort_order: (i + 1) * 10,
+    homepage_order: i + 1,
+    visible_on_homepage: true,
+    visible_on_site: true,
+  }
+})
+
+const LEGACY_COLLECTION_LABELS: Record<string, string> = {
+  'lost-in-jaipur': 'Jaipur',
+}
+
+export function fallbackCollectionBySlug(slug: string): CollectionRecord | null {
+  const normalized = String(slug ?? '').toLowerCase().trim()
+  const found = FALLBACK.find((c) => c.slug === normalized)
+  if (found) return found
+  const label = LEGACY_COLLECTION_LABELS[normalized]
+  if (!label) return null
+  const hero = PORTADA_HERO_BY_SLUG.jaipur
+  return {
+    id: normalized,
+    slug: normalized,
+    label,
+    description: null,
+    hero_image_left: hero?.left ?? null,
+    hero_image_right: hero?.right ?? null,
+    is_active: true,
+    sort_order: 100,
+    homepage_order: 100,
+    visible_on_homepage: false,
+    visible_on_site: true,
+  }
+}
 
 function mapRow(row: Record<string, unknown>): CollectionRecord {
   const visibleOnSite = row.visible_on_site !== false && row.is_active !== false
@@ -155,22 +200,37 @@ export async function fetchCollectionBySlugAdmin(slug: string): Promise<Collecti
   return rows.find((r) => r.slug === normalized) ?? null
 }
 
+/**
+ * Colección pública por slug. Usa Supabase si existe la tabla; si no, fallback local.
+ * Devuelve null solo si el slug es desconocido o la colección está oculta en web (visible_on_site).
+ */
 export async function fetchCollectionBySlug(slug: string): Promise<CollectionRecord | null> {
   const normalized = String(slug ?? '').toLowerCase().trim()
   if (!normalized) return null
+
+  const localFallback = fallbackCollectionBySlug(normalized)
+
   try {
     const sb = createSupabaseServerClient()
     const { data, error } = await sb
       .from('collections')
       .select(COLLECTION_SELECT)
       .ilike('slug', normalized)
-      .eq('visible_on_site', true)
       .maybeSingle()
-    if (error || !data) return null
-    return mapRow(data as Record<string, unknown>)
+
+    if (error) {
+      return localFallback?.visible_on_site ? localFallback : null
+    }
+
+    if (!data) {
+      return localFallback?.visible_on_site ? localFallback : null
+    }
+
+    const mapped = mapRow(data as Record<string, unknown>)
+    if (!mapped.visible_on_site) return null
+    return mapped
   } catch {
-    const fallback = FALLBACK.find((c) => c.slug === normalized && c.visible_on_site)
-    return fallback ?? null
+    return localFallback?.visible_on_site ? localFallback : null
   }
 }
 

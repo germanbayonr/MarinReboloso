@@ -13,6 +13,7 @@ const HERO_FALLBACK: Record<string, { left?: string; right?: string }> = {
   },
   jaipur: {
     left: 'https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Coral%20Jaipur(1).jpg',
+    right: 'https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Coral%20Jaipur.PNG',
   },
   filipa: {
     left: 'https://marebo.b-cdn.net/Colecciones/Filipa/Collar%20Filipa.PNG',

@@ -6,14 +6,8 @@ import NavbarWithCollections from '@/components/NavbarWithCollections'
 import Footer from '@/components/Footer'
 import CollectionHero from '@/components/CollectionHero'
 import CollectionProductsClient from '@/components/CollectionProductsClient'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { fetchCollectionBySlug } from '@/lib/collections'
-import type { ProductGridProduct } from '@/components/ProductGrid'
-
-function toNumber(value: unknown) {
-  const n = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(n) ? n : 0
-}
+import { fetchProductsForCollectionSlug, toCollectionGridProducts } from '@/lib/collection-products'
 
 export default async function ColeccionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -22,64 +16,13 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
 
   const collectionMeta = await fetchCollectionBySlug(normalizedSlug)
   if (!collectionMeta) notFound()
+
   const title = collectionMeta.label
+  const { products: rows, error } = await fetchProductsForCollectionSlug(normalizedSlug)
+  const products = toCollectionGridProducts(rows)
 
-  const supabase = createSupabaseServerClient()
-  const collectionFilter =
-    normalizedSlug === 'jaipur' ? ['jaipur', 'lost-in-jaipur'] : [normalizedSlug]
-
-  const { data, error } = await supabase
-    .from('products')
-    .select('id,name,price,image_url,category,collection,is_new_arrival,stock,in_stock')
-    .eq('is_active', true)
-    .in('collection', collectionFilter)
-    .order('name', { ascending: true })
-    .limit(500)
-
-  const products: Array<
-    ProductGridProduct & { is_new_arrival?: boolean | null; stock?: number | null; in_stock?: boolean | null }
-  > = error
-    ? []
-    : (data ?? []).map((row: Record<string, unknown>) => ({
-        id: String(row.id),
-        name: String(row.name ?? ''),
-        price: toNumber(row.price),
-        image_url: Array.isArray(row.image_url) ? row.image_url : row.image_url ? [row.image_url] : [],
-        category: (row.category as string) ?? null,
-        collection: (row.collection as string) ?? null,
-        is_new_arrival: Boolean(row.is_new_arrival),
-        stock: typeof row.stock === 'number' ? row.stock : null,
-        in_stock: typeof row.in_stock === 'boolean' ? row.in_stock : null,
-      }))
-
-  if (products.length === 0) {
-    return (
-      <main className="min-h-screen bg-background flex flex-col" suppressHydrationWarning>
-        <NavbarWithCollections />
-        <div className="flex-grow flex items-center justify-center px-6 py-32">
-          <div className="max-w-2xl text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="space-y-4">
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl tracking-tight text-foreground/90 leading-tight">
-                Colección {title}
-              </h1>
-              <div className="h-px w-24 bg-foreground/20 mx-auto" />
-            </div>
-            <p className="font-sans text-lg md:text-xl text-muted-foreground leading-relaxed tracking-wide font-light italic px-4">
-              Nuestras piezas de la Colección {title} están siendo seleccionadas con mimo. Estarán disponibles para ti muy pronto.
-            </p>
-            <div className="pt-6">
-              <a
-                href="/catalogo"
-                className="inline-block border border-foreground/30 px-12 py-4 text-[10px] tracking-[0.4em] uppercase hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-500 ease-out"
-              >
-                Explorar el catálogo
-              </a>
-            </div>
-          </div>
-        </div>
-        <Footer />
-      </main>
-    )
+  if (error) {
+    console.error('[coleccion] Error cargando productos:', normalizedSlug, error)
   }
 
   return (
@@ -89,8 +32,8 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
       <CollectionHero
         slug={normalizedSlug}
         title={title}
-        heroImageLeft={collectionMeta?.hero_image_left}
-        heroImageRight={collectionMeta?.hero_image_right}
+        heroImageLeft={collectionMeta.hero_image_left}
+        heroImageRight={collectionMeta.hero_image_right}
       />
 
       <div className="py-14 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
