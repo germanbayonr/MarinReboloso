@@ -49,7 +49,7 @@ export default async function ColeccionAdminDetailPage({
         maxHomepageOrder={Math.max(...allCollections.map((c) => c.homepage_order), 1)}
       />
 
-      <CollectionHeroEditor collection={collection} />
+      <CollectionHeroEditor key={`${collection.slug}-${collection.homepage_order}`} collection={collection} />
 
       <ProductsAdminClient
         initialProducts={collectionProducts}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -34,6 +34,15 @@ export default function CreateCollectionClient({
   const [isSaving, setIsSaving] = useState(false)
 
   const autoSlug = useMemo(() => slugifyCollectionLabel(label), [label])
+  const orderNum = Math.max(1, Math.floor(Number(homepageOrder) || 1))
+  const isHeroMain = orderNum === 1
+
+  useEffect(() => {
+    if (!isHeroMain) {
+      setHeroRight(null)
+      setHeroRightPreview(null)
+    }
+  }, [isHeroMain])
 
   const filteredProducts = useMemo(() => {
     const q = productSearch.toLowerCase().trim()
@@ -82,8 +91,12 @@ export default function CreateCollectionClient({
       formData.set('homepage_order', homepageOrder)
       formData.set('visible_on_homepage', String(visibleOnHomepage))
       formData.set('visible_on_site', String(visibleOnSite))
-      if (heroLeft) formData.set('hero_left', heroLeft)
-      if (heroRight) formData.set('hero_right', heroRight)
+      if (isHeroMain) {
+        if (heroLeft) formData.set('hero_left', heroLeft)
+        if (heroRight) formData.set('hero_right', heroRight)
+      } else if (heroLeft) {
+        formData.set('hero_portada', heroLeft)
+      }
 
       const res = await adminCreateCollectionWithImages(formData)
       if (!res.ok) {
@@ -168,42 +181,79 @@ export default function CreateCollectionClient({
         </div>
 
         <div className="space-y-4 border border-neutral-200 bg-white p-5">
-          <p className="text-[10px] uppercase tracking-wider text-neutral-500">Portada (hero)</p>
-          <p className="text-xs text-neutral-500">Imagen izquierda y/o derecha en la cabecera de la colección</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {(['left', 'right'] as const).map((side) => {
-              const preview = side === 'left' ? heroLeftPreview : heroRightPreview
-              return (
-                <div key={side} className="space-y-2">
-                  <p className="text-xs text-neutral-600">{side === 'left' ? 'Imagen izquierda' : 'Imagen derecha'}</p>
-                  {preview ? (
-                    <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-100">
-                      <Image src={preview} alt="" fill unoptimized className="object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setHeroFile(side, null)}
-                        className="absolute right-2 top-2 bg-white/90 p-1"
-                        aria-label="Quitar imagen"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+          {isHeroMain ? (
+            <>
+              <p className="text-[10px] uppercase tracking-wider text-neutral-500">Hero principal (orden 1)</p>
+              <p className="text-xs text-neutral-500">Dos imágenes para la cabecera en dos columnas de la portada</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {(['left', 'right'] as const).map((side) => {
+                  const preview = side === 'left' ? heroLeftPreview : heroRightPreview
+                  return (
+                    <div key={side} className="space-y-2">
+                      <p className="text-xs text-neutral-600">
+                        {side === 'left' ? 'Imagen izquierda' : 'Imagen derecha'}
+                      </p>
+                      {preview ? (
+                        <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-100">
+                          <Image src={preview} alt="" fill unoptimized className="object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setHeroFile(side, null)}
+                            className="absolute right-2 top-2 bg-white/90 p-1"
+                            aria-label="Quitar imagen"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-neutral-300 py-10 text-neutral-500 hover:border-neutral-400">
+                          <Upload className="h-5 w-5" />
+                          <span className="text-xs">Subir imagen</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => setHeroFile(side, e.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                      )}
                     </div>
-                  ) : (
-                    <label className="flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-neutral-300 py-10 text-neutral-500 hover:border-neutral-400">
-                      <Upload className="h-5 w-5" />
-                      <span className="text-xs">Subir imagen</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => setHeroFile(side, e.target.files?.[0] ?? null)}
-                      />
-                    </label>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] uppercase tracking-wider text-neutral-500">Imagen de portada</p>
+              <p className="text-xs text-neutral-500">Una sola imagen para el banner de esta colección en la home</p>
+              <div className="space-y-2 max-w-sm">
+                {heroLeftPreview ? (
+                  <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-100">
+                    <Image src={heroLeftPreview} alt="" fill unoptimized className="object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setHeroFile('left', null)}
+                      className="absolute right-2 top-2 bg-white/90 p-1"
+                      aria-label="Quitar imagen"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-neutral-300 py-10 text-neutral-500 hover:border-neutral-400">
+                    <Upload className="h-5 w-5" />
+                    <span className="text-xs">Subir imagen de portada</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => setHeroFile('left', e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

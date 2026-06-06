@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
 import { adminUpdateCollection } from '@/app/admin/collection-actions'
@@ -17,6 +18,7 @@ export default function CollectionVisibilityEditor({
   const [visibleOnHomepage, setVisibleOnHomepage] = useState(collection.visible_on_homepage)
   const [visibleOnSite, setVisibleOnSite] = useState(collection.visible_on_site)
   const [isSaving, setIsSaving] = useState(false)
+  const router = useRouter()
 
   const save = async () => {
     const order = Math.max(1, Math.floor(Number(homepageOrder) || 1))
@@ -33,6 +35,7 @@ export default function CollectionVisibilityEditor({
         return
       }
       toast.success('Visibilidad y orden guardados')
+      router.refresh()
     } finally {
       setIsSaving(false)
     }

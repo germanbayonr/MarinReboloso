@@ -123,6 +123,14 @@ export async function adminCreateCollection(
 
   if (error) {
     if (error.code === '23505') return { ok: false, error: 'Ya existe una colección con ese slug.' }
+    if (error.code === 'PGRST205' || error.message.includes("Could not find the table 'public.collections'")) {
+      logAdminSupabaseIssue('COLLECTION_CREATE_MISSING_TABLE', error.message, { slug })
+      return {
+        ok: false,
+        error:
+          'La tabla collections no existe en Supabase. Ejecuta scripts/collections-migration-combined.sql en el SQL Editor del proyecto (o npm run db:collections con DATABASE_URL en .env.local).',
+      }
+    }
     logAdminSupabaseIssue('COLLECTION_CREATE', error.message, { slug })
     return { ok: false, error: error.message }
   }
@@ -137,6 +145,46 @@ export async function adminCreateCollection(
 
   afterCollectionMutation(slug)
   return { ok: true, collection: mapCollectionRow((data ?? {}) as Record<string, unknown>) }
+}
+
+function collectionProductSlugs(slug: string): string[] {
+  const normalized = slug.toLowerCase().trim()
+  if (normalized === 'jaipur') return ['jaipur', 'lost-in-jaipur']
+  return [normalized]
+}
+
+export async function adminDeleteCollection(
+  slug: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await ensureAdminOrRedirect()
+  const normalized = String(slug ?? '').toLowerCase().trim()
+  if (!normalized) return { ok: false, error: 'Slug inválido.' }
+
+  const sb = getServiceSupabase()
+  const productSlugs = collectionProductSlugs(normalized)
+
+  for (const productSlug of productSlugs) {
+    const { error: unassignErr } = await sb
+      .from('products')
+      .update({ collection: null })
+      .ilike('collection', productSlug)
+    if (unassignErr) {
+      logAdminSupabaseIssue('COLLECTION_UNASSIGN_PRODUCTS', unassignErr.message, { slug: normalized, productSlug })
+      return { ok: false, error: unassignErr.message }
+    }
+  }
+
+  const { error: deleteErr } = await sb.from('collections').delete().ilike('slug', normalized)
+  if (deleteErr) {
+    if (deleteErr.code === 'PGRST205' || deleteErr.message.includes("Could not find the table 'public.collections'")) {
+      return { ok: false, error: 'La tabla collections no existe en Supabase.' }
+    }
+    logAdminSupabaseIssue('COLLECTION_DELETE', deleteErr.message, { slug: normalized })
+    return { ok: false, error: deleteErr.message }
+  }
+
+  afterCollectionMutation(normalized)
+  return { ok: true }
 }
 
 export async function adminUpdateCollection(
@@ -160,7 +208,11 @@ export async function adminUpdateCollection(
     patch.visible_on_site = input.is_active
   }
   if (input.visible_on_homepage !== undefined) patch.visible_on_homepage = input.visible_on_homepage
-  if (input.homepage_order !== undefined) patch.homepage_order = Math.max(1, Math.floor(Number(input.homepage_order) || 1))
+  if (input.homepage_order !== undefined) {
+    const order = Math.max(1, Math.floor(Number(input.homepage_order) || 1))
+    patch.homepage_order = order
+    if (order !== 1) patch.hero_image_right = null
+  }
   if (input.sort_order !== undefined) patch.sort_order = Number(input.sort_order) || 0
 
   const sb = getServiceSupabase()
@@ -191,26 +243,39 @@ export async function adminCreateCollectionWithImages(
   const productIdsRaw = String(formData.get('product_ids') ?? '').trim()
   const product_ids = productIdsRaw ? productIdsRaw.split(',').map((id) => id.trim()).filter(Boolean) : []
 
+  const homepage_order = Math.max(1, Number(formData.get('homepage_order')) || 100)
+  const isHeroMain = homepage_order === 1
+
   const leftFile = formData.get('hero_left')
   const rightFile = formData.get('hero_right')
+  const portadaFile = formData.get('hero_portada')
   const files: File[] = []
-  if (leftFile instanceof File && leftFile.size > 0) files.push(leftFile)
-  if (rightFile instanceof File && rightFile.size > 0) files.push(rightFile)
+  if (isHeroMain) {
+    if (leftFile instanceof File && leftFile.size > 0) files.push(leftFile)
+    if (rightFile instanceof File && rightFile.size > 0) files.push(rightFile)
+  } else if (portadaFile instanceof File && portadaFile.size > 0) {
+    files.push(portadaFile)
+  } else if (leftFile instanceof File && leftFile.size > 0) {
+    files.push(leftFile)
+  }
 
   let hero_image_left = String(formData.get('hero_image_left') ?? '').trim() || null
-  let hero_image_right = String(formData.get('hero_image_right') ?? '').trim() || null
+  let hero_image_right = isHeroMain ? String(formData.get('hero_image_right') ?? '').trim() || null : null
 
   if (files.length > 0) {
     const uploaded = await uploadCollectionImages(files)
     if (!uploaded.ok) return uploaded
-    if (leftFile instanceof File && leftFile.size > 0) hero_image_left = uploaded.urls[0] ?? hero_image_left
-    if (rightFile instanceof File && rightFile.size > 0) {
-      const rightIndex = leftFile instanceof File && leftFile.size > 0 ? 1 : 0
-      hero_image_right = uploaded.urls[rightIndex] ?? hero_image_right
+    if (isHeroMain) {
+      if (leftFile instanceof File && leftFile.size > 0) hero_image_left = uploaded.urls[0] ?? hero_image_left
+      if (rightFile instanceof File && rightFile.size > 0) {
+        const rightIndex = leftFile instanceof File && leftFile.size > 0 ? 1 : 0
+        hero_image_right = uploaded.urls[rightIndex] ?? hero_image_right
+      }
+    } else {
+      hero_image_left = uploaded.urls[0] ?? hero_image_left
+      hero_image_right = null
     }
   }
-
-  const homepage_order = Math.max(1, Number(formData.get('homepage_order')) || 100)
   const visible_on_homepage = String(formData.get('visible_on_homepage') ?? 'true') !== 'false'
   const visible_on_site = String(formData.get('visible_on_site') ?? 'true') !== 'false'
 

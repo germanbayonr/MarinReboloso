@@ -250,3 +250,5 @@ export async function getNextHomepageOrder(): Promise<number> {
 export function toCollectionOptions(rows: CollectionRecord[]): CollectionOption[] {
   return rows.map((r) => ({ slug: r.slug, label: r.label }))
 }
+
+export { portadaImageUrls } from '@/lib/portada-image-urls'

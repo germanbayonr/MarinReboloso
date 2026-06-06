@@ -3,7 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import Preloader from '@/components/Preloader'
 import HomeImagePreloadHead from '@/components/HomeImagePreloadHead'
 import Providers from './providers'
-import WhatsAppFloatingButton from '@/components/WhatsAppFloatingButton'
+import WhatsAppFloatingButtonGate from '@/components/WhatsAppFloatingButtonGate'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default function RootLayout({
         <Providers>
           <Preloader />
           {children}
-          <WhatsAppFloatingButton />
+          <WhatsAppFloatingButtonGate />
         </Providers>
         <Analytics />
       </body>

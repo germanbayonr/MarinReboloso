@@ -109,8 +109,8 @@ function HomepageBanner({ collection }: { collection: CollectionRecord }) {
 export default async function HomeCollectionsPortada() {
   const portada = await fetchHomepagePortadaCollections()
   const sorted = [...portada].sort((a, b) => a.homepage_order - b.homepage_order)
-  const hero = sorted.find((c) => c.homepage_order === 1) ?? sorted[0]
-  const banners = hero ? sorted.filter((c) => c.slug !== hero.slug) : sorted
+  const hero = sorted.find((c) => c.homepage_order === 1) ?? null
+  const banners = sorted.filter((c) => c.homepage_order !== 1)
 
   if (!hero && banners.length === 0) return null
 
