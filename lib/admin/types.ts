@@ -15,6 +15,7 @@ export type AdminProduct = {
   is_active: boolean
   stripe_price_id: string | null
   description: string | null
+  created_at: string | null
 }
 
 export const ORDER_STATUSES = [

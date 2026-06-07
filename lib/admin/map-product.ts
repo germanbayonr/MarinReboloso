@@ -17,5 +17,6 @@ export function mapProductRow(p: Record<string, unknown>): AdminProduct {
     is_active: typeof p.is_active === 'boolean' ? p.is_active : true,
     stripe_price_id: (p.stripe_price_id as string) ?? null,
     description: (p.description as string) ?? null,
+    created_at: p.created_at != null ? String(p.created_at) : null,
   }
 }

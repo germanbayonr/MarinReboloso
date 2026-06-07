@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { collectionSlugsForProductFilter } from '@/lib/collections'
 
 const PRODUCT_SELECT =
-  'id,name,price,original_price,discount_percent,image_url,category,collection,is_new_arrival,in_stock,is_active'
+  'id,name,price,original_price,discount_percent,image_url,category,collection,is_new_arrival,in_stock,is_active,created_at'
 
 /** Productos visibles en tienda para una colección (misma lógica que el panel admin). */
 export async function fetchProductsForCollectionSlug(slug: string): Promise<{
@@ -28,7 +28,9 @@ export async function fetchProductsForCollectionSlug(slug: string): Promise<{
     query = query.ilike('collection', slugs[0] ?? normalized)
   }
 
-  const { data, error } = await query.order('name', { ascending: true }).limit(500)
+  const { data, error } = await query
+    .order('created_at', { ascending: false, nullsFirst: false })
+    .limit(500)
 
   if (error) return { products: [], error: error.message }
 
@@ -48,5 +50,6 @@ export function toCollectionGridProducts(products: AdminProduct[]) {
     category: p.category,
     collection: p.collection,
     is_new_arrival: p.is_new_arrival,
+    created_at: p.created_at,
   }))
 }

@@ -11,7 +11,20 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
   const isHeroMain = collection.homepage_order === 1
   const [leftUrl, setLeftUrl] = useState(collection.hero_image_left)
   const [rightUrl, setRightUrl] = useState(isHeroMain ? collection.hero_image_right : null)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
+  const persistImages = async (nextLeft: string | null, nextRight: string | null) => {
+    const res = await adminUpdateCollection(collection.slug, {
+      hero_image_left: nextLeft,
+      hero_image_right: isHeroMain ? nextRight : null,
+    })
+    if (!res.ok) {
+      toast.error(res.error)
+      return false
+    }
+    toast.success('Portada sincronizada con Supabase')
+    return true
+  }
 
   const uploadImage = async (file: File | null): Promise<string | null> => {
     if (!file) return null
@@ -26,32 +39,45 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
   }
 
   const uploadSide = async (side: 'left' | 'right', file: File | null) => {
-    const url = await uploadImage(file)
-    if (!url) return
-    if (side === 'left') setLeftUrl(url)
-    else setRightUrl(url)
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const url = await uploadImage(file)
+      if (!url) return
+      const nextLeft = side === 'left' ? url : leftUrl
+      const nextRight = side === 'right' ? url : rightUrl
+      if (side === 'left') setLeftUrl(url)
+      else setRightUrl(url)
+      await persistImages(nextLeft, nextRight)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const uploadPortada = async (file: File | null) => {
-    const url = await uploadImage(file)
-    if (url) setLeftUrl(url)
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const url = await uploadImage(file)
+      if (!url) return
+      setLeftUrl(url)
+      await persistImages(url, null)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
-  const save = async () => {
-    setIsSaving(true)
-    try {
-      const res = await adminUpdateCollection(collection.slug, {
-        hero_image_left: leftUrl,
-        hero_image_right: isHeroMain ? rightUrl : null,
-      })
-      if (!res.ok) {
-        toast.error(res.error)
-        return
-      }
-      toast.success('Portada actualizada')
-    } finally {
-      setIsSaving(false)
-    }
+  const clearSide = async (side: 'left' | 'right') => {
+    const nextLeft = side === 'left' ? null : leftUrl
+    const nextRight = side === 'right' ? null : rightUrl
+    if (side === 'left') setLeftUrl(null)
+    else setRightUrl(null)
+    await persistImages(nextLeft, nextRight)
+  }
+
+  const clearPortada = async () => {
+    setLeftUrl(null)
+    await persistImages(null, null)
   }
 
   return (
@@ -59,7 +85,9 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
       {isHeroMain ? (
         <>
           <p className="text-[10px] uppercase tracking-wider text-neutral-500">Hero principal (orden 1)</p>
-          <p className="text-xs text-neutral-500">Dos imágenes para la cabecera en dos columnas de la portada</p>
+          <p className="text-xs text-neutral-500">
+            Al subir, la imagen se guarda al instante en Supabase Storage y en la colección
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {(['left', 'right'] as const).map((side) => {
               const url = side === 'left' ? leftUrl : rightUrl
@@ -73,7 +101,8 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
                       <Image src={url} alt="" fill unoptimized className="object-cover" />
                       <button
                         type="button"
-                        onClick={() => (side === 'left' ? setLeftUrl(null) : setRightUrl(null))}
+                        onClick={() => void clearSide(side)}
+                        disabled={isUploading}
                         className="absolute right-2 top-2 bg-white/90 p-1"
                         aria-label="Quitar"
                       >
@@ -85,11 +114,12 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
                   )}
                   <label className="inline-flex cursor-pointer items-center gap-2 border border-neutral-200 px-3 py-2 text-xs hover:border-neutral-400">
                     <Upload className="h-3.5 w-3.5" />
-                    Subir
+                    {isUploading ? 'Subiendo…' : 'Subir'}
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
+                      disabled={isUploading}
                       onChange={(e) => void uploadSide(side, e.target.files?.[0] ?? null)}
                     />
                   </label>
@@ -101,14 +131,17 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
       ) : (
         <>
           <p className="text-[10px] uppercase tracking-wider text-neutral-500">Imagen de portada</p>
-          <p className="text-xs text-neutral-500">Una sola imagen para el banner de esta colección en la home</p>
+          <p className="text-xs text-neutral-500">
+            Al subir, la imagen se guarda al instante en Supabase Storage y en la colección
+          </p>
           <div className="space-y-2 max-w-xs">
             {leftUrl ? (
               <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-100">
                 <Image src={leftUrl} alt="" fill unoptimized className="object-cover" />
                 <button
                   type="button"
-                  onClick={() => setLeftUrl(null)}
+                  onClick={() => void clearPortada()}
+                  disabled={isUploading}
                   className="absolute right-2 top-2 bg-white/90 p-1"
                   aria-label="Quitar"
                 >
@@ -120,25 +153,18 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
             )}
             <label className="inline-flex cursor-pointer items-center gap-2 border border-neutral-200 px-3 py-2 text-xs hover:border-neutral-400">
               <Upload className="h-3.5 w-3.5" />
-              Subir imagen de portada
+              {isUploading ? 'Subiendo…' : 'Subir imagen de portada'}
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
+                disabled={isUploading}
                 onChange={(e) => void uploadPortada(e.target.files?.[0] ?? null)}
               />
             </label>
           </div>
         </>
       )}
-      <button
-        type="button"
-        disabled={isSaving}
-        onClick={() => void save()}
-        className="border border-neutral-900 px-4 py-2 text-xs uppercase tracking-wider hover:bg-neutral-900 hover:text-white disabled:opacity-50"
-      >
-        {isSaving ? 'Guardando…' : 'Guardar portada'}
-      </button>
     </div>
   )
 }

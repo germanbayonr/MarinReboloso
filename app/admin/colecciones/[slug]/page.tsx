@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { adminGetProducts } from '@/app/admin/actions'
 import { fetchAllCollectionsAdmin, fetchCollectionBySlugAdmin, toCollectionOptions } from '@/lib/collections'
 import { buildProductCollectionOptions } from '@/lib/admin/product-collections'
+import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
 import ProductsAdminClient from '@/components/admin/ProductsAdminClient'
 import CollectionHeroEditor from '@/components/admin/CollectionHeroEditor'
 import CollectionVisibilityEditor from '@/components/admin/CollectionVisibilityEditor'
@@ -23,8 +24,8 @@ export default async function ColeccionAdminDetailPage({
 
   const allProducts = await adminGetProducts()
   const matchSlugs = normalized === 'jaipur' ? ['jaipur', 'lost-in-jaipur'] : [normalized]
-  const collectionProducts = allProducts.filter((p) =>
-    matchSlugs.includes((p.collection ?? '').trim().toLowerCase()),
+  const collectionProducts = sortProductsByCreatedAtDesc(
+    allProducts.filter((p) => matchSlugs.includes((p.collection ?? '').trim().toLowerCase())),
   )
   const collectionOptions = buildProductCollectionOptions(toCollectionOptions(allCollections))
 
@@ -55,6 +56,7 @@ export default async function ColeccionAdminDetailPage({
         initialProducts={collectionProducts}
         variant="collection"
         collectionLabel={collection.label}
+        collectionSlug={normalized}
         collectionOptions={collectionOptions}
       />
     </div>

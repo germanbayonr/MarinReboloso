@@ -30,7 +30,10 @@ function revalidateCatalogPaths(collectionSlug?: string | null) {
   revalidatePath('/admin/colecciones')
   revalidatePath('/catalogo')
   revalidatePath('/')
-  if (collectionSlug) revalidatePath(`/coleccion/${collectionSlug}`)
+  if (collectionSlug) {
+    revalidatePath(`/coleccion/${collectionSlug}`)
+    revalidatePath(`/admin/colecciones/${collectionSlug}`)
+  }
 }
 
 async function normalizeCollectionForProduct(raw: string | null | undefined): Promise<string | null> {
@@ -363,7 +366,11 @@ function shippingFieldsFromStripeSession(session: Stripe.Checkout.Session) {
 export async function adminGetProducts(): Promise<AdminProduct[]> {
   await ensureAdminOrRedirect()
   const sb = getServiceSupabase()
-  const { data, error } = await sb.from('products').select('*').order('name', { ascending: true }).limit(5000)
+  const { data, error } = await sb
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false, nullsFirst: false })
+    .limit(5000)
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => mapProductRow(row as Record<string, unknown>))
 }

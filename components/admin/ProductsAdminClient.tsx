@@ -24,13 +24,14 @@ import {
   adminSyncProductsWithStripe,
   adminSetProductCatalogVisible,
   adminSetProductStock,
-  adminUploadProductImages,
   deleteProduct,
   updateProduct,
 } from '@/app/admin/actions'
+import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
 import { labelForCollectionSlug, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import type { AdminProduct } from '@/lib/admin/types'
+import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
@@ -74,9 +75,9 @@ export function ProductEditModal({
   const d = Math.min(100, Math.max(0, Number(form.discount_percent) || 0))
   const finalPreview = computeFinalPrice(o, d)
 
-  const handleSave = async () => {
-    const cleanedImages = images.map((url) => url.trim()).filter(Boolean)
-    const res = await updateProduct(product.id, {
+  const buildProductInput = (imageList: string[]) => {
+    const cleanedImages = imageList.map((url) => url.trim()).filter(Boolean)
+    return {
       name: form.name.trim(),
       description: form.description.trim() || null,
       category: form.category,
@@ -87,7 +88,23 @@ export function ProductEditModal({
       in_stock: form.in_stock,
       original_price: o,
       discount_percent: d,
-    })
+    }
+  }
+
+  const syncImagesToSupabase = async (nextImages: string[], successMessage?: string) => {
+    const res = await updateProduct(product.id, buildProductInput(nextImages))
+    if (!res.ok) {
+      toast.error(res.error)
+      return false
+    }
+    onSaved(res.product)
+    if (successMessage) toast.success(successMessage)
+    return true
+  }
+
+  const handleSave = async () => {
+    const cleanedImages = images.map((url) => url.trim()).filter(Boolean)
+    const res = await updateProduct(product.id, buildProductInput(cleanedImages))
     if (!res.ok) {
       toast.error(res.error)
       return
@@ -98,46 +115,48 @@ export function ProductEditModal({
     setTimeout(onClose, 600)
   }
 
-  const handleAppendImageUrl = () => {
+  const handleAppendImageUrl = async () => {
     const trimmed = newImageUrl.trim()
     if (!trimmed) return
     if (images.includes(trimmed)) {
       toast.error('Esa imagen ya está en la galería')
       return
     }
-    setImages((prev) => [...prev, trimmed])
+    const next = [...images, trimmed]
+    setImages(next)
     setNewImageUrl('')
+    await syncImagesToSupabase(next, 'Imagen añadida en Supabase')
   }
 
-  const moveImage = (index: number, direction: 'up' | 'down') => {
+  const moveImage = async (index: number, direction: 'up' | 'down') => {
     if ((direction === 'up' && index === 0) || (direction === 'down' && index === images.length - 1)) return
-    setImages((prev) => {
-      const next = [...prev]
-      const targetIndex = direction === 'up' ? index - 1 : index + 1
-      const current = next[index]
-      next[index] = next[targetIndex]
-      next[targetIndex] = current
-      return next
-    })
+    const next = [...images]
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    const current = next[index]
+    next[index] = next[targetIndex]
+    next[targetIndex] = current
+    setImages(next)
+    await syncImagesToSupabase(next)
   }
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
+  const removeImage = async (index: number) => {
+    const next = images.filter((_, i) => i !== index)
+    setImages(next)
+    await syncImagesToSupabase(next, 'Imagen eliminada')
   }
 
   const handleUploadImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return
-    const formData = new FormData()
-    Array.from(files).forEach((file) => formData.append('images', file))
     setUploadingImages(true)
     try {
-      const res = await adminUploadProductImages(formData)
+      const res = await uploadProductImagesToSupabase(Array.from(files))
       if (!res.ok) {
         toast.error(res.error)
         return
       }
-      setImages((prev) => [...prev, ...res.urls])
-      toast.success(`${res.urls.length} imagen(es) subida(s)`)
+      const next = [...images, ...res.urls]
+      setImages(next)
+      await syncImagesToSupabase(next, `${res.urls.length} imagen(es) subida(s) a Supabase`)
     } finally {
       setUploadingImages(false)
     }
@@ -386,11 +405,14 @@ export default function ProductsAdminClient({
   initialProducts,
   variant = 'full',
   collectionLabel,
+  collectionSlug,
   collectionOptions = PRODUCT_COLLECTION_OPTIONS,
 }: {
   initialProducts: AdminProduct[]
   variant?: 'full' | 'collection'
   collectionLabel?: string
+  /** Slug de la colección actual (vista colección → nuevo producto enlazado) */
+  collectionSlug?: string
   collectionOptions?: { slug: string; label: string }[]
 }) {
   const [products, setProducts] = useState(initialProducts ?? [])
@@ -401,10 +423,12 @@ export default function ProductsAdminClient({
   const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null)
   const [isDeletingProduct, setIsDeletingProduct] = useState(false)
 
+  const sortedProducts = useMemo(() => sortProductsByCreatedAtDesc(products), [products])
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
-    if (!q) return products
-    return products.filter(
+    if (!q) return sortedProducts
+    return sortedProducts.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         (p.category ?? '').toLowerCase().includes(q) ||
@@ -412,7 +436,7 @@ export default function ProductsAdminClient({
         labelForCollectionSlug(p.collection, collectionOptions).toLowerCase().includes(q) ||
         p.id.toLowerCase().includes(q),
     )
-  }, [products, search])
+  }, [sortedProducts, search, collectionOptions])
 
   const columns = useMemo<ColumnDef<AdminProduct>[]>(
     () => [
@@ -622,7 +646,11 @@ export default function ProductsAdminClient({
           </Button>
           ) : null}
           <Link
-            href="/admin/nuevo-producto"
+            href={
+              collectionSlug
+                ? `/admin/nuevo-producto?coleccion=${encodeURIComponent(collectionSlug)}`
+                : '/admin/nuevo-producto'
+            }
             className="inline-flex items-center gap-2 bg-neutral-900 px-4 py-2.5 text-xs uppercase tracking-wider text-white hover:bg-neutral-800"
           >
             <PlusCircle className="h-4 w-4" strokeWidth={1.5} />
@@ -657,7 +685,7 @@ export default function ProductsAdminClient({
         />
       </div>
 
-      <AdminDataTable data={filtered} columns={columns} pageSize={12} />
+      <AdminDataTable data={filtered} columns={columns} pageSize={10} pageSizeOptions={[10, 25, 50, 100]} />
 
       <AlertDialog
         open={deleteTarget != null}

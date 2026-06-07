@@ -12,6 +12,7 @@ type CollectionProduct = {
   category?: string | null
   collection?: string | null
   is_new_arrival?: boolean | null
+  created_at?: string | null
   stock?: number | null
   in_stock?: boolean | null
 }
@@ -56,14 +57,13 @@ export default function CollectionProductsClient({
     if (filters.sort === 'price-desc') {
       return out.slice().sort((a, b) => toNumber(b.price) - toNumber(a.price))
     }
-    if (filters.sort === 'newest') {
-      return out
-        .slice()
-        .sort(
-          (a, b) =>
-            Number(Boolean(b.is_new_arrival)) - Number(Boolean(a.is_new_arrival)) ||
-            String(a.name).localeCompare(String(b.name)),
-        )
+    if (filters.sort === 'newest' || filters.sort === 'featured') {
+      return out.slice().sort((a, b) => {
+        if (a.created_at && b.created_at) return b.created_at.localeCompare(a.created_at)
+        if (a.created_at) return -1
+        if (b.created_at) return 1
+        return String(a.name).localeCompare(String(b.name))
+      })
     }
 
     return out

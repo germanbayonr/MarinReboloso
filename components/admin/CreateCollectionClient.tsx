@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
-import { adminCreateCollectionWithImages } from '@/app/admin/collection-actions'
+import { adminCreateCollectionWithImages, adminUploadCollectionHeroImages } from '@/app/admin/collection-actions'
 import { slugifyCollectionLabel } from '@/lib/collection-slug'
 import type { AdminProduct } from '@/lib/admin/types'
 
@@ -23,10 +23,9 @@ export default function CreateCollectionClient({
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
-  const [heroLeft, setHeroLeft] = useState<File | null>(null)
-  const [heroRight, setHeroRight] = useState<File | null>(null)
-  const [heroLeftPreview, setHeroLeftPreview] = useState<string | null>(null)
-  const [heroRightPreview, setHeroRightPreview] = useState<string | null>(null)
+  const [heroLeftUrl, setHeroLeftUrl] = useState<string | null>(null)
+  const [heroRightUrl, setHeroRightUrl] = useState<string | null>(null)
+  const [heroUploading, setHeroUploading] = useState<'left' | 'right' | null>(null)
   const [productSearch, setProductSearch] = useState('')
   const [homepageOrder, setHomepageOrder] = useState(String(defaultHomepageOrder))
   const [visibleOnHomepage, setVisibleOnHomepage] = useState(true)
@@ -38,10 +37,7 @@ export default function CreateCollectionClient({
   const isHeroMain = orderNum === 1
 
   useEffect(() => {
-    if (!isHeroMain) {
-      setHeroRight(null)
-      setHeroRightPreview(null)
-    }
+    if (!isHeroMain) setHeroRightUrl(null)
   }, [isHeroMain])
 
   const filteredProducts = useMemo(() => {
@@ -59,13 +55,28 @@ export default function CreateCollectionClient({
     setSelectedProductIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
-  const setHeroFile = (side: 'left' | 'right', file: File | null) => {
-    if (side === 'left') {
-      setHeroLeft(file)
-      setHeroLeftPreview(file ? URL.createObjectURL(file) : null)
-    } else {
-      setHeroRight(file)
-      setHeroRightPreview(file ? URL.createObjectURL(file) : null)
+  const setHeroFile = async (side: 'left' | 'right', file: File | null) => {
+    if (!file) {
+      if (side === 'left') setHeroLeftUrl(null)
+      else setHeroRightUrl(null)
+      return
+    }
+    setHeroUploading(side)
+    try {
+      const formData = new FormData()
+      formData.append('images', file)
+      const res = await adminUploadCollectionHeroImages(formData)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      const url = res.urls[0] ?? null
+      if (!url) return
+      if (side === 'left') setHeroLeftUrl(url)
+      else setHeroRightUrl(url)
+      toast.success('Imagen subida a Supabase')
+    } finally {
+      setHeroUploading(null)
     }
   }
 
@@ -91,12 +102,8 @@ export default function CreateCollectionClient({
       formData.set('homepage_order', homepageOrder)
       formData.set('visible_on_homepage', String(visibleOnHomepage))
       formData.set('visible_on_site', String(visibleOnSite))
-      if (isHeroMain) {
-        if (heroLeft) formData.set('hero_left', heroLeft)
-        if (heroRight) formData.set('hero_right', heroRight)
-      } else if (heroLeft) {
-        formData.set('hero_portada', heroLeft)
-      }
+      if (heroLeftUrl) formData.set('hero_image_left', heroLeftUrl)
+      if (isHeroMain && heroRightUrl) formData.set('hero_image_right', heroRightUrl)
 
       const res = await adminCreateCollectionWithImages(formData)
       if (!res.ok) {
@@ -187,7 +194,8 @@ export default function CreateCollectionClient({
               <p className="text-xs text-neutral-500">Dos imágenes para la cabecera en dos columnas de la portada</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(['left', 'right'] as const).map((side) => {
-                  const preview = side === 'left' ? heroLeftPreview : heroRightPreview
+                  const preview = side === 'left' ? heroLeftUrl : heroRightUrl
+                  const isUploading = heroUploading === side
                   return (
                     <div key={side} className="space-y-2">
                       <p className="text-xs text-neutral-600">
@@ -199,21 +207,23 @@ export default function CreateCollectionClient({
                           <button
                             type="button"
                             onClick={() => setHeroFile(side, null)}
-                            className="absolute right-2 top-2 bg-white/90 p-1"
+                            disabled={isUploading}
+                            className="absolute right-2 top-2 bg-white/90 p-1 disabled:opacity-50"
                             aria-label="Quitar imagen"
                           >
                             <X className="h-4 w-4" />
                           </button>
                         </div>
                       ) : (
-                        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-neutral-300 py-10 text-neutral-500 hover:border-neutral-400">
+                        <label className={`flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-neutral-300 py-10 text-neutral-500 hover:border-neutral-400 ${isUploading ? 'pointer-events-none opacity-60' : ''}`}>
                           <Upload className="h-5 w-5" />
-                          <span className="text-xs">Subir imagen</span>
+                          <span className="text-xs">{isUploading ? 'Subiendo…' : 'Subir imagen'}</span>
                           <input
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => setHeroFile(side, e.target.files?.[0] ?? null)}
+                            disabled={isUploading}
+                            onChange={(e) => void setHeroFile(side, e.target.files?.[0] ?? null)}
                           />
                         </label>
                       )}
@@ -227,27 +237,29 @@ export default function CreateCollectionClient({
               <p className="text-[10px] uppercase tracking-wider text-neutral-500">Imagen de portada</p>
               <p className="text-xs text-neutral-500">Una sola imagen para el banner de esta colección en la home</p>
               <div className="space-y-2 max-w-sm">
-                {heroLeftPreview ? (
+                {heroLeftUrl ? (
                   <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-100">
-                    <Image src={heroLeftPreview} alt="" fill unoptimized className="object-cover" />
+                    <Image src={heroLeftUrl} alt="" fill unoptimized className="object-cover" />
                     <button
                       type="button"
                       onClick={() => setHeroFile('left', null)}
-                      className="absolute right-2 top-2 bg-white/90 p-1"
+                      disabled={heroUploading === 'left'}
+                      className="absolute right-2 top-2 bg-white/90 p-1 disabled:opacity-50"
                       aria-label="Quitar imagen"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-neutral-300 py-10 text-neutral-500 hover:border-neutral-400">
+                  <label className={`flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-neutral-300 py-10 text-neutral-500 hover:border-neutral-400 ${heroUploading === 'left' ? 'pointer-events-none opacity-60' : ''}`}>
                     <Upload className="h-5 w-5" />
-                    <span className="text-xs">Subir imagen de portada</span>
+                    <span className="text-xs">{heroUploading === 'left' ? 'Subiendo…' : 'Subir imagen de portada'}</span>
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => setHeroFile('left', e.target.files?.[0] ?? null)}
+                      disabled={heroUploading === 'left'}
+                      onChange={(e) => void setHeroFile('left', e.target.files?.[0] ?? null)}
                     />
                   </label>
                 )}
