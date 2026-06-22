@@ -12,6 +12,8 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
 import { getCheckoutProductId } from '@/lib/checkout-product-id'
+import { allDisplayImagesForProduct } from '@/lib/product-display-images'
+import { productImageUrl } from '@/lib/image-delivery'
 import {
   findVariantItem,
   findVariantImages,
@@ -98,20 +100,13 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
     const rawImages =
       variantImages.length > 0
         ? variantImages
-        : !product?.image_url
-          ? []
-          : Array.isArray(product.image_url)
-            ? product.image_url
-            : [product.image_url]
+        : allDisplayImagesForProduct({
+            image_url: product?.image_url,
+            image_urls: product?.image_urls,
+          })
 
-    return rawImages.map((url) => {
-      try {
-        return decodeURIComponent(url)
-      } catch {
-        return url
-      }
-    })
-  }, [hasVariantOptions, variantConfig, selectedColor, selectedSize, product?.image_url])
+    return rawImages.map((url) => productImageUrl(url, 'detail'))
+  }, [hasVariantOptions, variantConfig, selectedColor, selectedSize, product?.image_url, product?.image_urls])
 
   const mainImageUrl = imageErrors[activeImageIndex] ? PLACEHOLDER_IMAGE : (images[activeImageIndex] || images[0] || PLACEHOLDER_IMAGE)
   const productHref = product ? `/producto/${product.id}` : ''

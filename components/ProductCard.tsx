@@ -7,6 +7,7 @@ import { Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWishlist } from '@/lib/wishlist-context'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
+import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 import { productImageUrl } from '@/lib/image-delivery'
 
 interface ProductCardProps {
@@ -32,13 +33,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   
   // Normalizar image_url a un array y corregir doble encoding de Bunny
   const images = useMemo(() => {
-    const rawImages = Array.isArray(product.image_url) 
-      ? product.image_url 
-      : product.image_url 
-        ? [product.image_url] 
-        : []
-    
-    return rawImages.map((url) => productImageUrl(url, 'grid'))
+    return allDisplayImagesForProduct({
+      image_url: product.image_url,
+    }).map((url) => productImageUrl(url, 'grid'))
   }, [product.image_url])
       
   const mainImage = mainImgError ? PLACEHOLDER_IMAGE : (images[0] || PLACEHOLDER_IMAGE)

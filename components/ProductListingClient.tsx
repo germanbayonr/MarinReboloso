@@ -5,6 +5,7 @@ import { Filter } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import ProductCard from '@/components/ProductCard'
 import { useSiteCatalog } from '@/lib/site-catalog-context'
+import { gridImageFieldForProduct } from '@/lib/product-display-images'
 
 type ListingProduct = {
   id: string
@@ -37,7 +38,7 @@ export default function ProductListingClient({ category }: { category: string })
         id: p.id,
         name: p.name,
         price: p.price,
-        image_url: p.image_urls?.length ? p.image_urls : p.image_url,
+        image_url: gridImageFieldForProduct(p),
         category: p.category,
       }))
   }, [ready, products, category])

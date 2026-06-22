@@ -10,6 +10,7 @@ import {
   resolveStorefrontProductById,
   type StorefrontProduct,
 } from '@/lib/product-variants'
+import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 
 async function resolveStorefrontProduct(id: string): Promise<StorefrontProduct | null> {
   const trimmed = String(id ?? '').trim()
@@ -22,8 +23,11 @@ async function resolveStorefrontProduct(id: string): Promise<StorefrontProduct |
 
   const { product } = await fetchProductRowById(trimmed)
   if (!product) return null
+  const urls = allDisplayImagesForProduct(product)
   return {
     ...product,
+    image_url: urls[0] ?? product.image_url,
+    image_urls: urls,
     display_variants: product.has_variants && product.variants.items.length ? product.variants : null,
   }
 }

@@ -2,6 +2,7 @@ import { mapProductRow } from '@/lib/admin/map-product'
 import type { AdminProduct } from '@/lib/admin/types'
 import { HOME_PAGE_STATIC_IMAGE_URLS } from '@/lib/home-page-images'
 import { collectUniqueImageUrls, productImageUrl } from '@/lib/image-delivery'
+import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 import { getHiddenCollectionSlugs } from '@/lib/collections'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getMasterCatalogProducts, isSupabaseQuotaOrUnavailableError } from '@/lib/master-catalog-products'
@@ -88,12 +89,9 @@ export async function buildSiteCatalogSnapshot(): Promise<SiteCatalogSnapshot> {
     fromFallback = true
   }
 
-  const productImageUrls = products.flatMap((p) => {
-    const urls = [p.image_url, ...(p.image_urls ?? [])].filter(Boolean) as string[]
-    const variantUrls =
-      p.variants?.items?.flatMap((item) => [item.image_url, ...(item.image_urls ?? [])].filter(Boolean)) ?? []
-    return [...urls, ...variantUrls].map((u) => productImageUrl(String(u)))
-  })
+  const productImageUrls = products.flatMap((p) =>
+    allDisplayImagesForProduct(p).map((u) => productImageUrl(String(u))),
+  )
 
   const imageUrls = collectUniqueImageUrls([
     ...HOME_PAGE_STATIC_IMAGE_URLS,

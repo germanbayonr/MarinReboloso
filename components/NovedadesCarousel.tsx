@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
 import { useSiteCatalog } from '@/lib/site-catalog-context'
+import { gridImageFieldForProduct } from '@/lib/product-display-images'
 
 interface NovedadProduct {
   id: string
@@ -51,7 +52,7 @@ export default function NovedadesCarousel() {
           original_price: p.original_price,
           discount_percent: p.discount_percent,
           in_stock: p.in_stock,
-          image_url: p.image_url,
+          image_url: gridImageFieldForProduct(p),
           category: p.category,
           collection: p.collection,
         }),

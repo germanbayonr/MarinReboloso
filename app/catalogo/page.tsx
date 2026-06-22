@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import ProductCatalogClient from '@/components/ProductCatalogClient'
 import { fetchActiveProducts } from '@/lib/products-data-source'
 import { filterProductsByCollectionVisibility } from '@/lib/product-collection-visibility'
+import { gridImageFieldForProduct } from '@/lib/product-display-images'
 
 function toNumber(value: unknown) {
   const n = typeof value === 'number' ? value : Number(value)
@@ -23,7 +24,7 @@ export default async function CatalogoPage() {
     id: p.id,
     name: p.name,
     price: toNumber(p.price),
-    image_url: p.image_urls?.length ? p.image_urls : p.image_url,
+    image_url: gridImageFieldForProduct(p),
     category: p.category,
     collection: p.collection,
     is_new_arrival: Boolean(p.is_new_arrival),

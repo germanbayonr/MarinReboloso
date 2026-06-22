@@ -1,4 +1,5 @@
 import type { AdminProduct } from '@/lib/admin/types'
+import { gridImageFieldForProduct } from '@/lib/product-display-images'
 import { fetchProductsForCollectionSlugData } from '@/lib/products-data-source'
 import { groupSimilarProductsForStorefront, type StorefrontProduct } from '@/lib/product-variants'
 
@@ -22,7 +23,7 @@ export function toCollectionGridProducts(products: StorefrontProduct[]) {
     original_price: p.original_price,
     discount_percent: p.discount_percent,
     in_stock: p.in_stock,
-    image_url: p.image_urls && p.image_urls.length > 0 ? p.image_urls : p.image_url,
+    image_url: gridImageFieldForProduct(p),
     category: p.category,
     collection: p.collection,
     is_new_arrival: p.is_new_arrival,

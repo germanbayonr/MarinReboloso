@@ -272,6 +272,9 @@ function mergeGroupedProduct(members: AdminProduct[], collection: string | null)
   const colSlug = collection ? slugifyCollectionLabel(collection) : 'general'
   const groupId = `grp-${colSlug}-${slugifyCollectionLabel(baseName)}`
   const checkoutProductId = sorted.find((p) => isProductUuid(p.id))?.id ?? null
+  const memberGalleryUrls = sorted.flatMap((p) => allImageUrlsFromProduct(p))
+  const variantUrls = variants.items.flatMap((i) => i.image_urls ?? [i.image_url]).filter(Boolean)
+  const allUrls = [...new Set([...memberGalleryUrls, ...variantUrls])]
 
   return {
     ...lead,
@@ -283,8 +286,8 @@ function mergeGroupedProduct(members: AdminProduct[], collection: string | null)
     variants,
     display_variants: variants,
     grouped_from_ids: sorted.map((p) => p.id),
-    image_url: items[0]?.image_url ?? lead.image_url,
-    image_urls: variants.items.flatMap((i) => i.image_urls ?? [i.image_url]).filter(Boolean),
+    image_url: allUrls[0] ?? lead.image_url,
+    image_urls: allUrls,
   }
 }
 
@@ -296,11 +299,14 @@ export function groupSimilarProductsForStorefront(products: AdminProduct[]): Sto
 
   for (const p of products) {
     if (p.has_variants && p.variants.items.length > 0) {
+      const galleryUrls = allImageUrlsFromProduct(p)
+      const variantUrls = p.variants.items.flatMap((i) => i.image_urls ?? [i.image_url]).filter(Boolean)
+      const allUrls = [...new Set([...galleryUrls, ...variantUrls])]
       explicit.push({
         ...p,
         display_variants: buildVariantsFromItems(p.variants.items),
-        image_url: p.variants.items[0]?.image_url ?? p.image_url,
-        image_urls: p.variants.items.flatMap((i) => i.image_urls ?? [i.image_url]).filter(Boolean),
+        image_url: allUrls[0] ?? p.image_url,
+        image_urls: allUrls,
       })
       consumed.add(p.id)
       continue
@@ -325,7 +331,15 @@ export function groupSimilarProductsForStorefront(products: AdminProduct[]): Sto
 
   const singles: StorefrontProduct[] = products
     .filter((p) => !consumed.has(p.id))
-    .map((p) => ({ ...p, display_variants: p.has_variants && p.variants.items.length ? p.variants : null }))
+    .map((p) => {
+      const urls = allImageUrlsFromProduct(p)
+      return {
+        ...p,
+        image_url: urls[0] ?? p.image_url,
+        image_urls: urls,
+        display_variants: p.has_variants && p.variants.items.length ? p.variants : null,
+      }
+    })
 
   return dedupeStorefrontProductsById([...explicit, ...grouped, ...singles])
 }
