@@ -9,6 +9,8 @@ import {
   RLS_BLOCK_USER_MESSAGE,
 } from '@/lib/admin/supabase-admin-log'
 import { slugifyCollectionLabel } from '@/lib/collection-slug'
+import { STORAGE_IMMUTABLE_CACHE_CONTROL } from '@/lib/image-delivery'
+import { compressProductImageBuffer } from '@/lib/admin/compress-product-image-server'
 import { clearHiddenCollectionSlugCache } from '@/lib/product-collection-visibility'
 import type { CollectionRecord } from '@/lib/collections'
 
@@ -54,10 +56,16 @@ async function uploadCollectionImages(
   for (const file of files) {
     const fileName = `${randomUUID()}.webp`
     const filePath = `collections/${fileName}`
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const rawBuffer = Buffer.from(await file.arrayBuffer())
+    let buffer: Buffer
+    try {
+      buffer = await compressProductImageBuffer(rawBuffer)
+    } catch {
+      buffer = rawBuffer
+    }
     const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGES_BUCKET).upload(filePath, buffer, {
-      contentType: file.type || 'image/webp',
-      cacheControl: '3600',
+      contentType: 'image/webp',
+      cacheControl: STORAGE_IMMUTABLE_CACHE_CONTROL,
       upsert: false,
     })
     if (uploadError) {

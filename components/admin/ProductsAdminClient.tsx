@@ -28,6 +28,7 @@ import {
   updateProduct,
 } from '@/app/admin/actions'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
+import { notifySiteCatalogChanged } from '@/lib/catalog-events'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
 import { labelForCollectionSlug, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import type { AdminProduct } from '@/lib/admin/types'
@@ -108,6 +109,7 @@ export function ProductEditModal({
       return false
     }
     onSaved(res.product)
+    notifySiteCatalogChanged()
     if (successMessage) toast.success(successMessage)
     return true
   }
@@ -120,6 +122,7 @@ export function ProductEditModal({
       return
     }
     onSaved(res.product)
+    notifySiteCatalogChanged()
     setSaved(true)
     toast.success('Producto actualizado')
     setTimeout(onClose, 600)
@@ -623,6 +626,7 @@ export default function ProductsAdminClient({
           onSaved={(next) => {
             setProducts((prev) => prev.map((x) => (x.id === next.id ? next : x)))
             setEditing(null)
+            notifySiteCatalogChanged()
           }}
         />
       ) : null}

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Volcado del catálogo generado (lib/data/generated-catalog.json) a Supabase.
- * Actualiza collection, category, image_url e is_active por nombre de producto.
+ * Actualiza collection/category por nombre. NO sobrescribe imagen ni precio ya definidos en el panel admin.
  *
  * Uso:
  *   node scripts/sync-full-catalog-to-supabase.js          # dry-run
@@ -63,7 +63,7 @@ async function main() {
 
   const { data: existing, error: fetchErr } = await sb
     .from('products')
-    .select('id,name,collection,image_url,category,is_active')
+    .select('id,name,collection,image_url,category,is_active,price,original_price')
     .limit(10000)
 
   if (fetchErr) {
@@ -79,9 +79,36 @@ async function main() {
   const toUpdate = []
   const toInsert = []
 
+  function imageUrlsFromRow(imageUrl) {
+    if (imageUrl == null) return []
+    if (typeof imageUrl === 'string') return imageUrl.trim() ? [imageUrl.trim()] : []
+    if (Array.isArray(imageUrl)) return imageUrl.filter((u) => typeof u === 'string' && u.trim())
+    return []
+  }
+
   for (const item of catalog) {
     const key = normalizeName(item.name)
-    const payload = {
+    const found = byName.get(key)
+    if (found) {
+      const hasAdminImage = imageUrlsFromRow(found.image_url).length > 0
+      const hasAdminPrice = found.price != null && Number(found.price) > 0
+      const patch = {
+        name: item.name.trim(),
+        collection: item.collection,
+        category: item.category,
+        is_active: true,
+        in_stock: true,
+      }
+      if (!hasAdminImage) patch.image_url = [item.image_url.trim()]
+      if (!hasAdminPrice) {
+        patch.price = DEFAULT_PRICE
+        patch.original_price = DEFAULT_PRICE
+        patch.discount_percent = 0
+      }
+      toUpdate.push({ id: found.id, ...patch })
+      continue
+    }
+    toInsert.push({
       name: item.name.trim(),
       collection: item.collection,
       category: item.category,
@@ -91,13 +118,7 @@ async function main() {
       price: DEFAULT_PRICE,
       original_price: DEFAULT_PRICE,
       discount_percent: 0,
-    }
-    const found = byName.get(key)
-    if (found) {
-      toUpdate.push({ id: found.id, ...payload })
-    } else {
-      toInsert.push(payload)
-    }
+    })
   }
 
   const byCol = catalog.reduce((acc, i) => {
@@ -142,8 +163,10 @@ async function main() {
     `-- Total: ${catalog.length} productos`,
   ]
   for (const item of catalog) {
+    const hasImage = `ARRAY['${sqlEscape(item.image_url)}']::text[]`
     sqlLines.push(
-      `UPDATE public.products SET collection = '${sqlEscape(item.collection)}', category = '${sqlEscape(item.category)}', image_url = ARRAY['${sqlEscape(item.image_url)}']::text[], is_active = true, in_stock = true WHERE lower(trim(name)) = lower(trim('${sqlEscape(item.name)}'));`,
+      `-- Solo rellena imagen/precio si el panel no los ha definido`,
+      `UPDATE public.products SET collection = '${sqlEscape(item.collection)}', category = '${sqlEscape(item.category)}', image_url = CASE WHEN image_url IS NULL OR cardinality(image_url) = 0 THEN ${hasImage} ELSE image_url END, is_active = true, in_stock = true, price = COALESCE(NULLIF(price, 0), ${DEFAULT_PRICE}), original_price = COALESCE(NULLIF(original_price, 0), ${DEFAULT_PRICE}) WHERE lower(trim(name)) = lower(trim('${sqlEscape(item.name)}'));`,
     )
   }
   fs.writeFileSync(path.join(process.cwd(), 'scripts/seed-collection-products.sql'), sqlLines.join('\n'))

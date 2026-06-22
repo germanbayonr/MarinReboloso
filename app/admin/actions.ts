@@ -15,6 +15,9 @@ import {
 } from '@/lib/admin/supabase-admin-log'
 import { computeFinalPrice } from '@/lib/pricing'
 import { mapProductRow } from '@/lib/admin/map-product'
+import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
+import { compressProductImageBuffer } from '@/lib/admin/compress-product-image-server'
+import { STORAGE_IMMUTABLE_CACHE_CONTROL } from '@/lib/image-delivery'
 import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { TEST_EMAIL_TO } from '@/lib/admin/test-email-config'
@@ -29,6 +32,7 @@ function revalidateCatalogPaths(collectionSlug?: string | null) {
   revalidatePath('/admin/productos')
   revalidatePath('/admin/colecciones')
   revalidatePath('/catalogo')
+  revalidatePath('/api/catalog/snapshot')
   revalidatePath('/')
   if (collectionSlug) {
     revalidatePath(`/coleccion/${collectionSlug}`)
@@ -424,8 +428,34 @@ export async function updateProduct(id: string, input: ProductInput) {
     .select('*')
     .single()
   if (error) return productMutationErrorResult('update', error.message)
+
+  const row = (data ?? {}) as Record<string, unknown>
+  const secret = stripeSecretKey()
+  if (secret) {
+    try {
+      const stripe = new Stripe(secret)
+      await ensureStripePriceForProduct({
+        stripe,
+        supabase: sb,
+        product: {
+          id: String(row.id),
+          name: input.name.trim(),
+          price,
+          description: input.description,
+          stripe_product_id: (row.stripe_product_id as string) ?? null,
+          stripe_price_id: (row.stripe_price_id as string) ?? null,
+          image_url: row.image_url,
+        },
+      })
+    } catch (syncError) {
+      logAdminSupabaseIssue('STRIPE_SYNC_FAILED', 'Producto actualizado en Supabase pero falló sync Stripe.', {
+        supabaseMessage: syncError instanceof Error ? syncError.message : String(syncError),
+      })
+    }
+  }
+
   revalidateCatalogPaths(collection)
-  return { ok: true as const, product: mapProductRow((data ?? {}) as Record<string, unknown>) }
+  return { ok: true as const, product: mapProductRow(row) }
 }
 
 export async function deleteProduct(id: string) {
@@ -539,8 +569,8 @@ export async function syncProductsWithStripe(): Promise<{
 
   const { data: unsyncedProducts, error: unsyncedProductsError } = await sb
     .from('products')
-    .select('id,name,description,image_url,price')
-    .is('stripe_product_id', null)
+    .select('id,name,description,image_url,price,stripe_product_id,stripe_price_id')
+    .or('stripe_product_id.is.null,stripe_price_id.is.null')
     .order('name', { ascending: true })
 
   if (unsyncedProductsError) {
@@ -565,25 +595,22 @@ export async function syncProductsWithStripe(): Promise<{
       const imageUrl = normalizeProductImageUrl(product.image_url)
       const description = normalizeNullableText(product.description)
 
-      const stripeLink = await findOrCreateStripeProductLink({
+      const ensuredPriceId = await ensureStripePriceForProduct({
         stripe,
-        stripeProducts,
-        name: productName,
-        description,
-        imageUrl,
-        amountEur,
+        supabase: sb,
+        product: {
+          id: String(product.id),
+          name: productName,
+          price: amountEur,
+          description,
+          stripe_product_id: (product.stripe_product_id as string) ?? null,
+          stripe_price_id: (product.stripe_price_id as string) ?? null,
+          image_url: product.image_url,
+        },
       })
 
-      const { error: updateError } = await sb
-        .from('products')
-        .update({
-          stripe_product_id: stripeLink.stripeProductId,
-          stripe_price_id: stripeLink.stripePriceId,
-          description: description ?? stripeProducts.find((item) => item.id === stripeLink.stripeProductId)?.description ?? null,
-        })
-        .eq('id', String(product.id))
+      if (!ensuredPriceId) throw new Error('No se pudo crear/enlazar precio en Stripe.')
 
-      if (updateError) throw new Error(updateError.message)
       syncedCount += 1
     } catch (error) {
       const reason = error instanceof Error ? error.message : 'Error de API'
@@ -593,7 +620,7 @@ export async function syncProductsWithStripe(): Promise<{
 
   const { data: linkedProducts, error: linkedProductsError } = await sb
     .from('products')
-    .select('id,name,price,description,stripe_product_id,stripe_price_id')
+    .select('id,name,price,description,image_url,stripe_product_id,stripe_price_id')
     .not('stripe_product_id', 'is', null)
     .not('stripe_price_id', 'is', null)
 
@@ -605,39 +632,52 @@ export async function syncProductsWithStripe(): Promise<{
   } else {
     for (const linkedProduct of linkedProducts ?? []) {
       try {
+        const productName = String(linkedProduct.name ?? '').trim() || '(sin nombre)'
+        const amountEur = Number(linkedProduct.price)
         const stripeProductId = String(linkedProduct.stripe_product_id ?? '').trim()
         const stripePriceId = String(linkedProduct.stripe_price_id ?? '').trim()
-        const amountEur = Number(linkedProduct.price)
-        const currentSupabaseDescription = normalizeNullableText(linkedProduct.description)
         if (!stripeProductId || !stripePriceId) continue
 
+        const currentSupabaseDescription = normalizeNullableText(linkedProduct.description)
         const stripeProduct = await stripe.products.retrieve(stripeProductId)
         const stripeDescription = normalizeNullableText(stripeProduct.description)
-        const ensuredOneTimePriceId = await ensureStripeProductHasOneTimeDefaultPrice({
+
+        const ensuredPriceId = await ensureStripePriceForProduct({
           stripe,
-          stripeProductId,
-          currentPriceId: stripePriceId,
-          amountEur,
+          supabase: sb,
+          product: {
+            id: String(linkedProduct.id),
+            name: productName,
+            price: amountEur,
+            description: currentSupabaseDescription,
+            stripe_product_id: stripeProductId,
+            stripe_price_id: stripePriceId,
+            image_url: (linkedProduct as { image_url?: unknown }).image_url,
+          },
         })
+
+        if (!ensuredPriceId) continue
+
         const shouldUpdateDescription = !currentSupabaseDescription && !!stripeDescription
-        const shouldUpdatePriceId = ensuredOneTimePriceId !== stripePriceId
+        const shouldUpdatePriceId = ensuredPriceId !== stripePriceId
         if (!shouldUpdateDescription && !shouldUpdatePriceId) continue
 
         const { error: updateLinkedError } = await sb
           .from('products')
           .update({
-            stripe_price_id: ensuredOneTimePriceId,
+            stripe_price_id: ensuredPriceId,
             description: shouldUpdateDescription ? stripeDescription : currentSupabaseDescription,
           })
           .eq('id', String(linkedProduct.id))
 
         if (updateLinkedError) throw new Error(updateLinkedError.message)
+        syncedCount += 1
       } catch (error) {
         const productName = String(linkedProduct.name ?? '(sin nombre)').trim() || '(sin nombre)'
         const reason =
           error instanceof Error
-            ? `No se pudo convertir a precio puntual: ${error.message}`
-            : 'No se pudo convertir a precio puntual'
+            ? `No se pudo sincronizar precio Stripe: ${error.message}`
+            : 'No se pudo sincronizar precio Stripe'
         failedSyncs.push({ name: productName, reason })
       }
     }
@@ -667,10 +707,16 @@ async function uploadFilesToProductImagesBucket(
   for (const file of files) {
     const fileName = `${randomUUID()}.webp`
     const filePath = `products/${fileName}`
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const rawBuffer = Buffer.from(await file.arrayBuffer())
+    let buffer: Buffer
+    try {
+      buffer = await compressProductImageBuffer(rawBuffer)
+    } catch {
+      buffer = rawBuffer
+    }
     const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGES_BUCKET).upload(filePath, buffer, {
-      contentType: file.type || 'image/webp',
-      cacheControl: '3600',
+      contentType: 'image/webp',
+      cacheControl: STORAGE_IMMUTABLE_CACHE_CONTROL,
       upsert: false,
     })
     if (uploadError) {

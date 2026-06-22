@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import Stripe from 'stripe'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServiceSupabase } from '@/lib/admin/server'
+import { resolveCheckoutProductIdsFromCatalog } from '@/lib/checkout-product-id'
+import { fetchActiveProducts } from '@/lib/products-data-source'
 import { validatePromoCodePublic } from '@/lib/promotions'
 import { findStripePromotionCodeId } from '@/lib/stripe-promotions'
+import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -57,11 +60,29 @@ export async function POST(req: Request) {
 
     const stripe = new Stripe(stripeSecretKey)
 
-    const supabase = createSupabaseServerClient()
-    const productIds = Array.from(new Set(cartItems.map((i) => i.id)))
+    const { products: catalogProducts } = await fetchActiveProducts()
+    const requestedIds = Array.from(new Set(cartItems.map((i) => i.id)))
+    const checkoutIdMap = resolveCheckoutProductIdsFromCatalog(requestedIds, catalogProducts)
+    const productIds = Array.from(new Set(requestedIds.map((id) => checkoutIdMap.get(id) ?? id)))
+
+    const unresolvedIds = requestedIds.filter((id) => !checkoutIdMap.has(id) && !/^[0-9a-f-]{36}$/i.test(id))
+    if (unresolvedIds.length > 0) {
+      return NextResponse.json(
+        {
+          error: {
+            message:
+              'Algunos productos del carrito no están vinculados a la base de datos. Vacía la cesta y vuelve a añadir los productos.',
+            missingIds: unresolvedIds,
+          },
+        },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const supabase = getServiceSupabase()
     const { data: rows, error: dbError } = await supabase
       .from('products')
-      .select('id,price,stripe_product_id,stripe_price_id')
+      .select('id,name,price,description,image_url,stripe_product_id,stripe_price_id')
       .eq('is_active', true)
       .eq('in_stock', true)
       .in('id', productIds)
@@ -77,53 +98,21 @@ export async function POST(req: Request) {
     const byId = new Map<string, string | null>()
     const productRows = (rows ?? []) as Array<{
       id: string
+      name: string
       price: number | string
+      description: string | null
+      image_url: unknown
       stripe_product_id: string | null
       stripe_price_id: string | null
     }>
 
     for (const row of productRows) {
       const productId = String(row.id)
-      const stripePriceId = row.stripe_price_id ? String(row.stripe_price_id) : ''
-      const stripeProductId = row.stripe_product_id ? String(row.stripe_product_id) : ''
-      const expectedUnitAmount = Math.round(Number(row.price) * 100)
-
-      if (!stripePriceId || !Number.isFinite(expectedUnitAmount) || expectedUnitAmount <= 0) {
-        byId.set(productId, stripePriceId || null)
-        continue
-      }
-
       try {
-        const currentStripePrice = await stripe.prices.retrieve(stripePriceId)
-        if (currentStripePrice.active && currentStripePrice.currency === 'eur' && currentStripePrice.unit_amount === expectedUnitAmount) {
-          byId.set(productId, stripePriceId)
-          continue
-        }
-
-        if (!stripeProductId) {
-          byId.set(productId, stripePriceId)
-          continue
-        }
-
-        const freshStripePrice = await stripe.prices.create({
-          product: stripeProductId,
-          unit_amount: expectedUnitAmount,
-          currency: 'eur',
-        })
-
-        const { error: updateStripePriceError } = await supabase
-          .from('products')
-          .update({ stripe_price_id: freshStripePrice.id })
-          .eq('id', productId)
-
-        if (updateStripePriceError) {
-          byId.set(productId, stripePriceId)
-          continue
-        }
-
-        byId.set(productId, freshStripePrice.id)
+        const ensured = await ensureStripePriceForProduct({ stripe, supabase, product: row })
+        byId.set(productId, ensured ?? (row.stripe_price_id ? String(row.stripe_price_id) : null))
       } catch {
-        byId.set(productId, stripePriceId)
+        byId.set(productId, row.stripe_price_id ? String(row.stripe_price_id) : null)
       }
     }
 
@@ -143,10 +132,13 @@ export async function POST(req: Request) {
       )
     }
 
-    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cartItems.map((item) => ({
-      quantity: item.quantity,
-      price: byId.get(item.id) as string,
-    }))
+    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cartItems.map((item) => {
+      const checkoutId = checkoutIdMap.get(item.id) ?? item.id
+      return {
+        quantity: item.quantity,
+        price: byId.get(checkoutId) as string,
+      }
+    })
 
     const forwardedHost = req.headers.get('x-forwarded-host')
     const forwardedProto = req.headers.get('x-forwarded-proto')
@@ -185,7 +177,8 @@ export async function POST(req: Request) {
 
     const metadata = cartItems.reduce(
       (acc, item, idx) => {
-        if (item.id) acc[`supabase_product_${idx}`] = item.id
+        const checkoutId = checkoutIdMap.get(item.id) ?? item.id
+        if (checkoutId) acc[`supabase_product_${idx}`] = checkoutId
         return acc
       },
       {} as Record<string, string>,

@@ -8,8 +8,8 @@ export async function compressProductImage(file: File): Promise<Blob> {
       img.src = event.target?.result as string
       img.onload = () => {
         const canvas = document.createElement('canvas')
-        const MAX_WIDTH = 1200
-        const MAX_HEIGHT = 1500
+        const MAX_WIDTH = 960
+        const MAX_HEIGHT = 1200
         let width = img.width
         let height = img.height
 
@@ -33,7 +33,7 @@ export async function compressProductImage(file: File): Promise<Blob> {
             else reject(new Error('No se pudo comprimir la imagen'))
           },
           'image/webp',
-          0.8,
+          0.72,
         )
       }
       img.onerror = () => reject(new Error('No se pudo leer la imagen'))

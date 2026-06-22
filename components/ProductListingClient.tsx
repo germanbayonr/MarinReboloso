@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Filter } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import ProductCard from '@/components/ProductCard'
-import { supabase } from '@/lib/supabase'
+import { useSiteCatalog } from '@/lib/site-catalog-context'
 
 type ListingProduct = {
   id: string
@@ -27,50 +27,22 @@ const categoryTitles: Record<string, string> = {
 
 export default function ProductListingClient({ category }: { category: string }) {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500])
-  const [items, setItems] = useState<ListingProduct[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const { ready, loading, products } = useSiteCatalog()
 
-  useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('id,name,price,image_url,category')
-          .eq('is_active', true)
-          .eq('category', category)
-          .order('name', { ascending: true })
-          .limit(5000)
+  const items = useMemo((): ListingProduct[] => {
+    if (!ready) return []
+    return products
+      .filter((p) => (p.category ?? '').toLowerCase() === category.toLowerCase())
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image_url: p.image_urls?.length ? p.image_urls : p.image_url,
+        category: p.category,
+      }))
+  }, [ready, products, category])
 
-        if (cancelled) return
-        if (error) {
-          setItems([])
-          setLoaded(true)
-          return
-        }
-
-        setItems(
-          (data ?? []).map((p: any) => ({
-            id: String(p.id),
-            name: String(p.name ?? ''),
-            price: p.price,
-            image_url: p.image_url ?? null,
-            category: p.category ?? null,
-          })),
-        )
-        setLoaded(true)
-      } catch {
-        if (!cancelled) {
-          setItems([])
-          setLoaded(true)
-        }
-      }
-    }
-    run()
-    return () => {
-      cancelled = true
-    }
-  }, [category])
+  const loaded = ready || !loading
 
   const filteredProducts = useMemo(() => {
     return items.filter((p) => {

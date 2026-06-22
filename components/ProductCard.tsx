@@ -7,6 +7,7 @@ import { Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWishlist } from '@/lib/wishlist-context'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
+import { productImageUrl } from '@/lib/image-delivery'
 
 interface ProductCardProps {
   product: {
@@ -37,14 +38,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         ? [product.image_url] 
         : []
     
-    return rawImages.map(url => {
-      try {
-        // Corregir %2520 -> %20
-        return decodeURIComponent(url)
-      } catch {
-        return url
-      }
-    })
+    return rawImages.map((url) => productImageUrl(url, 'grid'))
   }, [product.image_url])
       
   const mainImage = mainImgError ? PLACEHOLDER_IMAGE : (images[0] || PLACEHOLDER_IMAGE)

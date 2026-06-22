@@ -61,6 +61,7 @@ const FALLBACK: CollectionRecord[] = WEB_COLLECTIONS.map((c, i) => {
 
 const LEGACY_COLLECTION_LABELS: Record<string, string> = {
   'lost-in-jaipur': 'Jaipur',
+  'el-joyero-de-marebo': 'El joyero de Marebo',
 }
 
 export function fallbackCollectionBySlug(slug: string): CollectionRecord | null {
@@ -102,21 +103,10 @@ function mapRow(row: Record<string, unknown>): CollectionRecord {
   }
 }
 
-/** Jaipur legacy comparte visibilidad con slug jaipur */
-export function productCollectionMatchesSlug(productSlug: string, collectionSlug: string): boolean {
-  const p = productSlug.toLowerCase().trim()
-  const c = collectionSlug.toLowerCase().trim()
-  if (p === c) return true
-  if (c === 'jaipur' && p === 'lost-in-jaipur') return true
-  if (c === 'lost-in-jaipur' && p === 'jaipur') return true
-  return false
-}
-
-export function collectionSlugsForProductFilter(collectionSlug: string): string[] {
-  const s = collectionSlug.toLowerCase().trim()
-  if (s === 'jaipur') return ['jaipur', 'lost-in-jaipur']
-  return [s]
-}
+export {
+  collectionSlugsForProductFilter,
+  productCollectionMatchesSlug,
+} from '@/lib/collection-slug-aliases'
 
 export { slugifyCollectionLabel } from '@/lib/collection-slug'
 
@@ -238,6 +228,7 @@ export async function getAllowedCollectionSlugs(): Promise<Set<string>> {
   const rows = await fetchAllCollectionsAdmin()
   const slugs = new Set(rows.map((r) => r.slug))
   slugs.add('lost-in-jaipur')
+  slugs.add('el-joyero-de-marebo')
   return slugs
 }
 

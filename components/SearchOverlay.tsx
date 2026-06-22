@@ -4,32 +4,20 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useSiteCatalog } from '@/lib/site-catalog-context'
+import { productImageUrl } from '@/lib/image-delivery'
 
 const cachedSearchPreviewImages = new Set<string>()
 
-function firstImageUrl(raw: unknown): string | null {
-  if (typeof raw === 'string') {
-    const trimmed = raw.trim()
-    return trimmed || null
-  }
-  if (Array.isArray(raw)) {
-    const first = raw.find((item) => typeof item === 'string' && item.trim())
-    return typeof first === 'string' ? first.trim() : null
-  }
-  return null
-}
-
 export default function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [results, setResults] = useState<Array<{ id: string; name: string; price: number | string; image_url: string | null }>>([])
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const { ready, products } = useSiteCatalog()
 
   useEffect(() => {
     if (!open) return
 
     setSearchTerm('')
-    setResults([])
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
@@ -51,44 +39,18 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
     return term
   }, [searchTerm])
 
-  useEffect(() => {
-    if (!open) return
-    if (!term) {
-      setResults([])
-      return
-    }
-
-    let cancelled = false
-    const t = setTimeout(async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id,name,price,image_url')
-        .eq('is_active', true)
-        .ilike('name', `%${term}%`)
-        .order('name', { ascending: true })
-        .limit(5)
-
-      if (cancelled) return
-      if (error) {
-        setResults([])
-        return
-      }
-
-      setResults(
-        (data ?? []).map((p: any) => ({
-          id: String(p.id),
-          name: String(p.name ?? ''),
-          price: p.price,
-          image_url: firstImageUrl(p.image_url),
-        })),
-      )
-    }, 180)
-
-    return () => {
-      cancelled = true
-      clearTimeout(t)
-    }
-  }, [open, term])
+  const results = useMemo(() => {
+    if (!open || !ready || !term) return []
+    return products
+      .filter((p) => p.name.toLowerCase().includes(term))
+      .slice(0, 8)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image_url: p.image_url ? productImageUrl(p.image_url) : null,
+      }))
+  }, [open, ready, products, term])
 
   useEffect(() => {
     for (const row of results) {

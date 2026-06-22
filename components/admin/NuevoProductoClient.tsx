@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { createProduct } from '@/app/admin/actions'
+import { notifySiteCatalogChanged } from '@/lib/catalog-events'
 import { buildProductCollectionOptions, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
 import { computeFinalPrice } from '@/lib/pricing'
@@ -181,6 +182,7 @@ export default function NuevoProductoClient() {
         variants: hasVariants ? variants : undefined,
       })
       if (!res.ok) throw new Error(res.error)
+      notifySiteCatalogChanged()
       setSaved(true)
       const redirectTo = coleccionFromUrl
         ? `/admin/colecciones/${encodeURIComponent(coleccionFromUrl)}`

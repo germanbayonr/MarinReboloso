@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
+import { getCheckoutProductId } from '@/lib/checkout-product-id'
 import {
   findVariantItem,
   findVariantImages,
@@ -144,6 +145,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
 
   const handleAddToCart = () => {
     if (!inStock) return
+    const checkoutProductId = getCheckoutProductId(product)
     const cartIcon = document.getElementById('cart-icon-target')
     if (imageRef.current && cartIcon) {
       const originRect = imageRef.current.getBoundingClientRect()
@@ -157,7 +159,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
 
       setTimeout(() => {
         addToCart({
-          id: product.id,
+          id: checkoutProductId,
           name: product.name,
           price,
           image: mainImageUrl,
@@ -171,7 +173,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
     }
 
     addToCart({
-      id: product.id,
+      id: checkoutProductId,
       name: product.name,
       price,
       image: mainImageUrl,

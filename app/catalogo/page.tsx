@@ -4,7 +4,7 @@ export const revalidate = 0
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ProductCatalogClient from '@/components/ProductCatalogClient'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { fetchActiveProducts } from '@/lib/products-data-source'
 import { filterProductsByCollectionVisibility } from '@/lib/product-collection-visibility'
 
 function toNumber(value: unknown) {
@@ -13,46 +13,30 @@ function toNumber(value: unknown) {
 }
 
 export default async function CatalogoPage() {
-  const supabase = createSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('is_active', true)
-    .order('is_new_arrival', { ascending: false })
-    .order('name', { ascending: true })
-    .limit(5000)
+  const { products, error } = await fetchActiveProducts()
 
-  const rawProducts: Array<{
-    id: string
-    name: string
-    price: number
-    image_url: string | null
-    category: string | null
-    collection: string | null
-    is_new_arrival: boolean
-    stock?: number | null
-    in_stock?: boolean | null
-  }> = error
-    ? []
-    : (data ?? []).map((row: Record<string, unknown>) => ({
-        id: String(row.id),
-        name: String(row.name ?? ''),
-        price: toNumber(row.price),
-        image_url: row.image_url ?? null,
-        category: row.category ?? null,
-        collection: row.collection ?? null,
-        is_new_arrival: Boolean(row.is_new_arrival),
-        stock: typeof row.stock === 'number' ? row.stock : null,
-        in_stock: typeof row.in_stock === 'boolean' ? row.in_stock : null,
-      }))
+  if (error) {
+    console.error('[catalogo] Error cargando productos:', error)
+  }
 
-  const products = await filterProductsByCollectionVisibility(rawProducts)
+  const rawProducts = products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: toNumber(p.price),
+    image_url: p.image_urls?.length ? p.image_urls : p.image_url,
+    category: p.category,
+    collection: p.collection,
+    is_new_arrival: Boolean(p.is_new_arrival),
+    in_stock: p.in_stock,
+  }))
+
+  const visibleProducts = await filterProductsByCollectionVisibility(rawProducts)
 
   return (
     <main className="min-h-screen bg-background" suppressHydrationWarning>
       <Navbar />
 
-      <ProductCatalogClient title="Catálogo" products={products} />
+      <ProductCatalogClient title="Catálogo" products={visibleProducts} />
 
       <Footer />
     </main>

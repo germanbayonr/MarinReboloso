@@ -1,5 +1,5 @@
 import { slugifyCollectionLabel } from '@/lib/collection-slug'
-import { collectionSlugsForProductFilter, productCollectionMatchesSlug } from '@/lib/collections'
+import { collectionProductAliasGroup } from '@/lib/collection-slug-aliases'
 
 /** Normaliza el valor guardado en `products.collection` a slug. */
 export function normalizeProductCollectionSlug(raw: string | null | undefined): string | null {
@@ -8,7 +8,9 @@ export function normalizeProductCollectionSlug(raw: string | null | undefined): 
   const lower = trimmed.toLowerCase()
   if (lower === 'lost-in-jaipur' || lower === 'lost in jaipur') return 'jaipur'
   const slug = slugifyCollectionLabel(trimmed)
-  return slug || lower
+  if (!slug) return lower
+  const group = collectionProductAliasGroup(slug)
+  return group[0] ?? slug
 }
 
 export function productMatchesCollectionSlug(
@@ -17,6 +19,7 @@ export function productMatchesCollectionSlug(
 ): boolean {
   const productSlug = normalizeProductCollectionSlug(productCollection)
   if (!productSlug) return false
-  const targets = collectionSlugsForProductFilter(collectionSlug)
-  return targets.some((target) => productCollectionMatchesSlug(productSlug, target))
+  const targets = collectionProductAliasGroup(collectionSlug)
+  const productAliases = collectionProductAliasGroup(productSlug)
+  return productAliases.some((alias) => targets.includes(alias))
 }

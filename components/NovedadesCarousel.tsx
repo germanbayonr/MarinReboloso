@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
-import { supabase } from '@/lib/supabase'
-import { imageUrlsFromProductRow } from '@/lib/home-page-images'
+import { useSiteCatalog } from '@/lib/site-catalog-context'
 
 interface NovedadProduct {
   id: string
@@ -30,92 +29,38 @@ function isCollectionHidden(collection: string | null, hiddenSlugs: Set<string>)
   return false
 }
 
-function mapProductRow(
-  row: Record<string, unknown>,
-  hiddenSlugs: Set<string>,
-): NovedadProduct | null {
-  if (isCollectionHidden((row.collection as string) ?? null, hiddenSlugs)) return null
-  const urls = imageUrlsFromProductRow(row.image_url)
-  return {
-    id: String(row.id),
-    name: String(row.name ?? ''),
-    price: row.price as number | string,
-    original_price: row.original_price != null ? Number(row.original_price) : null,
-    discount_percent: row.discount_percent != null ? Number(row.discount_percent) : null,
-    in_stock: typeof row.in_stock === 'boolean' ? row.in_stock : null,
-    image_url: urls[0] ?? null,
-    category: (row.category as string) ?? null,
-    collection: (row.collection as string) ?? null,
-  }
-}
-
 export default function NovedadesCarousel() {
-  const [items, setItems] = useState<NovedadProduct[]>([])
+  const { ready, loading, products, hiddenCollectionSlugs } = useSiteCatalog()
   const [loaded, setLoaded] = useState(false)
 
+  const items = useMemo(() => {
+    if (!ready) return []
+    return products
+      .filter((p) => !isCollectionHidden(p.collection, hiddenCollectionSlugs))
+      .sort((a, b) => {
+        const ta = a.created_at ? Date.parse(a.created_at) : 0
+        const tb = b.created_at ? Date.parse(b.created_at) : 0
+        return tb - ta
+      })
+      .slice(0, 20)
+      .map(
+        (p): NovedadProduct => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          original_price: p.original_price,
+          discount_percent: p.discount_percent,
+          in_stock: p.in_stock,
+          image_url: p.image_url,
+          category: p.category,
+          collection: p.collection,
+        }),
+      )
+  }, [ready, products, hiddenCollectionSlugs])
+
   useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select(
-            'id,name,price,original_price,discount_percent,image_url,category,collection,in_stock,created_at',
-          )
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(20)
-
-        if (cancelled) return
-
-        if (error) {
-          const fallback = await supabase
-            .from('products')
-            .select(
-              'id,name,price,original_price,discount_percent,image_url,category,collection,in_stock',
-            )
-            .eq('is_active', true)
-            .order('name', { ascending: false })
-            .limit(20)
-          if (cancelled) return
-          if (fallback.error) {
-            setItems([])
-            setLoaded(true)
-            return
-          }
-          const hiddenRes = await fetch('/api/collections/hidden-slugs')
-          const hiddenSlugs = new Set<string>(
-            hiddenRes.ok ? ((await hiddenRes.json()) as string[]).map((s) => s.toLowerCase()) : [],
-          )
-          const mapped = (fallback.data ?? [])
-            .map((row) => mapProductRow(row as Record<string, unknown>, hiddenSlugs))
-            .filter((p): p is NovedadProduct => p != null)
-          setItems(mapped)
-          setLoaded(true)
-          return
-        }
-
-        const hiddenRes = await fetch('/api/collections/hidden-slugs')
-        const hiddenSlugs = new Set<string>(
-          hiddenRes.ok ? ((await hiddenRes.json()) as string[]).map((s) => s.toLowerCase()) : [],
-        )
-        const mapped = (data ?? [])
-          .map((row) => mapProductRow(row as Record<string, unknown>, hiddenSlugs))
-          .filter((p): p is NovedadProduct => p != null)
-        setItems(mapped)
-        setLoaded(true)
-      } catch {
-        if (!cancelled) {
-          setItems([])
-          setLoaded(true)
-        }
-      }
-    }
-    void run()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    if (ready || (!loading && !ready)) setLoaded(true)
+  }, [ready, loading])
 
   const loopItems = useMemo(() => {
     if (items.length === 0) return []

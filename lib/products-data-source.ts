@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { mapProductRow } from '@/lib/admin/map-product'
 import type { AdminProduct } from '@/lib/admin/types'
 import { productMatchesCollectionSlug } from '@/lib/collection-product-match'
@@ -8,7 +9,16 @@ import {
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const PRODUCT_SELECT =
-  'id,name,price,original_price,discount_percent,image_url,category,collection,is_new_arrival,in_stock,is_active,created_at,has_variants,variants,description,stripe_price_id'
+  'id,name,price,original_price,discount_percent,image_url,category,collection,is_new_arrival,in_stock,is_active,created_at,has_variants,variants,description,stripe_price_id,stripe_product_id'
+
+const PRODUCT_SELECT_LEGACY =
+  'id,name,price,original_price,discount_percent,image_url,category,collection,is_new_arrival,in_stock,is_active,created_at,description,stripe_price_id,stripe_product_id'
+
+function isMissingVariantsColumnError(message: string | null | undefined): boolean {
+  if (!message) return false
+  const m = message.toLowerCase()
+  return m.includes('has_variants') || m.includes('variants')
+}
 
 export interface ProductsFetchResult {
   products: AdminProduct[]
@@ -16,15 +26,26 @@ export interface ProductsFetchResult {
   error: string | null
 }
 
-export async function fetchActiveProducts(): Promise<ProductsFetchResult> {
+export const fetchActiveProducts = cache(async (): Promise<ProductsFetchResult> => {
   try {
     const sb = createSupabaseServerClient()
-    const { data, error } = await sb
+    let { data, error } = await sb
       .from('products')
       .select(PRODUCT_SELECT)
       .eq('is_active', true)
       .order('created_at', { ascending: false, nullsFirst: false })
       .limit(5000)
+
+    if (error && isMissingVariantsColumnError(error.message)) {
+      const legacy = await sb
+        .from('products')
+        .select(PRODUCT_SELECT_LEGACY)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false, nullsFirst: false })
+        .limit(5000)
+      data = legacy.data
+      error = legacy.error
+    }
 
     if (error) {
       const useFallback = isSupabaseQuotaOrUnavailableError(error.message)
@@ -42,7 +63,7 @@ export async function fetchActiveProducts(): Promise<ProductsFetchResult> {
     console.warn('[products] Excepción al cargar, usando catálogo maestro:', message)
     return { products: getMasterCatalogProducts(), fromFallback: true, error: message }
   }
-}
+})
 
 export async function fetchProductsForCollectionSlugData(collectionSlug: string): Promise<ProductsFetchResult & { collectionSlug: string }> {
   const normalized = String(collectionSlug ?? '').toLowerCase().trim()

@@ -1,5 +1,6 @@
 import { slugifyCollectionLabel } from '@/lib/collection-slug'
 import { formatProductDisplayName } from '@/lib/format-product-name'
+import { isProductUuid } from '@/lib/shop-client-storage'
 import type { AdminProduct } from '@/lib/admin/types'
 
 export interface ProductVariantItem {
@@ -177,6 +178,10 @@ export type StorefrontProduct = AdminProduct & {
   /** Variantes efectivas para la ficha (DB o agrupación automática). */
   display_variants: ProductVariantsData | null
   grouped_from_ids?: string[]
+  /** Slug público agrupado (`grp-...`) cuando difiere del id de checkout. */
+  storefront_group_id?: string | null
+  /** UUID de Supabase usado en carrito y Stripe. */
+  checkout_product_id?: string | null
 }
 
 function variantItemFromProduct(p: AdminProduct): ProductVariantItem {
@@ -266,10 +271,13 @@ function mergeGroupedProduct(members: AdminProduct[], collection: string | null)
   const variants = buildVariantsFromItems(items)
   const colSlug = collection ? slugifyCollectionLabel(collection) : 'general'
   const groupId = `grp-${colSlug}-${slugifyCollectionLabel(baseName)}`
+  const checkoutProductId = sorted.find((p) => isProductUuid(p.id))?.id ?? null
 
   return {
     ...lead,
     id: groupId,
+    storefront_group_id: groupId,
+    checkout_product_id: checkoutProductId,
     name: baseName,
     has_variants: true,
     variants,
@@ -392,7 +400,7 @@ export function resolveStorefrontProductById(
   products: StorefrontProduct[],
   id: string,
 ): StorefrontProduct | null {
-  const direct = products.find((p) => p.id === id)
+  const direct = products.find((p) => p.id === id || p.storefront_group_id === id)
   if (direct) return direct
   for (const p of products) {
     if (p.grouped_from_ids?.includes(id)) return p
