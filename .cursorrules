@@ -1,0 +1,23 @@
+# SUPABASE & DATA FETCHING STRICT RULES (ANTI-EGRESS SPIKE)
+
+You are an expert Frontend Developer and Architect. You must strictly adhere to the following rules to prevent infinite rendering loops, API spam, and massive Egress consumption in Supabase. The system has previously crashed due to infinite loops fetching text/URLs, and you are strictly forbidden from writing code that could cause this again.
+
+## 1. React Hooks & Re-renders (Zero-Tolerance for Infinite Loops)
+- NEVER write a `useEffect` that fetches data from Supabase without a strictly verified dependency array.
+- If an object or array is passed as a dependency to a `useEffect`, it MUST be wrapped in `useMemo` or declared outside the component to prevent reference changes on every render.
+- If a function triggers a Supabase fetch and is used in a `useEffect`, it MUST be wrapped in `useCallback`.
+- NEVER update a state inside a `useEffect` that is also listed in that exact same `useEffect`'s dependency array (directly or indirectly).
+
+## 2. Supabase API Calls
+- When fetching data, strictly limit the payload. ALWAYS use explicit `.select('col1, col2')`. NEVER use `.select('*')` unless absolutely explicitly requested.
+- Avoid placing `supabase.from(...)` calls directly inside standard React components without a caching strategy. 
+- If using raw `useEffect` for fetching, implement an AbortController to cancel pending requests if the component unmounts before the request finishes.
+
+## 3. Polling and Realtime (Background Tab Safety)
+- DO NOT implement aggressive polling (`setInterval` for fetching) under any circumstances.
+- If live data is needed, use Supabase Realtime subscriptions. 
+- You MUST ALWAYS provide the exact cleanup function (`supabase.removeChannel`) inside the `useEffect` return statement to ensure connections are closed when the component unmounts.
+- If using SWR or React Query, you must explicitly configure `refetchOnWindowFocus: false` and avoid aggressive `refreshInterval` settings unless the specific UI component absolutely requires it.
+
+## 4. Code Review Step
+- Before outputting any React component code that connects to Supabase or an external API, silently simulate the React render cycle in your mind. If there is even a 1% chance of a continuous re-render loop when a browser tab is left open and idle, YOU MUST REWRITE IT before presenting it to the user.

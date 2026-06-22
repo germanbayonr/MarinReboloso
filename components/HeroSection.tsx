@@ -3,32 +3,14 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import {
   HERO_DESCARA,
   HERO_JAIPUR_LEFT,
   HERO_JAIPUR_RIGHT,
 } from '@/lib/home-page-images'
-import { PRELOADER_DONE_EVENT, PRELOADER_STORAGE_KEY } from '@/lib/preloader-events'
 
 export default function HeroSection() {
-  const [isReady, setIsReady] = useState(false)
-
-  useEffect(() => {
-    const reveal = () => setIsReady(true)
-    let skipped = false
-    try {
-      skipped = sessionStorage.getItem(PRELOADER_STORAGE_KEY) !== null
-    } catch {
-      skipped = true
-    }
-    if (skipped) {
-      reveal()
-      return
-    }
-    window.addEventListener(PRELOADER_DONE_EVENT, reveal, { once: true })
-    return () => window.removeEventListener(PRELOADER_DONE_EVENT, reveal)
-  }, [])
+  const isReady = true
 
   return (
     <section className="bg-background w-full overflow-hidden">

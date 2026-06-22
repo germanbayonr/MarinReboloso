@@ -1,6 +1,6 @@
 import { HOME_PAGE_STATIC_IMAGE_URLS } from '@/lib/home-page-images'
 
-/** Enlaces de precarga en HTML para que el navegador empiece antes del JS del preloader. */
+/** Enlaces de precarga en HTML para que el navegador empiece a cargar la portada pronto. */
 export default function HomeImagePreloadHead() {
   const priorityUrls = HOME_PAGE_STATIC_IMAGE_URLS.slice(0, 8)
   return (

@@ -30,11 +30,14 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
-  if (path.startsWith('/admin')) {
+  const isPublicAdminAuthRoute =
+    path === '/admin/login' || path.startsWith('/admin/restablecer-contrasena')
+
+  if (path.startsWith('/admin') && !isPublicAdminAuthRoute) {
     if (!user || !isAdminPanelEmail(user.email)) {
       const url = request.nextUrl.clone()
-      url.pathname = '/'
-      url.searchParams.set('acceso', 'denegado')
+      url.pathname = '/admin/login'
+      url.searchParams.delete('acceso')
       return NextResponse.redirect(url)
     }
   }

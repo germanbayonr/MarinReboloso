@@ -32,6 +32,8 @@ import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
 import { labelForCollectionSlug, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import type { AdminProduct } from '@/lib/admin/types'
 import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
+import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
+import { emptyProductVariants, type ProductVariantsData } from '@/lib/product-variants'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
@@ -65,6 +67,10 @@ export function ProductEditModal({
     in_stock: product.in_stock,
   })
   const [images, setImages] = useState<string[]>(initialImages)
+  const [hasVariants, setHasVariants] = useState(product.has_variants)
+  const [variants, setVariants] = useState<ProductVariantsData>(
+    product.has_variants ? product.variants : emptyProductVariants(),
+  )
   const [newImageUrl, setNewImageUrl] = useState('')
   const [uploadingImages, setUploadingImages] = useState(false)
   const collectionUnknownInList =
@@ -77,17 +83,21 @@ export function ProductEditModal({
 
   const buildProductInput = (imageList: string[]) => {
     const cleanedImages = imageList.map((url) => url.trim()).filter(Boolean)
+    const variantUrls = variants.items.map((i) => i.image_url.trim()).filter(Boolean)
+    const useVariants = hasVariants && variantUrls.length > 0
     return {
       name: form.name.trim(),
       description: form.description.trim() || null,
       category: form.category,
       collection: form.collection.trim() || null,
-      image_url: cleanedImages[0] ?? (form.image_url.trim() || null),
-      image_urls: cleanedImages,
+      image_url: useVariants ? variantUrls[0] : cleanedImages[0] ?? (form.image_url.trim() || null),
+      image_urls: useVariants ? variantUrls : cleanedImages,
       is_new_arrival: form.is_new_arrival,
       in_stock: form.in_stock,
       original_price: o,
       discount_percent: d,
+      has_variants: hasVariants,
+      variants: hasVariants ? variants : emptyProductVariants(),
     }
   }
 
@@ -259,6 +269,13 @@ export function ProductEditModal({
               className="w-full border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-400 focus:outline-none"
             />
           </div>
+          <ProductVariantsEditor
+            hasVariants={hasVariants}
+            variants={variants}
+            onHasVariantsChange={setHasVariants}
+            onVariantsChange={setVariants}
+          />
+          {!hasVariants ? (
           <div className="space-y-2 border-t border-neutral-100 pt-3">
             <div className="flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-wider text-neutral-500">Galería de fotos</p>
@@ -353,6 +370,7 @@ export function ProductEditModal({
               </div>
             )}
           </div>
+          ) : null}
           <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"

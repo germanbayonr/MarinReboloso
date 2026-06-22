@@ -47,8 +47,6 @@ export default function PromoBannerPopup() {
         code: String(data.code),
         discount_percentage: Number(data.discount_percentage) || 0,
       })
-      const onPreloaderDone = () => openWithDelay()
-      window.addEventListener('marebo:preloader-done', onPreloaderDone, { once: true })
       openWithDelay()
     }
 

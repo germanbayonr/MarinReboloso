@@ -3,30 +3,39 @@ export const revalidate = 0
 
 import { notFound } from 'next/navigation'
 import ProductDetailClient from '@/components/ProductDetailClient'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { fetchActiveProducts, fetchProductRowById } from '@/lib/products-data-source'
 import { isProductInHiddenCollection } from '@/lib/product-collection-visibility'
+import {
+  groupSimilarProductsForStorefront,
+  resolveStorefrontProductById,
+  type StorefrontProduct,
+} from '@/lib/product-variants'
+
+async function resolveStorefrontProduct(id: string): Promise<StorefrontProduct | null> {
+  const trimmed = String(id ?? '').trim()
+  if (!trimmed) return null
+
+  const { products } = await fetchActiveProducts()
+  const grouped = groupSimilarProductsForStorefront(products)
+  const fromGroup = resolveStorefrontProductById(grouped, trimmed)
+  if (fromGroup) return fromGroup
+
+  const { product } = await fetchProductRowById(trimmed)
+  if (!product) return null
+  return {
+    ...product,
+    display_variants: product.has_variants && product.variants.items.length ? product.variants : null,
+  }
+}
 
 export default async function ProductoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = createSupabaseServerClient()
+  const product = await resolveStorefrontProduct(id)
+  if (!product) notFound()
 
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
-
-  let query = supabase.from('products').select('*').eq('is_active', true)
-
-  if (isUUID) {
-    query = query.eq('id', id)
-  } else {
-    query = query.ilike('name', id.replace(/-/g, ' '))
-  }
-
-  const { data: product, error } = await query.maybeSingle()
-
-  if (error || !product) notFound()
-
-  if (await isProductInHiddenCollection({ collection: (product as { collection?: string | null }).collection })) {
+  if (await isProductInHiddenCollection({ collection: product.collection })) {
     notFound()
   }
 
-  return <ProductDetailClient product={product as Record<string, unknown>} />
+  return <ProductDetailClient product={product} />
 }

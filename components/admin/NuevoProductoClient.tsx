@@ -11,6 +11,8 @@ import { createProduct } from '@/app/admin/actions'
 import { buildProductCollectionOptions, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
 import { computeFinalPrice } from '@/lib/pricing'
+import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
+import { emptyProductVariants, type ProductVariantsData } from '@/lib/product-variants'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
@@ -41,6 +43,8 @@ export default function NuevoProductoClient() {
   })
 
   const [images, setImages] = useState<UploadedImage[]>([])
+  const [hasVariants, setHasVariants] = useState(false)
+  const [variants, setVariants] = useState<ProductVariantsData>(emptyProductVariants())
   const [dragging, setDragging] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -144,7 +148,12 @@ export default function NuevoProductoClient() {
     if (!form.name.trim()) next.name = 'El nombre es obligatorio'
     if (!form.original_price || isNaN(Number(form.original_price))) next.original_price = 'Introduce un precio original válido'
     if (isUploadingImages) next.images = 'Espera a que terminen de subirse las imágenes'
-    else if (uploadedUrls.length === 0) next.images = 'Sube al menos una imagen a Supabase'
+    else if (hasVariants) {
+      if (!variants.items.length) next.variants = 'Añade al menos una variante con imagen'
+      else if (variants.items.some((item) => !item.image_url.trim())) {
+        next.variants = 'Cada variante necesita su imagen en Supabase'
+      }
+    } else if (uploadedUrls.length === 0) next.images = 'Sube al menos una imagen a Supabase'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -156,17 +165,20 @@ export default function NuevoProductoClient() {
     setIsSaving(true)
 
     try {
+      const variantUrls = variants.items.map((i) => i.image_url.trim()).filter(Boolean)
       const res = await createProduct({
         name: form.name.trim(),
         description: form.description.trim() || null,
         category: form.category,
         collection: form.collection.trim() || null,
-        image_url: uploadedUrls[0] ?? null,
-        image_urls: uploadedUrls,
+        image_url: hasVariants ? variantUrls[0] ?? null : uploadedUrls[0] ?? null,
+        image_urls: hasVariants ? variantUrls : uploadedUrls,
         is_new_arrival: form.is_new_arrival,
         in_stock: form.in_stock,
         original_price: Number(form.original_price),
         discount_percent: Math.min(100, Math.max(0, Number(form.discount_percent) || 0)),
+        has_variants: hasVariants,
+        variants: hasVariants ? variants : undefined,
       })
       if (!res.ok) throw new Error(res.error)
       setSaved(true)
@@ -342,10 +354,19 @@ export default function NuevoProductoClient() {
               </div>
               <Switch checked={form.in_stock} onCheckedChange={(v) => handleField('in_stock', v)} />
             </div>
+
+            <ProductVariantsEditor
+              hasVariants={hasVariants}
+              variants={variants}
+              onHasVariantsChange={setHasVariants}
+              onVariantsChange={setVariants}
+            />
+            {errors.variants ? <p className="text-xs text-destructive">{errors.variants}</p> : null}
           </div>
         </div>
 
         <aside className="space-y-4">
+          {!hasVariants ? (
           <div className="bg-white border border-border p-6 space-y-4">
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Imágenes *</h2>
             <div
@@ -411,6 +432,11 @@ export default function NuevoProductoClient() {
               </div>
             )}
           </div>
+          ) : (
+            <div className="bg-white border border-border p-6 text-sm text-muted-foreground">
+              Las imágenes se configuran en cada variante (colores / tallas).
+            </div>
+          )}
 
           <button
             type="submit"

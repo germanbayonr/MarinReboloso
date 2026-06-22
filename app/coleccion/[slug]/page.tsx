@@ -18,11 +18,14 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
   if (!collectionMeta) notFound()
 
   const title = collectionMeta.label
-  const { products: rows, error } = await fetchProductsForCollectionSlug(normalizedSlug)
-  const products = toCollectionGridProducts(rows)
+  const { storefrontProducts, error, fromFallback } = await fetchProductsForCollectionSlug(normalizedSlug)
+  const products = toCollectionGridProducts(storefrontProducts)
 
   if (error) {
     console.error('[coleccion] Error cargando productos:', normalizedSlug, error)
+  }
+  if (fromFallback) {
+    console.warn('[coleccion] Mostrando catálogo maestro local para', normalizedSlug)
   }
 
   return (

@@ -388,6 +388,8 @@ export type ProductInput = {
   in_stock: boolean
   original_price: number
   discount_percent: number
+  has_variants?: boolean
+  variants?: import('@/lib/product-variants').ProductVariantsData
 }
 
 export async function updateProduct(id: string, input: ProductInput) {
@@ -397,6 +399,11 @@ export async function updateProduct(id: string, input: ProductInput) {
   const sb = sup.client
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = await normalizeCollectionForProduct(input.collection)
+  const hasVariants = Boolean(input.has_variants && input.variants?.items?.length)
+  const variantImages = hasVariants ? input.variants!.items.map((i) => i.image_url).filter(Boolean) : []
+  const imageInput = hasVariants && variantImages.length
+    ? { image_url: variantImages[0], image_urls: variantImages }
+    : input
   const { data, error } = await sb
     .from('products')
     .update({
@@ -404,12 +411,14 @@ export async function updateProduct(id: string, input: ProductInput) {
       description: input.description,
       category: input.category,
       collection,
-      image_url: imageUrlsForDatabaseColumn(input),
+      image_url: imageUrlsForDatabaseColumn(imageInput),
       is_new_arrival: input.is_new_arrival,
       in_stock: input.in_stock,
       original_price: input.original_price,
       discount_percent: input.discount_percent,
       price,
+      has_variants: hasVariants,
+      variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
     })
     .eq('id', id)
     .select('*')
@@ -456,8 +465,13 @@ export async function createProduct(input: ProductInput) {
   const stripe = new Stripe(secret)
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = await normalizeCollectionForProduct(input.collection)
+  const hasVariants = Boolean(input.has_variants && input.variants?.items?.length)
+  const variantImages = hasVariants ? input.variants!.items.map((i) => i.image_url).filter(Boolean) : []
+  const imageInput = hasVariants && variantImages.length
+    ? { image_url: variantImages[0], image_urls: variantImages }
+    : input
   const primaryImageUrl =
-    imageUrlsForDatabaseColumn(input).find((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim()) ?? null
+    imageUrlsForDatabaseColumn(imageInput).find((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim()) ?? null
 
   let stripeLink: StripeLinkResult
   try {
@@ -482,7 +496,7 @@ export async function createProduct(input: ProductInput) {
       description: input.description,
       category: input.category,
       collection,
-      image_url: imageUrlsForDatabaseColumn(input),
+      image_url: imageUrlsForDatabaseColumn(imageInput),
       is_new_arrival: input.is_new_arrival,
       in_stock: input.in_stock,
       is_active: true,
@@ -491,6 +505,8 @@ export async function createProduct(input: ProductInput) {
       price,
       stripe_product_id: stripeLink.stripeProductId,
       stripe_price_id: stripeLink.stripePriceId,
+      has_variants: hasVariants,
+      variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
     })
     .select('id')
     .single()

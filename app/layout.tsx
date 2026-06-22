@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
-import Preloader from '@/components/Preloader'
 import HomeImagePreloadHead from '@/components/HomeImagePreloadHead'
 import Providers from './providers'
 import WhatsAppFloatingButtonGate from '@/components/WhatsAppFloatingButtonGate'
@@ -27,7 +26,6 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>
-          <Preloader />
           {children}
           <WhatsAppFloatingButtonGate />
         </Providers>

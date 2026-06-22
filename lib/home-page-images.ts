@@ -1,8 +1,5 @@
 /** URLs de imágenes de la página de inicio (portada + secciones). Fuente única para preload y componentes. */
 
-export const PRELOADER_IMAGE =
-  'https://marebo.b-cdn.net/PRODUCTOS/Mantones/Manton%20Dolores%203.jpeg'
-
 export const HERO_JAIPUR_LEFT =
   'https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Coral%20Jaipur(1).jpg'
 
@@ -34,7 +31,6 @@ export const INSTAGRAM_POST_IMAGES = [
 
 /** Todas las imágenes estáticas de la home (sin novedades del catálogo). */
 export const HOME_PAGE_STATIC_IMAGE_URLS: string[] = [
-  PRELOADER_IMAGE,
   HERO_JAIPUR_LEFT,
   HERO_JAIPUR_RIGHT,
   HERO_DESCARA,

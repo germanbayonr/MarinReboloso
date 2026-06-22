@@ -1,10 +1,14 @@
 import { allImageUrlsFromDatabase, imageUrlFirstFromDatabase } from '@/lib/admin/product-image-db'
+import { emptyProductVariants, parseProductVariants } from '@/lib/product-variants'
+import { formatProductDisplayName } from '@/lib/format-product-name'
 import type { AdminProduct } from '@/lib/admin/types'
 
 export function mapProductRow(p: Record<string, unknown>): AdminProduct {
+  const hasVariants = p.has_variants === true
+  const variants = parseProductVariants(p.variants)
   return {
     id: String(p.id),
-    name: String(p.name ?? ''),
+    name: formatProductDisplayName(String(p.name ?? '')),
     price: Number(p.price) || 0,
     original_price: p.original_price != null ? Number(p.original_price) : null,
     discount_percent: Number(p.discount_percent) || 0,
@@ -18,5 +22,7 @@ export function mapProductRow(p: Record<string, unknown>): AdminProduct {
     stripe_price_id: (p.stripe_price_id as string) ?? null,
     description: (p.description as string) ?? null,
     created_at: p.created_at != null ? String(p.created_at) : null,
+    has_variants: hasVariants,
+    variants: hasVariants ? variants : emptyProductVariants(),
   }
 }

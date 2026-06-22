@@ -1,44 +1,20 @@
-import { mapProductRow } from '@/lib/admin/map-product'
 import type { AdminProduct } from '@/lib/admin/types'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { collectionSlugsForProductFilter } from '@/lib/collections'
+import { fetchProductsForCollectionSlugData } from '@/lib/products-data-source'
+import { groupSimilarProductsForStorefront, type StorefrontProduct } from '@/lib/product-variants'
 
-const PRODUCT_SELECT =
-  'id,name,price,original_price,discount_percent,image_url,category,collection,is_new_arrival,in_stock,is_active,created_at'
-
-/** Productos visibles en tienda para una colección (misma lógica que el panel admin). */
+/** Productos visibles en tienda para una colección (Supabase + fallback catálogo maestro). */
 export async function fetchProductsForCollectionSlug(slug: string): Promise<{
   products: AdminProduct[]
+  storefrontProducts: StorefrontProduct[]
+  fromFallback: boolean
   error: string | null
 }> {
-  const normalized = String(slug ?? '').toLowerCase().trim()
-  if (!normalized) return { products: [], error: 'Slug vacío' }
-
-  const sb = createSupabaseServerClient()
-  const slugs = collectionSlugsForProductFilter(normalized)
-
-  let query = sb
-    .from('products')
-    .select(PRODUCT_SELECT)
-    .eq('is_active', true)
-
-  if (slugs.length > 1) {
-    query = query.or(slugs.map((s) => `collection.ilike.${s}`).join(','))
-  } else {
-    query = query.ilike('collection', slugs[0] ?? normalized)
-  }
-
-  const { data, error } = await query
-    .order('created_at', { ascending: false, nullsFirst: false })
-    .limit(500)
-
-  if (error) return { products: [], error: error.message }
-
-  const products = (data ?? []).map((row) => mapProductRow(row as Record<string, unknown>))
-  return { products, error: null }
+  const { products, fromFallback, error } = await fetchProductsForCollectionSlugData(slug)
+  const storefrontProducts = groupSimilarProductsForStorefront(products)
+  return { products, storefrontProducts, fromFallback, error }
 }
 
-export function toCollectionGridProducts(products: AdminProduct[]) {
+export function toCollectionGridProducts(products: StorefrontProduct[]) {
   return products.map((p) => ({
     id: p.id,
     name: p.name,
@@ -51,5 +27,6 @@ export function toCollectionGridProducts(products: AdminProduct[]) {
     collection: p.collection,
     is_new_arrival: p.is_new_arrival,
     created_at: p.created_at,
+    has_variants: p.has_variants || (p.display_variants?.items.length ?? 0) > 1,
   }))
 }

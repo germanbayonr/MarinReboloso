@@ -11,20 +11,16 @@ import { cn } from '@/lib/utils'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
+import {
+  findVariantItem,
+  findVariantImages,
+  variantLabel,
+  type ProductVariantsData,
+  type StorefrontProduct,
+} from '@/lib/product-variants'
 
-export type SupabaseProduct = {
-  id: string
-  name: string
-  description: string | null
-  price: number | string
-  original_price?: number | string | null
-  discount_percent?: number | string | null
-  in_stock?: boolean | null
-  image_url: string[] | string | null
-  category: string | null
-  collection?: string | null
+export type SupabaseProduct = StorefrontProduct & {
   stripe_product_id?: string | null
-  stripe_price_id?: string | null
 }
 
 function toNumber(value: number | string) {
@@ -41,7 +37,12 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
   const [animationCoords, setAnimationCoords] = useState({ x: 0, y: 0 })
   const imageRef = useRef<HTMLDivElement>(null)
   const [quantity, setQuantity] = useState(1)
-  const [selectedVariant, setSelectedVariant] = useState('Único')
+  const variantConfig: ProductVariantsData | null = product?.display_variants ?? null
+  const hasVariantOptions = (variantConfig?.items.length ?? 0) > 0
+  const initialColor = variantConfig?.items[0]?.color ?? null
+  const initialSize = variantConfig?.items[0]?.size ?? null
+  const [selectedColor, setSelectedColor] = useState<string | null>(initialColor)
+  const [selectedSize, setSelectedSize] = useState<string | null>(initialSize)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({})
 
@@ -70,21 +71,46 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
     return Number.isInteger(orig) ? String(orig) : orig.toFixed(2)
   }, [orig])
   const showDiscount = product ? hasActiveDiscount(orig, disc) : false
-  const inStock = product?.in_stock !== false
+
+  const selectedVariantItem = useMemo(() => {
+    if (!hasVariantOptions || !variantConfig) return null
+    return findVariantItem(variantConfig, selectedColor, selectedSize)
+  }, [hasVariantOptions, variantConfig, selectedColor, selectedSize])
+
+  const selectedVariant = useMemo(() => {
+    if (!hasVariantOptions) return 'Único'
+    if (selectedVariantItem) return variantLabel(selectedVariantItem)
+    return 'Único'
+  }, [hasVariantOptions, selectedVariantItem])
+
+  const inStock = selectedVariantItem ? selectedVariantItem.in_stock !== false : product?.in_stock !== false
   
   const PLACEHOLDER_IMAGE = 'https://marebo.b-cdn.net/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
 
-  // Normalizar image_url a array y corregir doble encoding
+  // Imágenes de la variante seleccionada (puede haber varias por color unificado)
   const images = useMemo(() => {
-    const rawImages = !product?.image_url ? [] : (Array.isArray(product.image_url) ? product.image_url : [product.image_url])
-    return rawImages.map(url => {
+    const variantImages =
+      hasVariantOptions && variantConfig
+        ? findVariantImages(variantConfig, selectedColor, selectedSize)
+        : []
+
+    const rawImages =
+      variantImages.length > 0
+        ? variantImages
+        : !product?.image_url
+          ? []
+          : Array.isArray(product.image_url)
+            ? product.image_url
+            : [product.image_url]
+
+    return rawImages.map((url) => {
       try {
         return decodeURIComponent(url)
       } catch {
         return url
       }
     })
-  }, [product?.image_url])
+  }, [hasVariantOptions, variantConfig, selectedColor, selectedSize, product?.image_url])
 
   const mainImageUrl = imageErrors[activeImageIndex] ? PLACEHOLDER_IMAGE : (images[activeImageIndex] || images[0] || PLACEHOLDER_IMAGE)
   const productHref = product ? `/producto/${product.id}` : ''
@@ -190,7 +216,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
               <div className="grid grid-cols-5 gap-4">
                 {images.map((img, idx) => (
                   <button
-                    key={img}
+                    key={`${img}-${idx}`}
                     onClick={() => setActiveImageIndex(idx)}
                     className={cn(
                       "relative aspect-[4/5] bg-stone-100 overflow-hidden border transition-all duration-300",
@@ -241,24 +267,101 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
               </div>
 
               <div className="space-y-6 pt-6 border-t border-border/50">
-                <div className="space-y-2">
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Variante</p>
-                  <div className="inline-flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedVariant('Único')}
-                      className={cn(
-                        'h-11 px-4 border text-xs tracking-[0.3em] uppercase transition-colors',
-                        selectedVariant === 'Único'
-                          ? 'border-foreground bg-foreground text-background'
-                          : 'border-border bg-transparent text-foreground hover:bg-foreground hover:text-background',
-                      )}
-                      suppressHydrationWarning
-                    >
-                      Único
-                    </button>
+                {hasVariantOptions && variantConfig ? (
+                  <>
+                    {variantConfig.colors.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Color</p>
+                        <div className="flex flex-wrap gap-2">
+                          {variantConfig.colors.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              onClick={() => {
+                                setSelectedColor(color)
+                                setActiveImageIndex(0)
+                                setImageErrors({})
+                              }}
+                              className={cn(
+                                'h-11 px-4 border text-xs tracking-[0.2em] uppercase transition-colors',
+                                selectedColor === color
+                                  ? 'border-foreground bg-foreground text-background'
+                                  : 'border-border bg-transparent text-foreground hover:bg-foreground hover:text-background',
+                              )}
+                            >
+                              {color}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {variantConfig.sizes.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Talla</p>
+                        <div className="flex flex-wrap gap-2">
+                          {variantConfig.sizes.map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSize(size)
+                                setActiveImageIndex(0)
+                                setImageErrors({})
+                              }}
+                              className={cn(
+                                'h-11 px-4 border text-xs tracking-[0.2em] uppercase transition-colors',
+                                selectedSize === size
+                                  ? 'border-foreground bg-foreground text-background'
+                                  : 'border-border bg-transparent text-foreground hover:bg-foreground hover:text-background',
+                              )}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {variantConfig.colors.length === 0 && variantConfig.sizes.length === 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Variante</p>
+                        <div className="flex flex-wrap gap-2">
+                          {variantConfig.items.map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedColor(item.color)
+                                setSelectedSize(item.size)
+                                setActiveImageIndex(0)
+                                setImageErrors({})
+                              }}
+                              className={cn(
+                                'h-11 px-4 border text-xs tracking-[0.15em] uppercase transition-colors',
+                                selectedVariantItem?.id === item.id
+                                  ? 'border-foreground bg-foreground text-background'
+                                  : 'border-border bg-transparent text-foreground hover:bg-foreground hover:text-background',
+                              )}
+                            >
+                              {variantLabel(item)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Variante</p>
+                    <div className="inline-flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="h-11 px-4 border border-foreground bg-foreground text-background text-xs tracking-[0.3em] uppercase"
+                      >
+                        Único
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Cantidad</p>

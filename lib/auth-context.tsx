@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { ADMIN_PANEL_EMAIL, isAdminPanelEmail } from '@/lib/admin-config'
+import { ADMIN_PANEL_EMAIL, adminPasswordResetRedirectUrl, isAdminPanelEmail } from '@/lib/admin-config'
 import { supabase } from '@/lib/supabase'
 
 export const ADMIN_EMAIL = ADMIN_PANEL_EMAIL
@@ -29,6 +29,10 @@ interface AuthContextType {
   /** @deprecated use signInWithPassword */
   login: (email: string, password: string) => Promise<'admin' | 'user' | false>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
+  /** Envía enlace de recuperación vía Supabase Auth (sincroniza contraseña en Auth). */
+  requestPasswordReset: (email: string) => Promise<{ error: string | null }>
+  /** Tras abrir el enlace del correo, establece la nueva contraseña en Supabase Auth. */
+  updatePassword: (password: string) => Promise<{ error: string | null }>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -74,6 +78,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null }
   }, [])
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const trimmed = email.trim()
+    if (!trimmed) return { error: 'Introduce tu correo electrónico.' }
+    if (!isAdminPanelEmail(trimmed)) {
+      return { error: 'Solo el correo de administración autorizado puede recuperar acceso al panel.' }
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const redirectTo = adminPasswordResetRedirectUrl(origin)
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo })
+    if (error) return { error: error.message }
+    return { error: null }
+  }, [])
+
+  const updatePassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) return { error: error.message }
+    return { error: null }
+  }, [])
+
   const login = useCallback(
     async (emailInput: string, passwordInput: string): Promise<'admin' | 'user' | false> => {
       const { error } = await signInWithPassword(emailInput, passwordInput)
@@ -102,10 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: user?.email ?? null,
       login,
       signInWithPassword,
+      requestPasswordReset,
+      updatePassword,
       logout,
       refreshUser,
     }),
-    [user, session, loading, login, signInWithPassword, logout, refreshUser],
+    [user, session, loading, login, signInWithPassword, requestPasswordReset, updatePassword, logout, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

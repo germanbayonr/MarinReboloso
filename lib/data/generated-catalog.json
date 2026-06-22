@@ -1,0 +1,746 @@
+[
+  {
+    "name": "Pendiente Esmeralda Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendiente-Esmeralda-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Amara Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-Amara-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Amber Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Amber%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Aqua Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Aqua%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Aura Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Aura%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Blush Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Blush%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coral Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Coral%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Fucsia Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Fucsia%20Jaipur%20.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Ivory Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Ivory%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Jade Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Jade%20Jaipur%20.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lavender Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Lavender%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Noir Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Noir%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Rose Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes%20Rose%20Jaipur.PNG",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Citrine Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-Citrine-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Ébano Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-E%CC%81bano-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Jaipur 1",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-Jaipur_1_.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Nira Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-Nira-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Noor Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-Noor-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Rubí Jaipur",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/II%20DROP%20Jaipur/Pendientes-Rubi%CC%81-Jaipur.webp",
+    "collection": "jaipur",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Alhambra",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Alhambra.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Coral",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Coral.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Cordoba Coral",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Cordoba%20Coral.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Cristal",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Cristal.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Linaje",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Linaje%202.JPG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Pasion",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Descara%20Pasion%202.jpg",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Folklore Negros",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Folklore%20Negros%204.JPG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Folklore blancos",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Folklore%20blancos%202.JPG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Folklore negras",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Folklore%20negras%202.JPG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Folklore turquesa",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Folklore%20turquesa%202.JPG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Reina Isabela Marfil",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientes%20Reina%20Isabela%20Marfil.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Cordoba",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/PendientesDescara%20Cordoba.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Dorados",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/PendientesDescara%20Dorados.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Esmeralda",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/PendientesDescara%20Esmeralda.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Imperio",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/PendientesDescara%20Imperio.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Linajes",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/PendientesDescara%20Linajes.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Descara Moneda",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/PendientesDescara%20Moneda.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Folklore fucsia",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientesfolklore%20fucsia.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Folklore turquesas",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pendientesfolklore%20turquesas.PNG",
+    "collection": "descara",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pulseras Folklore negras",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pulseras%20Folklore%20negras.PNG",
+    "collection": "descara",
+    "category": "pulseras"
+  },
+  {
+    "name": "Pulseras Folklore turquesa",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pulseras%20Folklore%20turquesa%202.JPG",
+    "collection": "descara",
+    "category": "pulseras"
+  },
+  {
+    "name": "Pulseras folklore fucsia",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pulseras%20folklore%20fucsia.PNG",
+    "collection": "descara",
+    "category": "pulseras"
+  },
+  {
+    "name": "Pulseras folklore turquesas",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Drop%20_Descara%CC%81_/Pulseras%20folklore%20turquesas.PNG",
+    "collection": "descara",
+    "category": "pulseras"
+  },
+  {
+    "name": "Collar Carmesí Doré",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Collar%20Carmes%C3%AD%20Dor%C3%A9.PNG",
+    "collection": "corales",
+    "category": "collares"
+  },
+  {
+    "name": "Collar Coralina Doré",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Collar%20Coralina%20Dor%C3%A9.PNG",
+    "collection": "corales",
+    "category": "collares"
+  },
+  {
+    "name": "Collar Esencia Carmesí",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Collar%20Esencia%20Carmes%C3%AD.PNG",
+    "collection": "corales",
+    "category": "collares"
+  },
+  {
+    "name": "Pendientes Clavel Carmesí",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Clavel%20Carmes%C3%AD.PNG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Clavel Márfil",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Clavel%20M%C3%A1rfil.PNG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%203.PNG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Bottel Green",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Bottel%20Green.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Bottle Green",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Bottle%20Green.jpg",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Cocoa",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Cocoa.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Electric Blue",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Electric%20Blue.PNG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Ivory",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Ivory.PNG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Pistachio",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Pistachio.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Salmon",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Salmon.PNG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Coralia Sky",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Coralia%20Sky.JPG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Pastora Crudos",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20Pastora%20Crudos.JPG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Aura Coralina coral antiguo",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20_Aura%20Coralina_%20coral%20antiguo.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Aura Coralina rojos",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20_Aura%20Coralina_%20rojos.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrimas de coral",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes%20_Lagrimas%20de%20coral_%20.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Pastora Azul",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes-Pastora-_Azul_.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Pastora Pistacho",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes-Pastora-_Pistacho.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Pastora Verde Botella",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes-Pastora-_Verde-Botella_.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Solea Rojos",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes-Solea-Rojos.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Solea naranjas",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes-Solea-naranjas.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Solea negros",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/Pendientes-Solea-negros.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "pendientes lagrimas coralinas crudo",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/pendientes%20lagrimas%20coralinas%20crudo.PNG",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "pendientes ecos de coral",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/pendientes-ecos-de-coral.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "pendientes lagrimas de Coralinas",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Corales/pendientes-lagrimas-de-Coralinas.png",
+    "collection": "corales",
+    "category": "pendientes"
+  },
+  {
+    "name": "Collar Duquesa Blanca",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Collar%20Duquesa%20Blanca.PNG",
+    "collection": "filipa",
+    "category": "collares"
+  },
+  {
+    "name": "Collar Filipa",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Collar%20Filipa.PNG",
+    "collection": "filipa",
+    "category": "collares"
+  },
+  {
+    "name": "Pendientes flor de perlas",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20flor%20de%20perlas.PNG",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Herencia Imperial",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Herencia%20Imperial.jpeg",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Jardin Imperial",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Jardin%20Imperial.PNG",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Legado Bizantino",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Legado%20Bizantino.PNG",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Linaje Carmesi",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Linaje%20Carmesi.jpg",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Milano Noir",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Milano%20Noir.PNG",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Noche Barroca",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Noche%20Barroca.jpeg",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Notte Milano",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Notte%20Milano.PNG",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Perla Imperiale",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Perla%20Imperiale.PNG",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Rosso Milano",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/Filipa/Pendientes%20Rosso%20Milano.PNG",
+    "collection": "filipa",
+    "category": "pendientes"
+  },
+  {
+    "name": "Aurora de Perlas Doradas",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Aurora%20de%20Perlas%20Doradas.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Bloom de Perlas",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Bloom%20de%20Perlas.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Flor MAREBO Dore",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Flor%20MAREBO%20Dore.jpg",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Flor de Perlas Vintage",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Flor%20de%20Perlas%20Vintage%20.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Magnolia Aurea",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Magnolia%20Aurea.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Magnolia Dorada",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Magnolia%20Dorada.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Magnolia Perla Eterna",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Magnolia%20Perla%20Eterna.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Aura Carmin",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Aura%20Carmin.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Aura Noir",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Aura%20Noir.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Aura marfil",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Aura%20marfil.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Aura nacar",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Aura%20nacar.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Aura turquesa",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Aura%20turquesa.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Corona",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Corona.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Flor Esmeralda",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Flor%20Esmeralda.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Flor MAREBO Dore",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Flor%20MAREBO%20Dore.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Flor Noir MAREBO Dore",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Flor%20Noir%20MAREBO%20Dore.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Imperial",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Imperial.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Triangulo Noir",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Triangulo%20Noir.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Triangulo Rubi",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Triangulo%20Rubi.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendiente Triangulo esmeralda",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendiente%20Triangulo%20esmeralda.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Aura Carmín",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Aura%20Carmi%CC%81n.JPG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Aura Nacar",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Aura%20Nacar.JPG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Aura Noir",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Aura%20Noir.jpg",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Floir Noir MAREBO",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Floir%20Noir%20MAREBO.jpg",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Geometria Azul Real",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Geometria%20Azul%20Real.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Geometria Esmeralda",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Geometria%20Esmeralda.jpg",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Geometria Vino",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Geometria%20Vino.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Imperial",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Imperial%202.png",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Isabela Aguamarina",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Isabela%20Aguamarina.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Isabela Vino",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Isabela%20Vino.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Isolde",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Isolde.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrima Buganvilla Real",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Lagrima%20Buganvilla%20Real%20.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrima Esmeralda Profunda",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Lagrima%20Esmeralda%20Profunda.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrima Imperial Azul",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Lagrima%20Imperial%20Azul.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrima Jade Dorado",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Lagrima%20Jade%20Dorado.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrima Marfil Dorado",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Lagrima%20Marfil%20Dorado.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrima Rosa Empolvado",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Lagrima%20Rosa%20Empolvado%20.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Lagrima Vino Imperial",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Lagrima%20Vino%20Imperial.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes Triángulo Rubí",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20Tria%CC%81ngulo%20Rubi%CC%81.JPG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes lagrima Coral Dorado",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20lagrima%20Coral%20Dorado.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes soberana grandes",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20soberana%20grandes.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  },
+  {
+    "name": "Pendientes soberana little",
+    "image_url": "https://marebo.b-cdn.net/Colecciones/MAREBO/Pendientes%20soberana%20little.PNG",
+    "collection": "marebo",
+    "category": "pendientes"
+  }
+]

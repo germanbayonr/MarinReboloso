@@ -38,7 +38,7 @@ async function fetchPortadaImageUrls(): Promise<string[]> {
   return portadaImageUrls(rows)
 }
 
-/** Precarga portada (DB), banners, Instagram y novedades durante el preloader. */
+/** Precarga portada (DB), banners, Instagram y novedades de la home. */
 export async function preloadHomePageImages(): Promise<void> {
   const [novedadesUrls, portadaUrls] = await Promise.all([
     fetchNovedadesImageUrls(),

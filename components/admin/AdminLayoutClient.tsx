@@ -18,6 +18,10 @@ export default function AdminLayoutClient({ children }: { children: ReactNode })
     setMobileOpen(false)
   }, [pathname])
 
+  if (pathname === '/admin/restablecer-contrasena' || pathname === '/admin/login') {
+    return <>{children}</>
+  }
+
   return (
     <div className="flex min-h-screen bg-[#f8f8f7]">
       <div className="hidden min-h-screen w-60 flex-col md:flex">
@@ -52,7 +56,7 @@ export default function AdminLayoutClient({ children }: { children: ReactNode })
           <span className="font-serif text-sm uppercase tracking-[0.18em] md:hidden">MAREBO :)</span>
 
           <div className="ml-auto flex items-center gap-3">
-            <AdminAuthDropdown />
+            <AdminAuthDropdown adminMode />
           </div>
         </header>
 

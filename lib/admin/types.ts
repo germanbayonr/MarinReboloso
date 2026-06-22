@@ -1,3 +1,5 @@
+import type { ProductVariantsData } from '@/lib/product-variants'
+
 export type AdminProduct = {
   id: string
   name: string
@@ -16,6 +18,8 @@ export type AdminProduct = {
   stripe_price_id: string | null
   description: string | null
   created_at: string | null
+  has_variants: boolean
+  variants: ProductVariantsData
 }
 
 export const ORDER_STATUSES = [

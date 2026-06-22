@@ -35,7 +35,7 @@ export async function getSessionUser() {
 export async function ensureAdminOrRedirect() {
   const user = await getSessionUser()
   if (!isAdminPanelEmail(user?.email)) {
-    redirect('/?acceso=denegado')
+    redirect('/admin/login')
   }
   return user
 }

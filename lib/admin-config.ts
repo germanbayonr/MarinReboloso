@@ -5,3 +5,7 @@ export function isAdminPanelEmail(email: string | null | undefined): boolean {
   if (!email) return false
   return email.trim().toLowerCase() === ADMIN_PANEL_EMAIL.toLowerCase()
 }
+
+export function adminPasswordResetRedirectUrl(origin: string): string {
+  return `${origin.replace(/\/$/, '')}/admin/restablecer-contrasena`
+}
