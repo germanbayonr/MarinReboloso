@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin-user.mjs",
-    "db:collections": "node --env-file=.env.local scripts/apply-collections-migration.mjs"
+    "db:collections": "node --env-file=.env.local scripts/apply-collections-migration.mjs",
+    "db:products-variants": "node --env-file=.env.local scripts/apply-products-variants-migration.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

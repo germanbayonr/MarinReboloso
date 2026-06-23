@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
@@ -25,6 +26,7 @@ import {
   adminSetProductCatalogVisible,
   adminSetProductStock,
   deleteProduct,
+  deleteProducts,
   updateProduct,
 } from '@/app/admin/actions'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
@@ -38,14 +40,52 @@ import { emptyProductVariants, type ProductVariantsData } from '@/lib/product-va
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
+type DeleteConfirmState = {
+  products: AdminProduct[]
+} | null
+
+function DeleteProductDialogDescription({ products }: { products: AdminProduct[] }) {
+  const preview = products.slice(0, 5)
+  const remaining = products.length - preview.length
+
+  return (
+    <div className="space-y-3 text-neutral-600">
+      <p>
+        {products.length === 1 ? (
+          <>
+            Se eliminará <span className="font-medium text-neutral-900">{products[0].name}</span> de Supabase
+            (incluidas las imágenes) y se desactivará en Stripe. Esta acción no se puede deshacer.
+          </>
+        ) : (
+          <>
+            Se eliminarán <span className="font-medium text-neutral-900">{products.length} productos</span> de
+            Supabase (incluidas las imágenes) y se desactivarán en Stripe. Esta acción no se puede deshacer.
+          </>
+        )}
+      </p>
+      {products.length > 1 ? (
+        <ul className="list-disc space-y-1 pl-4 text-sm">
+          {preview.map((p) => (
+            <li key={p.id}>{p.name}</li>
+          ))}
+          {remaining > 0 ? <li>…y {remaining} más</li> : null}
+        </ul>
+      ) : null}
+    </div>
+  )
+}
+
 export function ProductEditModal({
   product,
   collectionOptions = PRODUCT_COLLECTION_OPTIONS,
+  defaultCollectionSlug,
   onClose,
   onSaved,
 }: {
   product: AdminProduct
   collectionOptions?: { slug: string; label: string }[]
+  /** Si se edita desde una colección, fuerza ese slug al guardar si el campo queda vacío. */
+  defaultCollectionSlug?: string
   onClose: () => void
   onSaved: (p: AdminProduct) => void
 }) {
@@ -56,13 +96,17 @@ export function ProductEditModal({
         ? [product.image_url]
         : []
   const origBase = product.original_price ?? product.price
+  const initialCollection =
+    product.collection?.trim() ||
+    defaultCollectionSlug?.trim() ||
+    ''
   const [form, setForm] = useState({
     name: product.name,
     description: product.description ?? '',
     original_price: String(origBase),
     discount_percent: String(product.discount_percent ?? 0),
     category: product.category ?? 'accesorios',
-    collection: product.collection ?? '',
+    collection: initialCollection,
     image_url: product.image_url ?? '',
     is_new_arrival: product.is_new_arrival,
     in_stock: product.in_stock,
@@ -90,7 +134,7 @@ export function ProductEditModal({
       name: form.name.trim(),
       description: form.description.trim() || null,
       category: form.category,
-      collection: form.collection.trim() || null,
+      collection: form.collection.trim() || defaultCollectionSlug?.trim() || null,
       image_url: useVariants ? variantUrls[0] : cleanedImages[0] ?? (form.image_url.trim() || null),
       image_urls: useVariants ? variantUrls : cleanedImages,
       is_new_arrival: form.is_new_arrival,
@@ -441,8 +485,9 @@ export default function ProductsAdminClient({
   const [isSyncingWithStripe, setIsSyncingWithStripe] = useState(false)
   const [syncFailures, setSyncFailures] = useState<Array<{ name: string; reason: string }>>([])
   const [editing, setEditing] = useState<AdminProduct | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null)
   const [isDeletingProduct, setIsDeletingProduct] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
 
   const sortedProducts = useMemo(() => sortProductsByCreatedAtDesc(products), [products])
 
@@ -459,8 +504,55 @@ export default function ProductsAdminClient({
     )
   }, [sortedProducts, search, collectionOptions])
 
+  const isCollectionView = variant === 'collection'
+  const selectedCount = selectedIds.size
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id))
+  const someFilteredSelected = filtered.some((p) => selectedIds.has(p.id))
+
+  function toggleProductSelection(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAllFiltered() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allFilteredSelected) filtered.forEach((p) => next.delete(p.id))
+      else filtered.forEach((p) => next.add(p.id))
+      return next
+    })
+  }
+
   const columns = useMemo<ColumnDef<AdminProduct>[]>(
     () => [
+      ...(!isCollectionView
+        ? [
+            {
+              id: 'select',
+              header: () => (
+                <Checkbox
+                  checked={allFilteredSelected ? true : someFilteredSelected ? 'indeterminate' : false}
+                  onCheckedChange={() => toggleSelectAllFiltered()}
+                  aria-label="Seleccionar todos los productos visibles"
+                />
+              ),
+              cell: ({ row }: { row: { original: AdminProduct } }) => {
+                const p = row.original
+                return (
+                  <Checkbox
+                    checked={selectedIds.has(p.id)}
+                    onCheckedChange={() => toggleProductSelection(p.id)}
+                    aria-label={`Seleccionar ${p.name}`}
+                  />
+                )
+              },
+            } satisfies ColumnDef<AdminProduct>,
+          ]
+        : []),
       {
         id: 'product',
         header: 'Producto',
@@ -600,7 +692,7 @@ export default function ProductsAdminClient({
               </button>
               <button
                 type="button"
-                onClick={() => setDeleteTarget(p)}
+                onClick={() => setDeleteConfirm({ products: [p] })}
                 className="p-1.5 text-neutral-500 hover:text-red-600"
                 aria-label="Eliminar"
               >
@@ -611,10 +703,59 @@ export default function ProductsAdminClient({
         },
       },
     ],
-    [collectionOptions],
+    [allFilteredSelected, collectionOptions, isCollectionView, selectedIds, someFilteredSelected],
   )
 
-  const isCollectionView = variant === 'collection'
+  const productsPendingDelete = deleteConfirm?.products ?? []
+  const isBulkDelete = productsPendingDelete.length > 1
+
+  async function confirmDeleteProducts() {
+    if (productsPendingDelete.length === 0) return
+    setIsDeletingProduct(true)
+    try {
+      if (isBulkDelete) {
+        const res = await deleteProducts(productsPendingDelete.map((p) => p.id))
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        const failedIds = new Set(res.failures.map((f) => f.id))
+        const deletedIds = productsPendingDelete.map((p) => p.id).filter((id) => !failedIds.has(id))
+        if (deletedIds.length > 0) {
+          setProducts((prev) => prev.filter((x) => !deletedIds.includes(x.id)))
+          setSelectedIds((prev) => {
+            const next = new Set(prev)
+            deletedIds.forEach((id) => next.delete(id))
+            return next
+          })
+          notifySiteCatalogChanged()
+        }
+        if (res.failures.length > 0) {
+          toast.error(`${res.deletedCount} eliminado(s). ${res.failures.length} error(es).`)
+          return
+        }
+        toast.success(`${res.deletedCount} producto(s) eliminados de Supabase y Stripe`)
+      } else {
+        const target = productsPendingDelete[0]
+        const res = await deleteProduct(target.id)
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        setProducts((prev) => prev.filter((x) => x.id !== target.id))
+        setSelectedIds((prev) => {
+          const next = new Set(prev)
+          next.delete(target.id)
+          return next
+        })
+        notifySiteCatalogChanged()
+        toast.success('Producto eliminado de Supabase y Stripe')
+      }
+      setDeleteConfirm(null)
+    } finally {
+      setIsDeletingProduct(false)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -622,6 +763,7 @@ export default function ProductsAdminClient({
         <ProductEditModal
           product={editing}
           collectionOptions={collectionOptions}
+          defaultCollectionSlug={collectionSlug}
           onClose={() => setEditing(null)}
           onSaved={(next) => {
             setProducts((prev) => prev.map((x) => (x.id === next.id ? next : x)))
@@ -639,6 +781,19 @@ export default function ProductsAdminClient({
           <p className="mt-0.5 text-sm text-neutral-500">{products.length} productos</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {!isCollectionView && selectedCount > 0 ? (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                const selected = products.filter((p) => selectedIds.has(p.id))
+                if (selected.length === 0) return
+                setDeleteConfirm({ products: selected })
+              }}
+            >
+              Eliminar seleccionados ({selectedCount})
+            </Button>
+          ) : null}
           {!isCollectionView ? (
           <Button
             type="button"
@@ -710,18 +865,18 @@ export default function ProductsAdminClient({
       <AdminDataTable data={filtered} columns={columns} pageSize={10} pageSizeOptions={[10, 25, 50, 100]} />
 
       <AlertDialog
-        open={deleteTarget != null}
+        open={deleteConfirm != null}
         onOpenChange={(open) => {
-          if (!open && !isDeletingProduct) setDeleteTarget(null)
+          if (!open && !isDeletingProduct) setDeleteConfirm(null)
         }}
       >
         <AlertDialogContent className="border-neutral-200 bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-serif tracking-wide text-neutral-900">
-              ¿Eliminar este producto?
+              {isBulkDelete ? `¿Eliminar ${productsPendingDelete.length} productos?` : '¿Eliminar este producto?'}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-neutral-600">
-              Se borrará por completo.
+            <AlertDialogDescription asChild>
+              <DeleteProductDialogDescription products={productsPendingDelete} />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">
@@ -735,24 +890,9 @@ export default function ProductsAdminClient({
               type="button"
               variant="destructive"
               disabled={isDeletingProduct}
-              onClick={async () => {
-                if (!deleteTarget) return
-                setIsDeletingProduct(true)
-                try {
-                  const res = await deleteProduct(deleteTarget.id)
-                  if (!res.ok) {
-                    toast.error(res.error)
-                    return
-                  }
-                  setProducts((prev) => prev.filter((x) => x.id !== deleteTarget.id))
-                  toast.success('Producto e imágenes eliminados')
-                  setDeleteTarget(null)
-                } finally {
-                  setIsDeletingProduct(false)
-                }
-              }}
+              onClick={() => void confirmDeleteProducts()}
             >
-              {isDeletingProduct ? 'Eliminando…' : 'Eliminar'}
+              {isDeletingProduct ? 'Eliminando…' : isBulkDelete ? `Eliminar ${productsPendingDelete.length}` : 'Eliminar'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

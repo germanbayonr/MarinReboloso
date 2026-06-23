@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import Stripe from 'stripe'
 import { revalidatePath } from 'next/cache'
 import { allImageUrlsFromDatabase, imageUrlsForDatabaseColumn } from '@/lib/admin/product-image-db'
+import { archiveStripeProduct } from '@/lib/admin/archive-stripe-product'
 import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
 import { getAllowedCollectionSlugs } from '@/lib/collections'
@@ -18,6 +19,8 @@ import { mapProductRow } from '@/lib/admin/map-product'
 import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
 import { compressProductImageBuffer } from '@/lib/admin/compress-product-image-server'
 import { STORAGE_IMMUTABLE_CACHE_CONTROL } from '@/lib/image-delivery'
+import { insertProductRow, updateProductRow } from '@/lib/admin/product-db-write'
+import { ADMIN_PRODUCT_SELECT, ADMIN_PRODUCT_SELECT_LEGACY, isMissingVariantsColumnError } from '@/lib/admin/product-db-schema'
 import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { TEST_EMAIL_TO } from '@/lib/admin/test-email-config'
@@ -255,13 +258,14 @@ async function createStripeProductAndPrice({
     unit_amount: unitAmount,
     recurring: undefined,
   })
+  await stripe.products.update(stripeProduct.id, { default_price: stripePrice.id })
   return {
     stripeProductId: stripeProduct.id,
     stripePriceId: stripePrice.id,
   }
 }
 
-async function ensureStripeProductHasOneTimeDefaultPrice({
+async function ensureOneTimePriceForStripeProduct({
   stripe,
   stripeProductId,
   currentPriceId,
@@ -269,26 +273,48 @@ async function ensureStripeProductHasOneTimeDefaultPrice({
 }: {
   stripe: Stripe
   stripeProductId: string
-  currentPriceId: string
+  currentPriceId: string | null
   amountEur: number
 }): Promise<string> {
-  const currentPrice = await stripe.prices.retrieve(currentPriceId)
-  if (!currentPrice.recurring) return currentPrice.id
-
-  const unitAmount = Math.round(amountEur * 100)
-  if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
-    throw new Error('Precio no válido para reemplazar price recurrente por puntual.')
+  const expectedUnitAmount = Math.round(amountEur * 100)
+  if (!Number.isFinite(expectedUnitAmount) || expectedUnitAmount <= 0) {
+    throw new Error('Precio no válido para Stripe.')
   }
 
-  const oneTimePrice = await stripe.prices.create({
-    product: stripeProductId,
-    currency: (currentPrice.currency || 'eur').toLowerCase(),
-    unit_amount: unitAmount,
-    recurring: undefined,
-  })
+  if (currentPriceId) {
+    try {
+      const current = await stripe.prices.retrieve(currentPriceId)
+      if (
+        current.active &&
+        current.currency === 'eur' &&
+        !current.recurring &&
+        current.unit_amount === expectedUnitAmount
+      ) {
+        await stripe.products.update(stripeProductId, { default_price: currentPriceId, active: true })
+        return currentPriceId
+      }
+    } catch {
+      // Continuar: buscar o crear precio puntual
+    }
+  }
 
-  await stripe.products.update(stripeProductId, { default_price: oneTimePrice.id })
-  return oneTimePrice.id
+  const listed = await stripe.prices.list({ product: stripeProductId, active: true, limit: 100 })
+  const matching = listed.data.find(
+    (price) =>
+      price.currency === 'eur' && !price.recurring && price.unit_amount === expectedUnitAmount,
+  )
+  if (matching) {
+    await stripe.products.update(stripeProductId, { default_price: matching.id, active: true })
+    return matching.id
+  }
+
+  const freshPrice = await stripe.prices.create({
+    product: stripeProductId,
+    currency: 'eur',
+    unit_amount: expectedUnitAmount,
+  })
+  await stripe.products.update(stripeProductId, { default_price: freshPrice.id, active: true })
+  return freshPrice.id
 }
 
 async function findOrCreateStripeProductLink({
@@ -308,14 +334,10 @@ async function findOrCreateStripeProductLink({
 }): Promise<StripeLinkResult> {
   const matchResult = findStripeProductMatch({ supabaseProductName: name, stripeProducts })
   if (matchResult.ok) {
-    const matchedPriceId = matchResult.product.defaultPriceId
-    if (!matchedPriceId) {
-      throw new Error('Producto encontrado en Stripe sin default_price.')
-    }
-    const ensuredOneTimePriceId = await ensureStripeProductHasOneTimeDefaultPrice({
+    const ensuredOneTimePriceId = await ensureOneTimePriceForStripeProduct({
       stripe,
       stripeProductId: matchResult.product.id,
-      currentPriceId: matchedPriceId,
+      currentPriceId: matchResult.product.defaultPriceId,
       amountEur,
     })
     return { stripeProductId: matchResult.product.id, stripePriceId: ensuredOneTimePriceId }
@@ -370,11 +392,20 @@ function shippingFieldsFromStripeSession(session: Stripe.Checkout.Session) {
 export async function adminGetProducts(): Promise<AdminProduct[]> {
   await ensureAdminOrRedirect()
   const sb = getServiceSupabase()
-  const { data, error } = await sb
+  let { data, error } = await sb
     .from('products')
-    .select('*')
+    .select(ADMIN_PRODUCT_SELECT)
     .order('created_at', { ascending: false, nullsFirst: false })
     .limit(5000)
+  if (error && isMissingVariantsColumnError(error.message)) {
+    const legacy = await sb
+      .from('products')
+      .select(ADMIN_PRODUCT_SELECT_LEGACY)
+      .order('created_at', { ascending: false, nullsFirst: false })
+      .limit(5000)
+    data = legacy.data
+    error = legacy.error
+  }
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => mapProductRow(row as Record<string, unknown>))
 }
@@ -408,25 +439,21 @@ export async function updateProduct(id: string, input: ProductInput) {
   const imageInput = hasVariants && variantImages.length
     ? { image_url: variantImages[0], image_urls: variantImages }
     : input
-  const { data, error } = await sb
-    .from('products')
-    .update({
-      name: input.name,
-      description: input.description,
-      category: input.category,
-      collection,
-      image_url: imageUrlsForDatabaseColumn(imageInput),
-      is_new_arrival: input.is_new_arrival,
-      in_stock: input.in_stock,
-      original_price: input.original_price,
-      discount_percent: input.discount_percent,
-      price,
-      has_variants: hasVariants,
-      variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
-    })
-    .eq('id', id)
-    .select('*')
-    .single()
+  const writePayload = {
+    name: input.name,
+    description: input.description,
+    category: input.category,
+    collection,
+    image_url: imageUrlsForDatabaseColumn(imageInput),
+    is_new_arrival: input.is_new_arrival,
+    in_stock: input.in_stock,
+    original_price: input.original_price,
+    discount_percent: input.discount_percent,
+    price,
+    has_variants: hasVariants,
+    variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
+  }
+  const { data, error } = await updateProductRow(sb, id, writePayload)
   if (error) return productMutationErrorResult('update', error.message)
 
   const row = (data ?? {}) as Record<string, unknown>
@@ -458,31 +485,103 @@ export async function updateProduct(id: string, input: ProductInput) {
   return { ok: true as const, product: mapProductRow(row) }
 }
 
-export async function deleteProduct(id: string) {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false as const, error: sup.error }
-  const sb = sup.client
+type ProductDeleteRow = {
+  id: string
+  name?: string | null
+  image_url?: unknown
+  stripe_product_id?: string | null
+}
 
-  const { data: row, error: fetchErr } = await sb.from('products').select('image_url').eq('id', id).maybeSingle()
-  if (fetchErr) return { ok: false as const, error: fetchErr.message }
-  if (!row) return { ok: false as const, error: 'Producto no encontrado' }
+async function deleteOneProductFromStores(
+  sb: ReturnType<typeof getServiceSupabase>,
+  stripe: Stripe | null,
+  row: ProductDeleteRow,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const stripeProductId = row.stripe_product_id?.trim() ?? ''
+  if (stripeProductId) {
+    if (!stripe) {
+      return { ok: false, error: 'Falta STRIPE_SECRET_KEY para eliminar el producto en Stripe.' }
+    }
+    const archived = await archiveStripeProduct(stripe, stripeProductId)
+    if (!archived.ok) return { ok: false, error: `No se pudo desactivar en Stripe: ${archived.error}` }
+  }
 
-  const imageUrls = allImageUrlsFromDatabase((row as { image_url?: unknown }).image_url)
+  const imageUrls = allImageUrlsFromDatabase(row.image_url)
   if (imageUrls.length > 0) {
     const rm = await removeProductImagesFromSupabaseStorage(sb, imageUrls)
     if (!rm.ok) {
       logAdminSupabaseIssue('STORAGE_DELETE_FAILED', 'No se pudieron borrar imágenes en Storage antes de eliminar el producto.', {
         supabaseMessage: rm.error,
       })
-      return { ok: false as const, error: `No se pudieron borrar las imágenes en Storage: ${rm.error}` }
+      return { ok: false, error: `No se pudieron borrar las imágenes en Storage: ${rm.error}` }
     }
   }
 
-  const { error } = await sb.from('products').delete().eq('id', id)
+  const { error } = await sb.from('products').delete().eq('id', row.id)
   if (error) return productMutationErrorResult('delete', error.message)
+  return { ok: true }
+}
+
+export async function deleteProduct(id: string) {
+  await ensureAdminOrRedirect()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false as const, error: sup.error }
+  const sb = sup.client
+
+  const { data: row, error: fetchErr } = await sb
+    .from('products')
+    .select('id, name, image_url, stripe_product_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchErr) return { ok: false as const, error: fetchErr.message }
+  if (!row) return { ok: false as const, error: 'Producto no encontrado' }
+
+  const secret = stripeSecretKey()
+  const stripe = secret ? new Stripe(secret) : null
+  const deleted = await deleteOneProductFromStores(sb, stripe, row as ProductDeleteRow)
+  if (!deleted.ok) return { ok: false as const, error: deleted.error }
+
   revalidateCatalogPaths()
   return { ok: true as const }
+}
+
+export async function deleteProducts(ids: string[]) {
+  await ensureAdminOrRedirect()
+  const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))]
+  if (uniqueIds.length === 0) return { ok: false as const, error: 'No hay productos seleccionados' }
+
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false as const, error: sup.error }
+  const sb = sup.client
+
+  const { data: rows, error: fetchErr } = await sb
+    .from('products')
+    .select('id, name, image_url, stripe_product_id')
+    .in('id', uniqueIds)
+  if (fetchErr) return { ok: false as const, error: fetchErr.message }
+
+  const secret = stripeSecretKey()
+  const stripe = secret ? new Stripe(secret) : null
+  const failures: Array<{ id: string; name?: string; error: string }> = []
+  let deletedCount = 0
+
+  const foundIds = new Set<string>()
+  for (const row of (rows ?? []) as ProductDeleteRow[]) {
+    foundIds.add(row.id)
+    const deleted = await deleteOneProductFromStores(sb, stripe, row)
+    if (!deleted.ok) {
+      failures.push({ id: row.id, name: row.name ?? undefined, error: deleted.error })
+      continue
+    }
+    deletedCount++
+  }
+
+  for (const id of uniqueIds) {
+    if (!foundIds.has(id)) failures.push({ id, error: 'Producto no encontrado' })
+  }
+
+  if (deletedCount > 0) revalidateCatalogPaths()
+  return { ok: true as const, deletedCount, failures }
 }
 
 export async function createProduct(input: ProductInput) {
@@ -519,30 +618,27 @@ export async function createProduct(input: ProductInput) {
     return { ok: false as const, error: errorMessage }
   }
 
-  const { data, error } = await sb
-    .from('products')
-    .insert({
-      name: input.name,
-      description: input.description,
-      category: input.category,
-      collection,
-      image_url: imageUrlsForDatabaseColumn(imageInput),
-      is_new_arrival: input.is_new_arrival,
-      in_stock: input.in_stock,
-      is_active: true,
-      original_price: input.original_price,
-      discount_percent: input.discount_percent,
-      price,
-      stripe_product_id: stripeLink.stripeProductId,
-      stripe_price_id: stripeLink.stripePriceId,
-      has_variants: hasVariants,
-      variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
-    })
-    .select('id')
-    .single()
+  const insertPayload = {
+    name: input.name,
+    description: input.description,
+    category: input.category,
+    collection,
+    image_url: imageUrlsForDatabaseColumn(imageInput),
+    is_new_arrival: input.is_new_arrival,
+    in_stock: input.in_stock,
+    is_active: true,
+    original_price: input.original_price,
+    discount_percent: input.discount_percent,
+    price,
+    stripe_product_id: stripeLink.stripeProductId,
+    stripe_price_id: stripeLink.stripePriceId,
+    has_variants: hasVariants,
+    variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
+  }
+  const { data, error, id: insertedId } = await insertProductRow(sb, insertPayload)
   if (error) return productMutationErrorResult('create', error.message)
   revalidateCatalogPaths(collection)
-  return { ok: true as const, id: data.id as string }
+  return { ok: true as const, id: insertedId ?? String((data as { id?: string })?.id ?? '') }
 }
 
 export async function syncProductsWithStripe(): Promise<{
@@ -824,6 +920,7 @@ export async function adminSetProductCatalogVisible(id: string, is_active: boole
 
 export const adminUpdateProduct = updateProduct
 export const adminDeleteProduct = deleteProduct
+export const adminDeleteProducts = deleteProducts
 export const adminCreateProduct = createProduct
 export const adminCreateProductWithImages = createProductWithImages
 export const adminSyncProductsWithStripe = syncProductsWithStripe

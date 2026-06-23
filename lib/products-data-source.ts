@@ -6,6 +6,7 @@ import {
   getMasterCatalogProducts,
   isSupabaseQuotaOrUnavailableError,
 } from '@/lib/master-catalog-products'
+import { isMissingVariantsColumnError } from '@/lib/admin/product-db-schema'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const PRODUCT_SELECT =
@@ -13,12 +14,6 @@ const PRODUCT_SELECT =
 
 const PRODUCT_SELECT_LEGACY =
   'id,name,price,original_price,discount_percent,image_url,category,collection,is_new_arrival,in_stock,is_active,created_at,description,stripe_price_id,stripe_product_id'
-
-function isMissingVariantsColumnError(message: string | null | undefined): boolean {
-  if (!message) return false
-  const m = message.toLowerCase()
-  return m.includes('has_variants') || m.includes('variants')
-}
 
 export interface ProductsFetchResult {
   products: AdminProduct[]
@@ -104,7 +99,15 @@ export async function fetchProductRowById(id: string): Promise<{
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed)
     let query = sb.from('products').select(PRODUCT_SELECT).eq('is_active', true)
     query = isUUID ? query.eq('id', trimmed) : query.ilike('name', trimmed.replace(/-/g, ' '))
-    const { data, error } = await query.maybeSingle()
+    let { data, error } = await query.maybeSingle()
+
+    if (error && isMissingVariantsColumnError(error.message)) {
+      let legacyQuery = sb.from('products').select(PRODUCT_SELECT_LEGACY).eq('is_active', true)
+      legacyQuery = isUUID ? legacyQuery.eq('id', trimmed) : legacyQuery.ilike('name', trimmed.replace(/-/g, ' '))
+      const legacy = await legacyQuery.maybeSingle()
+      data = legacy.data
+      error = legacy.error
+    }
 
     if (error && isSupabaseQuotaOrUnavailableError(error.message)) {
       const { findMasterCatalogProductById, findMasterCatalogProductByNameSlug } = await import(
