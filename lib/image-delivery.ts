@@ -4,15 +4,19 @@ export type ProductImageVariant = 'grid' | 'detail' | 'thumb'
 
 const SUPABASE_PUBLIC_MARKER = '/storage/v1/object/public/'
 
-/** Normaliza URL (decodifica doble-encoding de Bunny, etc.). */
+/** Normaliza URL sin romper rutas codificadas (%20, acentos, etc.). */
 export function normalizeProductImageUrl(raw: string): string {
   const trimmed = String(raw ?? '').trim()
   if (!trimmed) return ''
-  try {
-    return decodeURIComponent(trimmed)
-  } catch {
-    return trimmed
+  // Solo corregir doble-encoding (%2520 → %20), nunca decodificar URLs ya válidas.
+  if (trimmed.includes('%25')) {
+    try {
+      return decodeURIComponent(trimmed)
+    } catch {
+      return trimmed
+    }
   }
+  return trimmed
 }
 
 export function isSupabaseStorageUrl(url: string): boolean {
