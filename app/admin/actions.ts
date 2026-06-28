@@ -1,9 +1,8 @@
 'use server'
 
-import { randomUUID } from 'crypto'
 import Stripe from 'stripe'
 import { revalidatePath } from 'next/cache'
-import { allImageUrlsFromDatabase, imageUrlsForDatabaseColumn } from '@/lib/admin/product-image-db'
+import { allImageUrlsFromDatabase, imageUrlFirstFromDatabase, imageUrlsForDatabaseColumn } from '@/lib/admin/product-image-db'
 import { archiveStripeProduct } from '@/lib/admin/archive-stripe-product'
 import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
@@ -17,8 +16,7 @@ import {
 import { computeFinalPrice } from '@/lib/pricing'
 import { mapProductRow } from '@/lib/admin/map-product'
 import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
-import { compressProductImageBuffer } from '@/lib/admin/compress-product-image-server'
-import { STORAGE_IMMUTABLE_CACHE_CONTROL } from '@/lib/image-delivery'
+import { uploadOptimizedAdminImages } from '@/lib/admin/upload-optimized-admin-images'
 import { insertProductRow, updateProductRow } from '@/lib/admin/product-db-write'
 import { ADMIN_PRODUCT_SELECT, ADMIN_PRODUCT_SELECT_LEGACY, isMissingVariantsColumnError } from '@/lib/admin/product-db-schema'
 import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
@@ -485,6 +483,73 @@ export async function updateProduct(id: string, input: ProductInput) {
   return { ok: true as const, product: mapProductRow(row) }
 }
 
+/** Sincroniza galería: borra ficheros en Storage, actualiza BD y opcionalmente imagen en Stripe. */
+export async function syncProductGallery(
+  productId: string,
+  input: {
+    image_urls: string[]
+    removed_urls: string[]
+    /** true solo si se eliminó al menos una imagen y se añadió otra nueva */
+    update_stripe_image: boolean
+  },
+) {
+  await ensureAdminOrRedirect()
+  const sup = getServiceSupabaseForAction()
+  if (!sup.ok) return { ok: false as const, error: sup.error }
+  const sb = sup.client
+  const id = String(productId ?? '').trim()
+  if (!id) return { ok: false as const, error: 'ID de producto inválido' }
+
+  const { data: row, error: fetchErr } = await sb
+    .from('products')
+    .select('id,collection,stripe_product_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchErr) return { ok: false as const, error: fetchErr.message }
+  if (!row) return { ok: false as const, error: 'Producto no encontrado' }
+
+  const removed = [...new Set(input.removed_urls.map((u) => u.trim()).filter(Boolean))]
+  if (removed.length > 0) {
+    const rm = await removeProductImagesFromSupabaseStorage(sb, removed)
+    if (!rm.ok) {
+      return { ok: false as const, error: `No se pudieron borrar las imágenes en Storage: ${rm.error}` }
+    }
+  }
+
+  const urls = input.image_urls.map((u) => String(u).trim()).filter(Boolean)
+  const imageColumn = imageUrlsForDatabaseColumn({
+    image_url: urls[0] ?? null,
+    image_urls: urls,
+  })
+
+  const { data, error } = await updateProductRow(sb, id, { image_url: imageColumn })
+  if (error) return productMutationErrorResult('update', error.message)
+
+  const mappedRow = (data ?? {}) as Record<string, unknown>
+  const collection = (row.collection as string | null) ?? null
+
+  if (input.update_stripe_image) {
+    const stripeProductId = String(row.stripe_product_id ?? '').trim()
+    const secret = stripeSecretKey()
+    if (stripeProductId && secret) {
+      try {
+        const stripe = new Stripe(secret)
+        const primary = imageUrlFirstFromDatabase(imageColumn)
+        await stripe.products.update(stripeProductId, {
+          images: primary ? [primary] : [],
+        })
+      } catch (syncError) {
+        logAdminSupabaseIssue('STRIPE_SYNC_FAILED', 'Galería actualizada pero falló sync de imagen Stripe.', {
+          supabaseMessage: syncError instanceof Error ? syncError.message : String(syncError),
+        })
+      }
+    }
+  }
+
+  revalidateCatalogPaths(collection)
+  return { ok: true as const, product: mapProductRow(mappedRow) }
+}
+
 type ProductDeleteRow = {
   id: string
   name?: string | null
@@ -637,8 +702,15 @@ export async function createProduct(input: ProductInput) {
   }
   const { data, error, id: insertedId } = await insertProductRow(sb, insertPayload)
   if (error) return productMutationErrorResult('create', error.message)
+  const newId = insertedId ?? String((data as { id?: string })?.id ?? '')
+  if (newId) {
+    const row = (data ?? {}) as Record<string, unknown>
+    if (row.is_active === false) {
+      await sb.from('products').update({ is_active: true }).eq('id', newId)
+    }
+  }
   revalidateCatalogPaths(collection)
-  return { ok: true as const, id: insertedId ?? String((data as { id?: string })?.id ?? '') }
+  return { ok: true as const, id: newId }
 }
 
 export async function syncProductsWithStripe(): Promise<{
@@ -787,8 +859,6 @@ export async function syncProductsWithStripe(): Promise<{
   }
 }
 
-const PRODUCT_IMAGES_BUCKET = 'product-images'
-
 function parseFormBoolean(value: FormDataEntryValue | null): boolean {
   if (value == null) return false
   const s = String(value).toLowerCase()
@@ -799,45 +869,7 @@ async function uploadFilesToProductImagesBucket(
   sb: ReturnType<typeof getServiceSupabase>,
   files: File[],
 ): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
-  const imageUrls: string[] = []
-  for (const file of files) {
-    const fileName = `${randomUUID()}.webp`
-    const filePath = `products/${fileName}`
-    const rawBuffer = Buffer.from(await file.arrayBuffer())
-    let buffer: Buffer
-    try {
-      buffer = await compressProductImageBuffer(rawBuffer)
-    } catch {
-      buffer = rawBuffer
-    }
-    const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGES_BUCKET).upload(filePath, buffer, {
-      contentType: 'image/webp',
-      cacheControl: STORAGE_IMMUTABLE_CACHE_CONTROL,
-      upsert: false,
-    })
-    if (uploadError) {
-      logAdminSupabaseIssue('STORAGE_UPLOAD_FAILED', 'Fallo al subir imagen a Storage con service role.', {
-        supabaseMessage: uploadError.message,
-      })
-      if (isLikelyRowLevelSecurityMessage(uploadError.message)) {
-        return {
-          ok: false,
-          error:
-            'Storage bloqueó la subida (RLS). Con la clave service_role no debería ocurrir: revisa SUPABASE_SERVICE_ROLE_KEY y que sea del mismo proyecto que NEXT_PUBLIC_SUPABASE_URL. ' +
-            uploadError.message,
-        }
-      }
-      return { ok: false, error: uploadError.message }
-    }
-    const { data: publicData } = sb.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(filePath)
-    const publicUrl = publicData?.publicUrl?.trim()
-    if (!publicUrl) {
-      logAdminSupabaseIssue('STORAGE_UPLOAD_FAILED', 'getPublicUrl no devolvió URL tras subida.', {})
-      return { ok: false, error: 'No se pudo obtener la URL pública de la imagen en Storage.' }
-    }
-    imageUrls.push(publicUrl)
-  }
-  return { ok: true, urls: imageUrls }
+  return uploadOptimizedAdminImages(sb, files, 'products')
 }
 
 /**
@@ -919,6 +951,7 @@ export async function adminSetProductCatalogVisible(id: string, is_active: boole
 }
 
 export const adminUpdateProduct = updateProduct
+export const adminSyncProductGallery = syncProductGallery
 export const adminDeleteProduct = deleteProduct
 export const adminDeleteProducts = deleteProducts
 export const adminCreateProduct = createProduct

@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { ArrowUpRight, Clock, Package, ShoppingCart, TrendingUp, Users } from 'lucide-react'
+import { Clock, Package, ShoppingCart, TrendingUp } from 'lucide-react'
 import { adminGetOrders, adminGetProducts } from '@/app/admin/actions'
 import { allImageUrlsFromDatabase } from '@/lib/admin/product-image-db'
 
@@ -42,6 +42,32 @@ function formatOrderDate(iso: string | null | undefined): string {
   } catch {
     return '—'
   }
+}
+
+function isInCurrentMonth(iso: string | null | undefined): boolean {
+  if (!iso || typeof iso !== 'string') return false
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return false
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+}
+
+function orderCountsForRevenue(status: string): boolean {
+  return status !== 'cancelado' && status !== 'reembolsado'
+}
+
+function orderRevenueAmount(totalAmount: number | null | undefined, status: string): number {
+  if (!orderCountsForRevenue(status)) return 0
+  return typeof totalAmount === 'number' && Number.isFinite(totalAmount) ? totalAmount : 0
+}
+
+function formatEur(amount: number): string {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
 }
 
 type DashboardOrderRow = {
@@ -114,11 +140,32 @@ export default async function AdminDashboardPage() {
   }))
   const syncedCount = products.filter((p) => !!p.stripe_price_id).length
 
+  const ordersThisMonth = ordersRaw.filter((o) => isInCurrentMonth(o.created_at))
+  const monthRevenue = ordersThisMonth.reduce(
+    (sum, o) => sum + orderRevenueAmount(o.total_amount, String(o.status ?? '')),
+    0,
+  )
+  const monthOrderCount = ordersThisMonth.filter((o) => orderCountsForRevenue(String(o.status ?? ''))).length
+
   const STATS = [
-    { label: 'Ingresos este mes', value: '1.240€', change: '+12%', icon: TrendingUp },
-    { label: 'Pedidos totales', value: String(ordersRaw.length), change: '+5 esta semana', icon: ShoppingCart },
-    { label: 'Clientes', value: '38', change: '+3 nuevos', icon: Users },
-    { label: 'Productos', value: String(products.length), change: `${syncedCount} con Stripe`, icon: Package },
+    {
+      label: 'Ingresos este mes',
+      value: formatEur(monthRevenue),
+      change: `${monthOrderCount} pedido${monthOrderCount === 1 ? '' : 's'} en el mes`,
+      icon: TrendingUp,
+    },
+    {
+      label: 'Pedidos totales',
+      value: String(ordersRaw.length),
+      change: `${ordersThisMonth.length} en el mes actual`,
+      icon: ShoppingCart,
+    },
+    {
+      label: 'Productos',
+      value: String(products.length),
+      change: `${syncedCount} con Stripe`,
+      icon: Package,
+    },
   ]
 
   return (
@@ -130,7 +177,7 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {STATS.map(({ label, value, change, icon: Icon }) => (
           <div key={label} className="bg-white border border-border p-5 space-y-3">
             <div className="flex items-start justify-between">
@@ -141,10 +188,7 @@ export default async function AdminDashboardPage() {
               <p className="font-serif text-2xl text-foreground" suppressHydrationWarning>
                 {value}
               </p>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <ArrowUpRight className="w-3 h-3 text-green-600" />
-                {change}
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">{change}</p>
             </div>
           </div>
         ))}

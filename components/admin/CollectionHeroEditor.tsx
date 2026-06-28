@@ -4,7 +4,8 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { adminUpdateCollection, adminUploadCollectionHeroImages } from '@/app/admin/collection-actions'
+import { adminUpdateCollection } from '@/app/admin/collection-actions'
+import { uploadCollectionHeroImageToSupabase } from '@/lib/admin/upload-collection-images-client'
 import type { CollectionRecord } from '@/lib/collections'
 
 export default function CollectionHeroEditor({ collection }: { collection: CollectionRecord }) {
@@ -28,14 +29,12 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
 
   const uploadImage = async (file: File | null): Promise<string | null> => {
     if (!file) return null
-    const formData = new FormData()
-    formData.append('images', file)
-    const res = await adminUploadCollectionHeroImages(formData)
+    const res = await uploadCollectionHeroImageToSupabase(file)
     if (!res.ok) {
       toast.error(res.error)
       return null
     }
-    return res.urls[0] ?? null
+    return res.url
   }
 
   const uploadSide = async (side: 'left' | 'right', file: File | null) => {

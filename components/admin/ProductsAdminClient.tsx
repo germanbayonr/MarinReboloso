@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, CheckCircle, Download, Pencil, PlusCircle, Search, Trash2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -27,6 +27,7 @@ import {
   adminSetProductStock,
   deleteProduct,
   deleteProducts,
+  syncProductGallery,
   updateProduct,
 } from '@/app/admin/actions'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
@@ -35,10 +36,18 @@ import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
 import { labelForCollectionSlug, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import type { AdminProduct } from '@/lib/admin/types'
 import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
+import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
 import { emptyProductVariants, type ProductVariantsData } from '@/lib/product-variants'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
+
+const GALLERY_SYNC_DEBOUNCE_MS = 1500
+
+function galleryListsEqual(a: string[], b: string[]) {
+  if (a.length !== b.length) return false
+  return a.every((url, i) => url === b[i])
+}
 
 type DeleteConfirmState = {
   products: AdminProduct[]
@@ -107,7 +116,6 @@ export function ProductEditModal({
     discount_percent: String(product.discount_percent ?? 0),
     category: product.category ?? 'accesorios',
     collection: initialCollection,
-    image_url: product.image_url ?? '',
     is_new_arrival: product.is_new_arrival,
     in_stock: product.in_stock,
   })
@@ -118,9 +126,85 @@ export function ProductEditModal({
   )
   const [newImageUrl, setNewImageUrl] = useState('')
   const [uploadingImages, setUploadingImages] = useState(false)
+  const [isSyncingGallery, setIsSyncingGallery] = useState(false)
+  const [galleryPending, setGalleryPending] = useState(false)
   const collectionUnknownInList =
     !!form.collection && !collectionOptions.some((o) => o.slug === form.collection)
   const [saved, setSaved] = useState(false)
+
+  const syncBaselineRef = useRef(initialImages)
+  const imagesRef = useRef(initialImages)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isSyncingGalleryRef = useRef(false)
+
+  useEffect(() => {
+    imagesRef.current = images
+  }, [images])
+
+  const flushGallerySync = useCallback(async (): Promise<boolean> => {
+    if (hasVariants) return true
+
+    const current = imagesRef.current.map((u) => u.trim()).filter(Boolean)
+    const baseline = syncBaselineRef.current
+    if (galleryListsEqual(current, baseline)) {
+      setGalleryPending(false)
+      return true
+    }
+
+    if (isSyncingGalleryRef.current) return false
+    isSyncingGalleryRef.current = true
+    setIsSyncingGallery(true)
+
+    const removed = baseline.filter((u) => !current.includes(u))
+    const added = current.filter((u) => !baseline.includes(u))
+
+    try {
+      const res = await syncProductGallery(product.id, {
+        image_urls: current,
+        removed_urls: removed,
+        update_stripe_image: removed.length > 0 && added.length > 0,
+      })
+      if (!res.ok) {
+        toast.error(res.error)
+        return false
+      }
+      syncBaselineRef.current = current
+      onSaved(res.product)
+      notifySiteCatalogChanged()
+      setGalleryPending(false)
+      return true
+    } finally {
+      isSyncingGalleryRef.current = false
+      setIsSyncingGallery(false)
+    }
+  }, [hasVariants, onSaved, product.id])
+
+  const scheduleGallerySync = useCallback(() => {
+    if (hasVariants) return
+    setGalleryPending(true)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null
+      void flushGallerySync()
+    }, GALLERY_SYNC_DEBOUNCE_MS)
+  }, [flushGallerySync, hasVariants])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
+  const handleClose = useCallback(async () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    if (!hasVariants && !galleryListsEqual(imagesRef.current, syncBaselineRef.current)) {
+      await flushGallerySync()
+    }
+    onClose()
+  }, [flushGallerySync, hasVariants, onClose])
 
   const o = Number(form.original_price) || 0
   const d = Math.min(100, Math.max(0, Number(form.discount_percent) || 0))
@@ -135,7 +219,7 @@ export function ProductEditModal({
       description: form.description.trim() || null,
       category: form.category,
       collection: form.collection.trim() || defaultCollectionSlug?.trim() || null,
-      image_url: useVariants ? variantUrls[0] : cleanedImages[0] ?? (form.image_url.trim() || null),
+      image_url: useVariants ? variantUrls[0] ?? null : cleanedImages[0] ?? null,
       image_urls: useVariants ? variantUrls : cleanedImages,
       is_new_arrival: form.is_new_arrival,
       in_stock: form.in_stock,
@@ -146,25 +230,23 @@ export function ProductEditModal({
     }
   }
 
-  const syncImagesToSupabase = async (nextImages: string[], successMessage?: string) => {
-    const res = await updateProduct(product.id, buildProductInput(nextImages))
-    if (!res.ok) {
-      toast.error(res.error)
-      return false
-    }
-    onSaved(res.product)
-    notifySiteCatalogChanged()
-    if (successMessage) toast.success(successMessage)
-    return true
-  }
-
   const handleSave = async () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    if (!hasVariants) {
+      const flushed = await flushGallerySync()
+      if (!flushed) return
+    }
+
     const cleanedImages = images.map((url) => url.trim()).filter(Boolean)
     const res = await updateProduct(product.id, buildProductInput(cleanedImages))
     if (!res.ok) {
       toast.error(res.error)
       return
     }
+    syncBaselineRef.current = cleanedImages
     onSaved(res.product)
     notifySiteCatalogChanged()
     setSaved(true)
@@ -172,34 +254,32 @@ export function ProductEditModal({
     setTimeout(onClose, 600)
   }
 
-  const handleAppendImageUrl = async () => {
+  const handleAppendImageUrl = () => {
     const trimmed = newImageUrl.trim()
     if (!trimmed) return
     if (images.includes(trimmed)) {
       toast.error('Esa imagen ya está en la galería')
       return
     }
-    const next = [...images, trimmed]
-    setImages(next)
+    setImages((prev) => [...prev, trimmed])
     setNewImageUrl('')
-    await syncImagesToSupabase(next, 'Imagen añadida en Supabase')
+    scheduleGallerySync()
   }
 
-  const moveImage = async (index: number, direction: 'up' | 'down') => {
+  const moveImage = (index: number, direction: 'up' | 'down') => {
     if ((direction === 'up' && index === 0) || (direction === 'down' && index === images.length - 1)) return
-    const next = [...images]
-    const targetIndex = direction === 'up' ? index - 1 : index + 1
-    const current = next[index]
-    next[index] = next[targetIndex]
-    next[targetIndex] = current
-    setImages(next)
-    await syncImagesToSupabase(next)
+    setImages((prev) => {
+      const next = [...prev]
+      const targetIndex = direction === 'up' ? index - 1 : index + 1
+      ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+      return next
+    })
+    scheduleGallerySync()
   }
 
-  const removeImage = async (index: number) => {
-    const next = images.filter((_, i) => i !== index)
-    setImages(next)
-    await syncImagesToSupabase(next, 'Imagen eliminada')
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+    scheduleGallerySync()
   }
 
   const handleUploadImages = async (files: FileList | null) => {
@@ -211,20 +291,19 @@ export function ProductEditModal({
         toast.error(res.error)
         return
       }
-      const next = [...images, ...res.urls]
-      setImages(next)
-      await syncImagesToSupabase(next, `${res.urls.length} imagen(es) subida(s) a Supabase`)
+      setImages((prev) => [...prev, ...res.urls])
+      scheduleGallerySync()
     } finally {
       setUploadingImages(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => void handleClose()}>
       <div className="mx-4 w-full max-w-lg border border-neutral-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3">
           <h2 className="font-serif text-lg tracking-wide text-neutral-900">Editar producto</h2>
-          <button type="button" onClick={onClose} className="text-neutral-500 hover:text-neutral-900" aria-label="Cerrar">
+          <button type="button" onClick={() => void handleClose()} className="text-neutral-500 hover:text-neutral-900" aria-label="Cerrar">
             <X className="h-4 w-4" strokeWidth={1.5} />
           </button>
         </div>
@@ -306,15 +385,6 @@ export function ProductEditModal({
                 </option>
               ))}
             </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-wider text-neutral-500">Imagen (URL)</label>
-            <input
-              type="url"
-              value={form.image_url}
-              onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
-              className="w-full border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-400 focus:outline-none"
-            />
           </div>
           <ProductVariantsEditor
             hasVariants={hasVariants}
@@ -441,13 +511,17 @@ export function ProductEditModal({
               <CheckCircle className="h-4 w-4" />
               Guardado
             </span>
+          ) : isSyncingGallery ? (
+            <span className="text-xs text-neutral-500">Guardando galería…</span>
+          ) : galleryPending ? (
+            <span className="text-xs text-neutral-400">Cambios pendientes…</span>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => void handleClose()}
               className="border border-neutral-200 px-4 py-2 text-sm text-neutral-600 hover:border-neutral-400"
             >
               Cancelar
@@ -558,7 +632,7 @@ export default function ProductsAdminClient({
         header: 'Producto',
         cell: ({ row }) => {
           const p = row.original
-          const src = typeof p.image_url === 'string' ? p.image_url.trim() : ''
+          const src = allDisplayImagesForProduct(p)[0] ?? ''
           return (
             <div className="flex items-center gap-2">
               {src ? (

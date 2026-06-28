@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { createProduct } from '@/app/admin/actions'
 import { notifySiteCatalogChanged } from '@/lib/catalog-events'
 import { buildProductCollectionOptions, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
-import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
+import { uploadProductImagesToSupabase, validateAdminImageFile } from '@/lib/admin/upload-product-images-client'
 import { computeFinalPrice } from '@/lib/pricing'
 import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
 import { emptyProductVariants, type ProductVariantsData } from '@/lib/product-variants'
@@ -79,7 +79,11 @@ export default function NuevoProductoClient() {
   }
 
   const uploadSingleFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) return
+    const check = validateAdminImageFile(file)
+    if (!check.ok) {
+      toast.error(check.error)
+      return
+    }
     const id = crypto.randomUUID()
     const previewUrl = URL.createObjectURL(file)
     setImages((prev) => [

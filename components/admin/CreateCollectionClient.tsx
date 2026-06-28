@@ -7,7 +7,8 @@ import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
-import { adminCreateCollectionWithImages, adminUploadCollectionHeroImages } from '@/app/admin/collection-actions'
+import { adminCreateCollectionWithImages } from '@/app/admin/collection-actions'
+import { uploadCollectionHeroImageToSupabase } from '@/lib/admin/upload-collection-images-client'
 import { slugifyCollectionLabel } from '@/lib/collection-slug'
 import type { AdminProduct } from '@/lib/admin/types'
 
@@ -63,15 +64,12 @@ export default function CreateCollectionClient({
     }
     setHeroUploading(side)
     try {
-      const formData = new FormData()
-      formData.append('images', file)
-      const res = await adminUploadCollectionHeroImages(formData)
+      const res = await uploadCollectionHeroImageToSupabase(file)
       if (!res.ok) {
         toast.error(res.error)
         return
       }
-      const url = res.urls[0] ?? null
-      if (!url) return
+      const url = res.url
       if (side === 'left') setHeroLeftUrl(url)
       else setHeroRightUrl(url)
       toast.success('Imagen subida a Supabase')

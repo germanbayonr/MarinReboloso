@@ -1,20 +1,38 @@
 'use server'
 
-import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
-import {
-  isLikelyRowLevelSecurityMessage,
-  logAdminSupabaseIssue,
-  RLS_BLOCK_USER_MESSAGE,
-} from '@/lib/admin/supabase-admin-log'
+import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
 import { slugifyCollectionLabel } from '@/lib/collection-slug'
-import { STORAGE_IMMUTABLE_CACHE_CONTROL } from '@/lib/image-delivery'
-import { compressProductImageBuffer } from '@/lib/admin/compress-product-image-server'
+import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
+import { uploadOptimizedAdminImages } from '@/lib/admin/upload-optimized-admin-images'
 import { clearHiddenCollectionSlugCache } from '@/lib/product-collection-visibility'
 import type { CollectionRecord } from '@/lib/collections'
 
-const PRODUCT_IMAGES_BUCKET = 'product-images'
+function collectionHeroUrls(row: {
+  hero_image_left?: string | null
+  hero_image_right?: string | null
+}): string[] {
+  return [row.hero_image_left, row.hero_image_right]
+    .map((url) => (url != null ? String(url).trim() : ''))
+    .filter(Boolean)
+}
+
+function orphanedHeroUrls(
+  previous: { hero_image_left?: string | null; hero_image_right?: string | null },
+  nextLeft: string | null,
+  nextRight: string | null,
+): string[] {
+  const nextUrls = new Set([nextLeft, nextRight].filter(Boolean))
+  return collectionHeroUrls(previous).filter((url) => !nextUrls.has(url))
+}
+
+async function uploadCollectionImages(
+  files: File[],
+): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
+  const sb = getServiceSupabase()
+  return uploadOptimizedAdminImages(sb, files, 'collections')
+}
 
 function revalidateCollectionPaths(slug?: string) {
   revalidatePath('/admin/colecciones')
@@ -46,40 +64,6 @@ function mapCollectionRow(row: Record<string, unknown>): CollectionRecord {
 function afterCollectionMutation(slug?: string) {
   clearHiddenCollectionSlugCache()
   revalidateCollectionPaths(slug)
-}
-
-async function uploadCollectionImages(
-  files: File[],
-): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
-  const sb = getServiceSupabase()
-  const urls: string[] = []
-  for (const file of files) {
-    const fileName = `${randomUUID()}.webp`
-    const filePath = `collections/${fileName}`
-    const rawBuffer = Buffer.from(await file.arrayBuffer())
-    let buffer: Buffer
-    try {
-      buffer = await compressProductImageBuffer(rawBuffer)
-    } catch {
-      buffer = rawBuffer
-    }
-    const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGES_BUCKET).upload(filePath, buffer, {
-      contentType: 'image/webp',
-      cacheControl: STORAGE_IMMUTABLE_CACHE_CONTROL,
-      upsert: false,
-    })
-    if (uploadError) {
-      if (isLikelyRowLevelSecurityMessage(uploadError.message)) {
-        return { ok: false, error: `${RLS_BLOCK_USER_MESSAGE}${uploadError.message}` }
-      }
-      return { ok: false, error: uploadError.message }
-    }
-    const { data } = sb.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(filePath)
-    const url = data?.publicUrl?.trim()
-    if (!url) return { ok: false, error: 'No se pudo obtener la URL pública de la imagen.' }
-    urls.push(url)
-  }
-  return { ok: true, urls }
 }
 
 export type CreateCollectionInput = {
@@ -171,6 +155,13 @@ export async function adminDeleteCollection(
   const sb = getServiceSupabase()
   const productSlugs = collectionProductSlugs(normalized)
 
+  const { data: existingRow } = await sb
+    .from('collections')
+    .select('hero_image_left, hero_image_right')
+    .ilike('slug', normalized)
+    .maybeSingle()
+  const heroUrlsToRemove = existingRow ? collectionHeroUrls(existingRow) : []
+
   for (const productSlug of productSlugs) {
     const { error: unassignErr } = await sb
       .from('products')
@@ -189,6 +180,13 @@ export async function adminDeleteCollection(
     }
     logAdminSupabaseIssue('COLLECTION_DELETE', deleteErr.message, { slug: normalized })
     return { ok: false, error: deleteErr.message }
+  }
+
+  if (heroUrlsToRemove.length > 0) {
+    const removed = await removeProductImagesFromSupabaseStorage(sb, heroUrlsToRemove)
+    if (!removed.ok) {
+      logAdminSupabaseIssue('COLLECTION_DELETE_STORAGE', removed.error, { slug: normalized })
+    }
   }
 
   afterCollectionMutation(normalized)
@@ -224,8 +222,49 @@ export async function adminUpdateCollection(
   if (input.sort_order !== undefined) patch.sort_order = Number(input.sort_order) || 0
 
   const sb = getServiceSupabase()
+
+  const heroFieldsChanging =
+    input.hero_image_left !== undefined ||
+    input.hero_image_right !== undefined ||
+    (input.homepage_order !== undefined && Math.max(1, Math.floor(Number(input.homepage_order) || 1)) !== 1)
+
+  let urlsToRemove: string[] = []
+  if (heroFieldsChanging) {
+    const { data: currentRow } = await sb
+      .from('collections')
+      .select('hero_image_left, hero_image_right')
+      .ilike('slug', normalized)
+      .maybeSingle()
+    if (currentRow) {
+      const nextLeft =
+        input.hero_image_left !== undefined
+          ? input.hero_image_left?.trim() || null
+          : currentRow.hero_image_left != null
+            ? String(currentRow.hero_image_left).trim() || null
+            : null
+      let nextRight =
+        input.hero_image_right !== undefined
+          ? input.hero_image_right?.trim() || null
+          : currentRow.hero_image_right != null
+            ? String(currentRow.hero_image_right).trim() || null
+            : null
+      if (input.homepage_order !== undefined) {
+        const order = Math.max(1, Math.floor(Number(input.homepage_order) || 1))
+        if (order !== 1) nextRight = null
+      }
+      urlsToRemove = orphanedHeroUrls(currentRow, nextLeft, nextRight)
+    }
+  }
+
   const { data, error } = await sb.from('collections').update(patch).ilike('slug', normalized).select('*').single()
   if (error) return { ok: false, error: error.message }
+
+  if (urlsToRemove.length > 0) {
+    const removed = await removeProductImagesFromSupabaseStorage(sb, urlsToRemove)
+    if (!removed.ok) {
+      logAdminSupabaseIssue('COLLECTION_HERO_STORAGE_REMOVE', removed.error, { slug: normalized })
+    }
+  }
 
   afterCollectionMutation(normalized)
   return { ok: true, collection: mapCollectionRow((data ?? {}) as Record<string, unknown>) }
