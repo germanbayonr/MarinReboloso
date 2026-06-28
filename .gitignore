@@ -21,4 +21,5 @@ out
 app-cc/
 app-gemini/
 .claude/
+.cursor/
 verifactu/
