@@ -6,7 +6,7 @@ import NavbarWithCollections from '@/components/NavbarWithCollections'
 import Footer from '@/components/Footer'
 import CollectionHero from '@/components/CollectionHero'
 import CollectionProductsClient from '@/components/CollectionProductsClient'
-import { fetchCollectionBySlug } from '@/lib/collections'
+import { fetchCollectionBySlugAdmin } from '@/lib/collections'
 import { fetchProductsForCollectionSlug, toCollectionGridProducts } from '@/lib/collection-products'
 
 export default async function ColeccionPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -14,7 +14,7 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
   const normalizedSlug = String(slug ?? '').toLowerCase().trim()
   if (!normalizedSlug) notFound()
 
-  const collectionMeta = await fetchCollectionBySlug(normalizedSlug)
+  const collectionMeta = await fetchCollectionBySlugAdmin(normalizedSlug)
   if (!collectionMeta) notFound()
 
   const title = collectionMeta.label

@@ -4,7 +4,6 @@ export const revalidate = 0
 import { notFound } from 'next/navigation'
 import ProductDetailClient from '@/components/ProductDetailClient'
 import { fetchActiveProducts, fetchProductRowById } from '@/lib/products-data-source'
-import { isProductInHiddenCollection } from '@/lib/product-collection-visibility'
 import {
   groupSimilarProductsForStorefront,
   resolveStorefrontProductById,
@@ -21,7 +20,7 @@ async function resolveStorefrontProduct(id: string): Promise<StorefrontProduct |
   const fromGroup = resolveStorefrontProductById(grouped, trimmed)
   if (fromGroup) return fromGroup
 
-  const { product } = await fetchProductRowById(trimmed)
+  const { product } = await fetchProductRowById(trimmed, { includeInactive: true })
   if (!product) return null
   const urls = allDisplayImagesForProduct(product)
   return {
@@ -36,10 +35,6 @@ export default async function ProductoPage({ params }: { params: Promise<{ id: s
   const { id } = await params
   const product = await resolveStorefrontProduct(id)
   if (!product) notFound()
-
-  if (await isProductInHiddenCollection({ collection: product.collection })) {
-    notFound()
-  }
 
   return <ProductDetailClient product={product} />
 }

@@ -24,7 +24,7 @@ interface ProductCardProps {
   }
 }
 
-const PLACEHOLDER_IMAGE = 'https://marebo.b-cdn.net/assets/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
+const PLACEHOLDER_IMAGE = 'https://marebo.b-cdn.net/Logo/Captura%20de%20pantalla%202026-03-10%20a%20las%2011.28.12.jpg'
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
