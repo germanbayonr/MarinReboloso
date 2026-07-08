@@ -2,11 +2,13 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { fetchHomepagePortadaCollections } from '@/lib/collections'
+import { productImageUrl } from '@/lib/image-delivery'
 import type { CollectionRecord } from '@/lib/collections'
 
 function heroImage(collection: CollectionRecord, side: 'left' | 'right'): string | null {
-  if (side === 'left') return collection.hero_image_left
-  return collection.hero_image_right ?? collection.hero_image_left
+  const raw = side === 'left' ? collection.hero_image_left : collection.hero_image_right ?? collection.hero_image_left
+  if (!raw?.trim()) return null
+  return productImageUrl(raw)
 }
 
 function objectPositionClass(slug: string) {
@@ -76,7 +78,7 @@ function HomepageHero({ collection }: { collection: CollectionRecord }) {
 }
 
 function HomepageBanner({ collection }: { collection: CollectionRecord }) {
-  const image = collection.hero_image_left
+  const image = collection.hero_image_left ? productImageUrl(collection.hero_image_left) : null
   if (!image) return null
   const href = `/coleccion/${collection.slug}`
   const pos = objectPositionClass(collection.slug)
@@ -111,6 +113,10 @@ export default async function HomeCollectionsPortada() {
   const sorted = [...portada].sort((a, b) => a.homepage_order - b.homepage_order)
   const hero = sorted.find((c) => c.homepage_order === 1) ?? null
   const banners = sorted.filter((c) => c.homepage_order !== 1)
+
+  // #region agent log
+  fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'eda70f'},body:JSON.stringify({sessionId:'eda70f',runId:'pre-fix',hypothesisId:'C',location:'HomeCollectionsPortada.tsx:117',message:'portada fetched',data:{count:portada.length,heroSlug:hero?.slug??null,heroLeft:!!hero?.hero_image_left,heroRight:!!hero?.hero_image_right,bannerCount:banners.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   if (!hero && banners.length === 0) return null
 

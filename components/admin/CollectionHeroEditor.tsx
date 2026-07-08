@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { adminUpdateCollection } from '@/app/admin/collection-actions'
 import { uploadCollectionHeroImageToSupabase } from '@/lib/admin/upload-collection-images-client'
+import { normalizeProductImageUrl } from '@/lib/image-delivery'
 import type { CollectionRecord } from '@/lib/collections'
 
 export default function CollectionHeroEditor({ collection }: { collection: CollectionRecord }) {
@@ -13,6 +13,17 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
   const [leftUrl, setLeftUrl] = useState(collection.hero_image_left)
   const [rightUrl, setRightUrl] = useState(isHeroMain ? collection.hero_image_right : null)
   const [isUploading, setIsUploading] = useState(false)
+  const [brokenSides, setBrokenSides] = useState<{ left?: boolean; right?: boolean }>({})
+
+  const markBroken = (side: 'left' | 'right') => {
+    setBrokenSides((prev) => ({ ...prev, [side]: true }))
+    toast.error('La imagen guardada está dañada. Sube de nuevo un JPG o PNG.')
+  }
+
+  const displayUrl = (side: 'left' | 'right', url: string | null) => {
+    if (!url) return null
+    return normalizeProductImageUrl(url) || url
+  }
 
   const persistImages = async (nextLeft: string | null, nextRight: string | null) => {
     const res = await adminUpdateCollection(collection.slug, {
@@ -47,6 +58,7 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
       const nextRight = side === 'right' ? url : rightUrl
       if (side === 'left') setLeftUrl(url)
       else setRightUrl(url)
+      setBrokenSides((prev) => ({ ...prev, [side]: false }))
       await persistImages(nextLeft, nextRight)
     } finally {
       setIsUploading(false)
@@ -60,6 +72,7 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
       const url = await uploadImage(file)
       if (!url) return
       setLeftUrl(url)
+      setBrokenSides((prev) => ({ ...prev, left: false }))
       await persistImages(url, null)
     } finally {
       setIsUploading(false)
@@ -90,6 +103,8 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {(['left', 'right'] as const).map((side) => {
               const url = side === 'left' ? leftUrl : rightUrl
+              const src = displayUrl(side, url)
+              const isBroken = brokenSides[side]
               return (
                 <div key={side} className="space-y-2">
                   <p className="text-xs text-neutral-600">
@@ -97,7 +112,18 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
                   </p>
                   {url ? (
                     <div className="relative aspect-[4/5] w-full max-w-xs overflow-hidden bg-neutral-100">
-                      <Image src={url} alt="" fill unoptimized className="object-cover" />
+                      {isBroken ? (
+                        <div className="flex h-full items-center justify-center px-4 text-center text-xs text-red-600">
+                          Imagen dañada en Storage. Sube de nuevo.
+                        </div>
+                      ) : (
+                        <img
+                          src={src ?? url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={() => markBroken(side)}
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => void clearSide(side)}
@@ -136,7 +162,18 @@ export default function CollectionHeroEditor({ collection }: { collection: Colle
           <div className="space-y-2 max-w-xs">
             {leftUrl ? (
               <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-100">
-                <Image src={leftUrl} alt="" fill unoptimized className="object-cover" />
+                {brokenSides.left ? (
+                  <div className="flex h-full items-center justify-center px-4 text-center text-xs text-red-600">
+                    Imagen dañada en Storage. Sube de nuevo.
+                  </div>
+                ) : (
+                  <img
+                    src={displayUrl('left', leftUrl) ?? leftUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={() => markBroken('left')}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => void clearPortada()}
