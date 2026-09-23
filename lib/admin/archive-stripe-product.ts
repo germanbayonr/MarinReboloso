@@ -8,7 +8,13 @@ function isStripeResourceMissing(error: unknown): boolean {
   return msg.includes('no such product') || msg.includes('no such price')
 }
 
-/** Desactiva precios activos y archiva el producto en Stripe (no borra historial de pedidos). */
+function isDefaultPriceArchiveError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const msg = error.message.toLowerCase()
+  return msg.includes('default price') || msg.includes('default_price')
+}
+
+/** Desactiva precios activos (excepto el default si Stripe lo bloquea) y archiva el producto. */
 export async function archiveStripeProduct(
   stripe: Stripe,
   stripeProductId: string | null | undefined,
@@ -17,6 +23,14 @@ export async function archiveStripeProduct(
   if (!id) return { ok: true }
 
   try {
+    const product = await stripe.products.retrieve(id)
+    const defaultPriceId =
+      typeof product.default_price === 'string'
+        ? product.default_price
+        : product.default_price && typeof product.default_price === 'object'
+          ? product.default_price.id
+          : null
+
     let startingAfter: string | undefined
     for (;;) {
       const page = await stripe.prices.list({
@@ -26,6 +40,7 @@ export async function archiveStripeProduct(
         ...(startingAfter ? { starting_after: startingAfter } : {}),
       })
       for (const price of page.data) {
+        if (defaultPriceId && price.id === defaultPriceId) continue
         try {
           await stripe.prices.update(price.id, { active: false })
         } catch (priceError) {
@@ -38,6 +53,17 @@ export async function archiveStripeProduct(
     }
 
     await stripe.products.update(id, { active: false })
+
+    if (defaultPriceId) {
+      try {
+        await stripe.prices.update(defaultPriceId, { active: false })
+      } catch (priceError) {
+        if (!isStripeResourceMissing(priceError) && !isDefaultPriceArchiveError(priceError)) {
+          throw priceError
+        }
+      }
+    }
+
     return { ok: true }
   } catch (error) {
     if (isStripeResourceMissing(error)) return { ok: true }

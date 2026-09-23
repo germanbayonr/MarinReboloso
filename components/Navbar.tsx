@@ -7,6 +7,8 @@ import { ChameleonHeader } from '@/components/ChameleonHeader'
 import PromoHeader, { type PromoHeaderData } from '@/components/PromoHeader'
 import PromoBannerPopup from '@/components/PromoBannerPopup'
 import { supabase } from '@/lib/supabase'
+import { useCart } from '@/lib/cart-context'
+import { useWishlist } from '@/lib/wishlist-context'
 import { WEB_COLLECTIONS } from '@/lib/web-collections'
 
 const DEFAULT_NAV_COLLECTIONS = WEB_COLLECTIONS.map((item) => ({
@@ -29,6 +31,8 @@ export default function Navbar({
   collections?: { label: string; href: string; isNew?: boolean }[]
 }) {
   const navCollections = collections
+  const { totalCount: cartCount } = useCart()
+  const { items: wishlistItems } = useWishlist()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collectionsOpen, setCollectionsOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
@@ -70,7 +74,12 @@ export default function Navbar({
       {headerPromotion ? <PromoHeader promotion={headerPromotion} /> : null}
       <PromoBannerPopup />
       {/* CHAMELEON HEADER - Auto-contrast logo and icons */}
-      <ChameleonHeader onMenuClick={() => setDrawerOpen(true)} topOffsetClassName={headerPromotion ? 'top-8' : 'top-0'} />
+      <ChameleonHeader
+        onMenuClick={() => setDrawerOpen(true)}
+        topOffsetClassName={headerPromotion ? 'top-8' : 'top-0'}
+        cartCount={cartCount}
+        wishlistCount={wishlistItems.length}
+      />
 
       {/* Off-canvas Drawer */}
       {/* Backdrop */}

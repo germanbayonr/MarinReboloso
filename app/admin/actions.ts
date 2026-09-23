@@ -24,6 +24,7 @@ import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { TEST_EMAIL_TO } from '@/lib/admin/test-email-config'
 import { notifyCustomerOrderStatusChange } from '@/lib/mail/order-status-mail'
 import { sendMareboMailResult } from '@/lib/mail/send'
+import { checkoutNameFromStripeSession, customerPhoneFromStripeSession } from '@/lib/stripe-session-customer'
 import { getMailTransporter } from '@/lib/mail/transporter'
 import { getOrderConfirmationTemplate, getOrderEmailSubject } from '@/lib/mail/templates'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
@@ -1075,8 +1076,10 @@ export async function adminSyncOrdersFromStripe(input?: AdminStripeSyncInput): P
 
     const shipping = shippingFieldsFromStripeSession(session)
     const shippingName = shippingBlockFromStripeSession(session)?.name?.trim() || null
-    const customerName = shippingName || session.customer_details?.name?.trim() || null
+    const customerName =
+      shippingName || checkoutNameFromStripeSession(session) || session.customer_details?.name?.trim() || null
     const customerEmail = (session.customer_details?.email || session.customer_email || '').trim() || null
+    const customerPhone = customerPhoneFromStripeSession(session)
     const totalAmount = typeof session.amount_total === 'number' ? session.amount_total / 100 : null
     const shippingCents =
       session.shipping_cost && typeof session.shipping_cost.amount_total === 'number'
@@ -1087,6 +1090,7 @@ export async function adminSyncOrdersFromStripe(input?: AdminStripeSyncInput): P
       stripe_session_id: session.id,
       customer_email: customerEmail,
       customer_name: customerName,
+      customer_phone: customerPhone,
       total_amount: totalAmount,
       currency: (session.currency || 'eur').toLowerCase(),
       status: 'pendiente',
@@ -1422,6 +1426,7 @@ export async function simulateRealPurchase(): Promise<{ ok: true } | { ok: false
     .insert({
       customer_email: 'marebo.meri@gmail.com',
       customer_name: 'Cliente de Prueba',
+      customer_phone: '+34623781628',
       status: 'pendiente',
       total_amount: priceEur,
       currency: 'EUR',

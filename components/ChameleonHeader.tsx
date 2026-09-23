@@ -3,8 +3,6 @@
 import Link from 'next/link'
 import { Menu, Search, Heart, ShoppingBag, User } from 'lucide-react'
 import AdminAuthDropdown from './admin/AdminAuthDropdown'
-import { useCart } from '@/lib/cart-context'
-import { useWishlist } from '@/lib/wishlist-context'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import SearchOverlay from '@/components/SearchOverlay'
@@ -12,12 +10,16 @@ import SearchOverlay from '@/components/SearchOverlay'
 interface ChameleonHeaderProps {
   onMenuClick?: () => void
   topOffsetClassName?: string
+  cartCount?: number
+  wishlistCount?: number
 }
 
-export function ChameleonHeader({ onMenuClick, topOffsetClassName = 'top-0' }: ChameleonHeaderProps) {
-  const { totalCount } = useCart()
-  const { items } = useWishlist()
-  const wishlistCount = items.length
+export function ChameleonHeader({
+  onMenuClick,
+  topOffsetClassName = 'top-0',
+  cartCount = 0,
+  wishlistCount = 0,
+}: ChameleonHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   return (
@@ -98,12 +100,12 @@ export function ChameleonHeader({ onMenuClick, topOffsetClassName = 'top-0' }: C
           >
             <ShoppingBag className="w-5 h-5" strokeWidth={1.5} />
             <AnimatePresence>
-              {totalCount > 0 && (
+              {cartCount > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
-                  key={totalCount}
+                  key={cartCount}
                   className="absolute -top-1.5 -right-1.5 bg-white text-black text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center mix-blend-normal"
                 >
                   <motion.span
@@ -111,7 +113,7 @@ export function ChameleonHeader({ onMenuClick, topOffsetClassName = 'top-0' }: C
                     animate={{ scale: [1, 1.3, 1] }}
                     transition={{ duration: 0.3 }}
                   >
-                    {totalCount}
+                    {cartCount}
                   </motion.span>
                 </motion.span>
               )}

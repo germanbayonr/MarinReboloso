@@ -4,6 +4,7 @@ export type OrderLineDisplay = {
   quantity: number
   lineTotal: number | null
   imageUrl: string | null
+  variant: string | null
 }
 
 function num(v: unknown): number | null {
@@ -34,10 +35,13 @@ export function parseOrderItemsJson(itemsJson: unknown): OrderLineDisplay[] {
         (typeof o.imageUrl === 'string' && o.imageUrl) ||
         (typeof o.image === 'string' && o.image) ||
         null
+      const variantRaw = o.variant ?? o.variant_label ?? o.color
+      const variant =
+        typeof variantRaw === 'string' && variantRaw.trim() ? variantRaw.trim() : null
       let lineTotal: number | null = null
       if (num(o.line_total) != null) lineTotal = num(o.line_total)
       else if (num(o.price) != null) lineTotal = num(o.price)! * quantity
-      return { name, quantity, lineTotal, imageUrl }
+      return { name, quantity, lineTotal, imageUrl, variant }
     })
     .filter((x): x is OrderLineDisplay => Boolean(x))
 }

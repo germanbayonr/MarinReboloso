@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { STORE_PHONE_DISPLAY, STORE_TEL_HREF } from '@/lib/site-contact'
 
 export default function Footer() {
   return (
@@ -70,7 +71,11 @@ export default function Footer() {
           <h4 className="font-sans text-[10px] tracking-[0.22em] uppercase mb-4 text-foreground" suppressHydrationWarning>Contacto</h4>
           <ul className="space-y-2.5" suppressHydrationWarning>
             <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>marebo.meri@gmail.com</li>
-            <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>+34 657 46 04 46</li>
+            <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>
+              <a href={STORE_TEL_HREF} className="hover:text-accent transition-colors">
+                {STORE_PHONE_DISPLAY}
+              </a>
+            </li>
             <li className="font-sans text-sm text-muted-foreground mt-1" suppressHydrationWarning>Santa Marta, España</li>
           </ul>
         </div>

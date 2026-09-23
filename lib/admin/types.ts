@@ -40,6 +40,7 @@ export type AdminOrder = {
   status: string
   customer_email: string | null
   customer_name: string | null
+  customer_phone?: string | null
   stripe_session_id: string | null
   /** Importe total en unidad de moneda (ej. EUR), no céntimos */
   total_amount: number | null

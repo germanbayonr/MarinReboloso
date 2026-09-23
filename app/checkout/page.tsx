@@ -80,6 +80,7 @@ export default function CheckoutPage() {
               id: item.id,
               quantity: item.quantity,
               stripe_price_id: item.stripe_price_id,
+              variant: item.variant ?? null,
             })),
             customer: values,
             promoCode: promoApplied?.code ?? null,
@@ -181,13 +182,18 @@ export default function CheckoutPage() {
                     <FieldError message={errors.email?.message} />
                   </div>
 
-                  <div>
-                    <label className="text-xs uppercase tracking-widest text-gray-500">Teléfono</label>
+                  <div className="md:col-span-2">
+                    <label className="text-xs uppercase tracking-widest text-gray-500">
+                      Teléfono <span className="text-red-600/80">*</span>
+                    </label>
                     <input
                       type="tel"
-                      placeholder="+34 600 000 000"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      required
+                      placeholder="+34 623 781 628"
                       className="mt-3 w-full bg-transparent border-b border-gray-300 pb-3 text-base text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-0 focus:border-gray-900"
-                      {...register('phone')}
+                      {...register('phone', { required: true })}
                     />
                     <FieldError message={errors.phone?.message} />
                   </div>

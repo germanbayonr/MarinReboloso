@@ -11,9 +11,10 @@ import { cn } from '@/lib/utils'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
-import { getCheckoutProductId } from '@/lib/checkout-product-id'
+import { getCartLineProductId } from '@/lib/checkout-product-id'
 import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 import { productImageUrl } from '@/lib/image-delivery'
+import { isProductUuid } from '@/lib/shop-client-storage'
 import {
   findVariantItem,
   findVariantImages,
@@ -140,7 +141,11 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
 
   const handleAddToCart = () => {
     if (!inStock) return
-    const checkoutProductId = getCheckoutProductId(product)
+    const checkoutProductId = getCartLineProductId(product, selectedVariantItem)
+    const lineStripePriceId =
+      selectedVariantItem && isProductUuid(String(selectedVariantItem.id))
+        ? null
+        : product.stripe_price_id ?? null
     const cartIcon = document.getElementById('cart-icon-target')
     if (imageRef.current && cartIcon) {
       const originRect = imageRef.current.getBoundingClientRect()
@@ -160,7 +165,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
           image: mainImageUrl,
           quantity,
           variant: selectedVariant,
-          stripe_price_id: product.stripe_price_id ?? null,
+          stripe_price_id: lineStripePriceId,
         })
         setIsAnimating(false)
       }, 700)
@@ -174,7 +179,7 @@ export default function ProductDetailClient({ product }: { product: SupabaseProd
       image: mainImageUrl,
       quantity,
       variant: selectedVariant,
-      stripe_price_id: product.stripe_price_id ?? null,
+      stripe_price_id: lineStripePriceId,
     })
   }
 

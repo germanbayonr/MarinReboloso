@@ -134,6 +134,9 @@ export default async function PedidoSeguimientoPage({ params }: { params: Promis
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground leading-snug">{line.name}</p>
+                      {line.variant && !line.name.toLowerCase().includes(line.variant.toLowerCase()) && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{line.variant}</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">Cantidad: {line.quantity}</p>
                       {line.lineTotal != null && Number.isFinite(line.lineTotal) && (
                         <p className="text-sm text-foreground mt-1">

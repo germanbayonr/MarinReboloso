@@ -14,6 +14,7 @@ import {
   type AdminOrderStatusPayload,
 } from '@/app/admin/actions'
 import { ORDER_STATUSES, type AdminOrder, type OrderStatus } from '@/lib/admin/types'
+import { formatOrderCustomerBlock } from '@/lib/order-customer-display'
 import {
   Dialog,
   DialogContent,
@@ -248,12 +249,33 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
       {
         id: 'customer',
         header: 'Cliente',
-        cell: ({ row }) => (
-          <div>
-            <p className="text-sm text-neutral-900">{row.original.customer_name?.trim() || 'Sin nombre'}</p>
-            <p className="text-xs text-neutral-500">{row.original.customer_email?.trim() || 'Email desconocido'}</p>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const info = formatOrderCustomerBlock(row.original)
+          return (
+            <div className="min-w-[200px] space-y-0.5">
+              <p className="text-sm font-medium text-neutral-900">{info.name}</p>
+              <p className="text-xs text-neutral-600">
+                <a href={`mailto:${info.email}`} className="hover:underline">
+                  {info.email}
+                </a>
+              </p>
+              <p className="text-xs text-neutral-600">
+                {info.phone !== 'Sin teléfono' ? (
+                  <a href={`tel:${info.phone.replace(/\s/g, '')}`} className="hover:underline">
+                    {info.phone}
+                  </a>
+                ) : (
+                  <span className="text-amber-700">{info.phone}</span>
+                )}
+              </p>
+              {info.shipping ? (
+                <p className="text-[11px] text-neutral-500 line-clamp-2" title={info.shipping}>
+                  {info.shipping}
+                </p>
+              ) : null}
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'line_summary',

@@ -8,6 +8,7 @@ type ParsedLine = {
   quantity: number
   imageUrl: string | null
   lineTotalCents: number | null
+  variant: string | null
 }
 
 function num(v: unknown): number | null {
@@ -36,6 +37,9 @@ function parseItemsJson(items_json: unknown): ParsedLine[] {
         (typeof o.product_name === 'string' && o.product_name) ||
         (typeof o.title === 'string' && o.title) ||
         'Pieza'
+      const variantRaw = o.variant ?? o.variant_label
+      const variantSuffix =
+        typeof variantRaw === 'string' && variantRaw.trim() ? variantRaw.trim() : null
       const quantityRaw = num(o.quantity) ?? num(o.qty) ?? 1
       const quantity = Math.max(1, Math.min(999, Math.round(quantityRaw)))
       const imageUrl =
@@ -61,6 +65,7 @@ function parseItemsJson(items_json: unknown): ParsedLine[] {
         quantity,
         imageUrl,
         lineTotalCents: lineTotalCents != null ? Math.round(lineTotalCents) : null,
+        variant: variantSuffix,
       }
     })
     .filter((x): x is ParsedLine => Boolean(x))
@@ -108,7 +113,11 @@ async function enrichLinesWithProducts(parsed: ParsedLine[]): Promise<ParsedLine
     if (!p.productId) return p
     const pr = map.get(p.productId)
     if (!pr) return p
-    const name = typeof pr.name === 'string' && pr.name.trim() ? pr.name.trim() : p.name
+    let name = typeof pr.name === 'string' && pr.name.trim() ? pr.name.trim() : p.name
+    const variantSuffix = p.variant
+    if (variantSuffix && !name.toLowerCase().includes(variantSuffix.toLowerCase())) {
+      name = `${name} · ${variantSuffix}`
+    }
     const img =
       typeof pr.image_url === 'string' && pr.image_url.trim() ? pr.image_url.trim() : p.imageUrl
     let lineTotalCents = p.lineTotalCents

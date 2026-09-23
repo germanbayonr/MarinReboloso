@@ -7,6 +7,10 @@ import { fetchActiveProducts } from '@/lib/products-data-source'
 import { validatePromoCodePublic } from '@/lib/promotions'
 import { findStripePromotionCodeId } from '@/lib/stripe-promotions'
 import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
+import {
+  checkoutCustomerStripeMetadata,
+  parseCheckoutCustomerFromBody,
+} from '@/lib/validation/checkout-customer-api'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -15,35 +19,32 @@ const cartItemSchema = z.object({
   id: z.string().min(1),
   quantity: z.number().int().positive().max(99),
   stripe_price_id: z.string().min(1).optional(),
+  variant: z.string().max(200).nullable().optional(),
 })
 
 const requestSchema = z.object({
   cartItems: z.array(cartItemSchema).min(1),
   promoCode: z.string().nullable().optional(),
-  customer: z
-    .object({
-      email: z.string().email().optional(),
-    })
-    .passthrough()
-    .optional(),
-  customerDetails: z
-    .object({
-      email: z.string().email().optional(),
-    })
-    .passthrough()
-    .optional(),
-  customerData: z
-    .object({
-      email: z.string().email().optional(),
-    })
-    .passthrough()
-    .optional(),
+  customer: z.record(z.unknown()).optional(),
+  customerDetails: z.record(z.unknown()).optional(),
+  customerData: z.record(z.unknown()).optional(),
 })
 
 export async function POST(req: Request) {
   try {
     const json = await req.json()
     const { customer, customerData, customerDetails, cartItems, promoCode } = requestSchema.parse(json)
+
+    let checkoutCustomer
+    try {
+      checkoutCustomer = parseCheckoutCustomerFromBody(customer ?? customerDetails ?? customerData)
+    } catch (customerErr) {
+      if (customerErr instanceof z.ZodError) {
+        const first = customerErr.errors[0]?.message ?? 'Datos de contacto incompletos'
+        return NextResponse.json({ error: { message: first } }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
+      }
+      throw customerErr
+    }
 
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY ||
@@ -134,9 +135,11 @@ export async function POST(req: Request) {
 
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = cartItems.map((item) => {
       const checkoutId = checkoutIdMap.get(item.id) ?? item.id
+      const fromCart = item.stripe_price_id?.trim()
+      const priceId = (fromCart && fromCart.startsWith('price_') ? fromCart : null) ?? (byId.get(checkoutId) as string)
       return {
         quantity: item.quantity,
-        price: byId.get(checkoutId) as string,
+        price: priceId,
       }
     })
 
@@ -179,18 +182,22 @@ export async function POST(req: Request) {
       (acc, item, idx) => {
         const checkoutId = checkoutIdMap.get(item.id) ?? item.id
         if (checkoutId) acc[`supabase_product_${idx}`] = checkoutId
+        const variant = item.variant?.trim()
+        if (variant) acc[`cart_variant_${idx}`] = variant.slice(0, 200)
         return acc
       },
       {} as Record<string, string>,
     )
     if (promoCode) metadata.promo_code = String(promoCode).trim().toUpperCase()
 
+    Object.assign(metadata, checkoutCustomerStripeMetadata(checkoutCustomer))
+
     const hasDiscounts = Boolean(discounts?.length)
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
-      customer_email: customer?.email ?? customerDetails?.email ?? customerData?.email,
+      customer_email: checkoutCustomer.email,
       shipping_address_collection: { allowed_countries: ['ES'] },
       shipping_options: [
         {

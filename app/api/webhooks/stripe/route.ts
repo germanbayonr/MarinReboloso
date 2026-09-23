@@ -7,6 +7,7 @@ import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { getOrderConfirmationTemplate, getOrderEmailSubject } from '@/lib/mail/templates'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
 import { sendMareboMailResult } from '@/lib/mail/send'
+import { checkoutNameFromStripeSession, customerPhoneFromStripeSession } from '@/lib/stripe-session-customer'
 
 export const dynamic = 'force-dynamic'
 
@@ -204,7 +205,8 @@ async function buildItemsAndSummary(
   const summaryParts: string[] = []
   const items: Record<string, unknown>[] = []
 
-  for (const li of lineItems) {
+  for (let lineIndex = 0; lineIndex < lineItems.length; lineIndex++) {
+    const li = lineItems[lineIndex]
     const qty = typeof li.quantity === 'number' && li.quantity > 0 ? li.quantity : 1
     const lineCents =
       typeof li.amount_total === 'number' ? li.amount_total : typeof li.amount_subtotal === 'number' ? li.amount_subtotal : 0
@@ -221,31 +223,44 @@ async function buildItemsAndSummary(
     const descName = li.description?.trim() || product?.name?.trim() || 'Producto'
 
     const pr = priceId ? byStripePrice.get(priceId) : undefined
+    const variantLabel =
+      typeof session.metadata?.[`cart_variant_${lineIndex}`] === 'string'
+        ? session.metadata[`cart_variant_${lineIndex}`].trim()
+        : null
+
     if (pr) {
       const unit = typeof pr.price === 'number' ? pr.price : Number(pr.price)
       const dbImg = normalizeProductImageUrl(pr.image_url)
+      const baseName = String(pr.name ?? descName)
+      const lineName =
+        variantLabel && !baseName.toLowerCase().includes(variantLabel.toLowerCase())
+          ? `${baseName} · ${variantLabel}`
+          : baseName
       items.push({
         id: String(pr.id),
-        name: String(pr.name ?? descName),
+        name: lineName,
         quantity: qty,
         line_total: Number.isFinite(lineEur) ? lineEur : Number.isFinite(unit) ? unit * qty : 0,
         image_url: dbImg || stripeImg,
         price: Number.isFinite(unit) ? unit : lineEur / Math.max(1, qty),
         stripe_price_id: priceId,
+        variant: variantLabel,
       })
-      summaryParts.push(`${qty}× ${String(pr.name ?? descName)}`)
+      summaryParts.push(`${qty}× ${lineName}`)
     } else {
       const unitCents = typeof price?.unit_amount === 'number' ? price.unit_amount : Math.round(lineCents / qty)
       const unitEur = unitCents / 100
+      const lineName = variantLabel ? `${descName} · ${variantLabel}` : descName
       items.push({
-        name: descName,
+        name: lineName,
         quantity: qty,
         line_total: Number.isFinite(lineEur) ? lineEur : unitEur * qty,
         image_url: stripeImg,
         price: unitEur,
         stripe_price_id: priceId,
+        variant: variantLabel,
       })
-      summaryParts.push(`${qty}× ${descName}`)
+      summaryParts.push(`${qty}× ${lineName}`)
     }
   }
 
@@ -320,6 +335,7 @@ async function sendShopNotificationMail(orderRow: AdminOrder, customerName: stri
       <p><strong>Ref:</strong> ${orderRef}</p>
       <p><strong>Cliente:</strong> ${customerName}</p>
       <p><strong>Email:</strong> ${email || '—'}</p>
+      <p><strong>Teléfono:</strong> ${(orderRow.customer_phone ?? '').trim() || '—'}</p>
       <p><strong>Total:</strong> ${orderRow.total_amount ?? '—'} ${orderRow.currency ?? ''}</p>
       <ul>${lines}</ul>
     </div>
@@ -446,7 +462,13 @@ export async function POST(req: Request) {
   const customer_email =
     (session.customer_details?.email || session.customer_email || '').trim() || null
 
-  const customer_name = built.customer_name || session.customer_details?.name?.trim() || null
+  const customer_name =
+    built.customer_name ||
+    checkoutNameFromStripeSession(session) ||
+    session.customer_details?.name?.trim() ||
+    null
+
+  const customer_phone = customerPhoneFromStripeSession(session)
 
   const shipping = shippingFieldsFromSession(session)
   const shippingCents =
@@ -459,6 +481,7 @@ export async function POST(req: Request) {
     stripe_event_id: event.id,
     customer_email,
     customer_name,
+    customer_phone,
     total_amount: totalEur,
     currency: (session.currency || 'eur').toLowerCase(),
     status: 'pendiente',

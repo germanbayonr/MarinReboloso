@@ -6,6 +6,19 @@ import {
   type StorefrontProduct,
 } from '@/lib/product-variants'
 
+export function getCartLineProductId(
+  product: {
+    id: string
+    checkout_product_id?: string | null
+    grouped_from_ids?: string[]
+  },
+  selectedVariant: { id?: string | null } | null | undefined,
+): string {
+  const variantId = String(selectedVariant?.id ?? '').trim()
+  if (variantId && isProductUuid(variantId)) return variantId
+  return getCheckoutProductId(product)
+}
+
 export function getCheckoutProductId(product: {
   id: string
   checkout_product_id?: string | null

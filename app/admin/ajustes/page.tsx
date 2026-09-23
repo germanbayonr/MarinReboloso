@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { Save } from 'lucide-react'
+import { STORE_PHONE_DISPLAY } from '@/lib/site-contact'
 
 export default function AjustesPage() {
   const [settings, setSettings] = useState({
     storeName: 'Marebo Jewelry',
     storeEmail: 'marebo.meri@gmail.com',
-    storePhone: '+34 600 000 000',
+    storePhone: STORE_PHONE_DISPLAY,
     storeCity: 'Sevilla',
     currency: 'EUR',
     language: 'es',
