@@ -1,6 +1,6 @@
 'use client'
 
-import { STORE_PHONE_DISPLAY, STORE_TEL_HREF, STORE_WHATSAPP_URL } from '@/lib/site-contact'
+import { STORE_PHONE_DISPLAY, STORE_WHATSAPP_URL } from '@/lib/site-contact'
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (

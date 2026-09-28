@@ -7,13 +7,14 @@ import { archiveStripeProduct } from '@/lib/admin/archive-stripe-product'
 import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
 import { getAllowedCollectionSlugs } from '@/lib/collections'
-import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
+import { ensureAdminOrRedirect, getServiceSupabase, withAdminServiceSupabase } from '@/lib/admin/server'
 import {
   isLikelyRowLevelSecurityMessage,
   logAdminSupabaseIssue,
   RLS_BLOCK_USER_MESSAGE,
 } from '@/lib/admin/supabase-admin-log'
 import { computeFinalPrice } from '@/lib/pricing'
+import { flattenVariantItemsGalleryUrls, normalizeVariantsForSave } from '@/lib/product-variants'
 import { mapProductRow } from '@/lib/admin/map-product'
 import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
 import { uploadOptimizedAdminImages } from '@/lib/admin/upload-optimized-admin-images'
@@ -389,24 +390,24 @@ function shippingFieldsFromStripeSession(session: Stripe.Checkout.Session) {
 }
 
 export async function adminGetProducts(): Promise<AdminProduct[]> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
-  let { data, error } = await sb
-    .from('products')
-    .select(ADMIN_PRODUCT_SELECT)
-    .order('created_at', { ascending: false, nullsFirst: false })
-    .limit(5000)
-  if (error && isMissingVariantsColumnError(error.message)) {
-    const legacy = await sb
+  return withAdminServiceSupabase(async (sb) => {
+    let { data, error } = await sb
       .from('products')
-      .select(ADMIN_PRODUCT_SELECT_LEGACY)
+      .select(ADMIN_PRODUCT_SELECT)
       .order('created_at', { ascending: false, nullsFirst: false })
       .limit(5000)
-    data = legacy.data
-    error = legacy.error
-  }
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((row) => mapProductRow(row as Record<string, unknown>))
+    if (error && isMissingVariantsColumnError(error.message)) {
+      const legacy = await sb
+        .from('products')
+        .select(ADMIN_PRODUCT_SELECT_LEGACY)
+        .order('created_at', { ascending: false, nullsFirst: false })
+        .limit(5000)
+      data = legacy.data
+      error = legacy.error
+    }
+    if (error) throw new Error(error.message)
+    return (data ?? []).map((row) => mapProductRow(row as Record<string, unknown>))
+  })
 }
 
 export type ProductInput = {
@@ -433,8 +434,12 @@ export async function updateProduct(id: string, input: ProductInput) {
   const sb = sup.client
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = await normalizeCollectionForProduct(input.collection)
-  const hasVariants = Boolean(input.has_variants && input.variants?.items?.length)
-  const variantImages = hasVariants ? input.variants!.items.map((i) => i.image_url).filter(Boolean) : []
+  const normalizedVariants =
+    input.has_variants && input.variants
+      ? normalizeVariantsForSave(input.variants)
+      : { colors: [], sizes: [], items: [] }
+  const hasVariants = Boolean(input.has_variants && normalizedVariants.items.length)
+  const variantImages = hasVariants ? flattenVariantItemsGalleryUrls(normalizedVariants.items) : []
   const imageInput = hasVariants && variantImages.length
     ? { image_url: variantImages[0], image_urls: variantImages }
     : input
@@ -450,7 +455,7 @@ export async function updateProduct(id: string, input: ProductInput) {
     discount_percent: input.discount_percent,
     price,
     has_variants: hasVariants,
-    variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
+    variants: hasVariants ? normalizedVariants : { colors: [], sizes: [], items: [] },
   }
   const { data, error } = await updateProductRow(sb, id, writePayload)
   if (error) return productMutationErrorResult('update', error.message)
@@ -660,8 +665,12 @@ export async function createProduct(input: ProductInput) {
   const stripe = new Stripe(secret)
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = await normalizeCollectionForProduct(input.collection)
-  const hasVariants = Boolean(input.has_variants && input.variants?.items?.length)
-  const variantImages = hasVariants ? input.variants!.items.map((i) => i.image_url).filter(Boolean) : []
+  const normalizedVariants =
+    input.has_variants && input.variants
+      ? normalizeVariantsForSave(input.variants)
+      : { colors: [], sizes: [], items: [] }
+  const hasVariants = Boolean(input.has_variants && normalizedVariants.items.length)
+  const variantImages = hasVariants ? flattenVariantItemsGalleryUrls(normalizedVariants.items) : []
   const imageInput = hasVariants && variantImages.length
     ? { image_url: variantImages[0], image_urls: variantImages }
     : input
@@ -699,7 +708,7 @@ export async function createProduct(input: ProductInput) {
     stripe_product_id: stripeLink.stripeProductId,
     stripe_price_id: stripeLink.stripePriceId,
     has_variants: hasVariants,
-    variants: hasVariants ? input.variants : { colors: [], sizes: [], items: [] },
+    variants: hasVariants ? normalizedVariants : { colors: [], sizes: [], items: [] },
   }
   const { data, error, id: insertedId } = await insertProductRow(sb, insertPayload)
   if (error) return productMutationErrorResult('create', error.message)
@@ -960,11 +969,11 @@ export const adminCreateProductWithImages = createProductWithImages
 export const adminSyncProductsWithStripe = syncProductsWithStripe
 
 export async function adminGetOrders(): Promise<AdminOrder[]> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
-  const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false }).limit(5000)
-  if (error) throw new Error(error.message)
-  return (data ?? []) as AdminOrder[]
+  return withAdminServiceSupabase(async (sb) => {
+    const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false }).limit(5000)
+    if (error) throw new Error(error.message)
+    return (data ?? []) as AdminOrder[]
+  })
 }
 
 type AdminStripeSyncInput = {

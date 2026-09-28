@@ -2,19 +2,21 @@
 
 import { useCallback, useState } from 'react'
 import Image from 'next/image'
-import { Plus, Trash2, Upload } from 'lucide-react'
+import { Plus, Trash2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
 import type { ProductVariantItem, ProductVariantsData } from '@/lib/product-variants'
-import { emptyProductVariants } from '@/lib/product-variants'
+import { emptyProductVariants, variantItemImageUrls } from '@/lib/product-variants'
 
 function newVariantItem(partial?: Partial<ProductVariantItem>): ProductVariantItem {
+  const urls = partial ? variantItemImageUrls(partial as ProductVariantItem) : []
   return {
     id: partial?.id ?? crypto.randomUUID(),
     color: partial?.color ?? null,
     size: partial?.size ?? null,
-    image_url: partial?.image_url ?? '',
+    image_url: urls[0] ?? partial?.image_url ?? '',
+    image_urls: urls.length > 1 ? urls : urls.length === 1 ? urls : partial?.image_urls,
     in_stock: partial?.in_stock ?? true,
   }
 }
@@ -51,7 +53,16 @@ export default function ProductVariantsEditor({
   const updateItem = (id: string, patch: Partial<ProductVariantItem>) => {
     onVariantsChange({
       ...variants,
-      items: variants.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      items: variants.items.map((item) => {
+        if (item.id !== id) return item
+        const merged = { ...item, ...patch }
+        const urls = variantItemImageUrls(merged)
+        return {
+          ...merged,
+          image_url: urls[0] ?? '',
+          image_urls: urls.length > 0 ? urls : undefined,
+        }
+      }),
     })
   }
 
@@ -63,21 +74,39 @@ export default function ProductVariantsEditor({
     onVariantsChange({ ...variants, items: [...variants.items, newVariantItem()] })
   }
 
-  const uploadVariantImage = async (itemId: string, file: File) => {
+  const uploadVariantImages = async (itemId: string, files: FileList | File[]) => {
+    const list = Array.from(files)
+    if (!list.length) return
     setUploadingId(itemId)
     try {
-      const res = await uploadProductImagesToSupabase([file])
+      const res = await uploadProductImagesToSupabase(list)
       if (!res.ok) {
         toast.error(res.error)
         return
       }
-      const url = res.urls[0]
-      if (!url) return
-      updateItem(itemId, { image_url: url })
-      toast.success('Imagen de variante subida')
+      const newUrls = res.urls.filter(Boolean)
+      if (!newUrls.length) return
+      const item = variants.items.find((i) => i.id === itemId)
+      const existing = item ? variantItemImageUrls(item) : []
+      const combined = [...existing, ...newUrls]
+      updateItem(itemId, {
+        image_url: combined[0] ?? '',
+        image_urls: combined.length ? combined : undefined,
+      })
+      toast.success(newUrls.length > 1 ? 'Imágenes subidas' : 'Imagen subida')
     } finally {
       setUploadingId(null)
     }
+  }
+
+  const removeVariantImage = (itemId: string, url: string) => {
+    const item = variants.items.find((i) => i.id === itemId)
+    if (!item) return
+    const next = variantItemImageUrls(item).filter((u) => u !== url)
+    updateItem(itemId, {
+      image_url: next[0] ?? '',
+      image_urls: next.length ? next : undefined,
+    })
   }
 
   return (
@@ -85,7 +114,9 @@ export default function ProductVariantsEditor({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-neutral-500">Variantes</p>
-          <p className="text-xs text-neutral-500">Colores, tallas e imagen específica por variante</p>
+          <p className="text-xs text-neutral-500">
+            Colores, tallas e imágenes por variante. En pedidos se muestra «Color · Talla».
+          </p>
         </div>
         <Switch
           checked={hasVariants}
@@ -136,78 +167,81 @@ export default function ProductVariantsEditor({
             </div>
 
             {variants.items.length === 0 ? (
-              <p className="text-xs text-neutral-500">Añade al menos una variante con su imagen.</p>
+              <p className="text-xs text-neutral-500">Añade al menos una variante con una imagen.</p>
             ) : null}
 
-            {variants.items.map((item) => (
-              <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[88px_1fr_auto] gap-3 border border-neutral-200 bg-white p-3">
-                <div className="relative aspect-square w-[88px] overflow-hidden bg-neutral-100">
-                  {item.image_url ? (
-                    <Image src={item.image_url} alt="" fill unoptimized className="object-cover" />
-                  ) : (
-                    <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-1 text-neutral-400">
+            {variants.items.map((item) => {
+              const urls = variantItemImageUrls(item)
+              const isUploading = uploadingId === item.id
+              return (
+                <div key={item.id} className="space-y-3 border border-neutral-200 bg-white p-3">
+                  <div className="flex flex-wrap gap-2">
+                    {urls.map((url) => (
+                      <div key={url} className="relative h-20 w-20 shrink-0 overflow-hidden bg-neutral-100">
+                        <Image src={url} alt="" fill unoptimized className="object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeVariantImage(item.id, url)}
+                          className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black"
+                          aria-label="Quitar imagen"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="flex h-20 w-20 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 border border-dashed border-neutral-300 bg-neutral-50 text-neutral-400 hover:border-neutral-400">
                       <Upload className="h-4 w-4" />
-                      <span className="text-[10px]">{uploadingId === item.id ? '…' : 'Subir'}</span>
+                      <span className="text-[10px]">{isUploading ? '…' : 'Subir'}</span>
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         className="hidden"
-                        disabled={uploadingId === item.id}
+                        disabled={isUploading}
                         onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) void uploadVariantImage(item.id, file)
+                          const files = e.target.files
+                          if (files?.length) void uploadVariantImages(item.id, files)
+                          e.target.value = ''
                         }}
                       />
                     </label>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-neutral-500">Color</label>
-                    <input
-                      type="text"
-                      list="variant-colors-list"
-                      value={item.color ?? ''}
-                      onChange={(e) => updateItem(item.id, { color: e.target.value.trim() || null })}
-                      className="w-full border border-neutral-200 px-2 py-1.5 text-sm"
-                    />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-neutral-500">Talla</label>
-                    <input
-                      type="text"
-                      list="variant-sizes-list"
-                      value={item.size ?? ''}
-                      onChange={(e) => updateItem(item.id, { size: e.target.value.trim() || null })}
-                      className="w-full border border-neutral-200 px-2 py-1.5 text-sm"
-                    />
-                  </div>
-                  {item.image_url ? (
-                    <label className="sm:col-span-2 text-xs text-neutral-500 underline cursor-pointer">
-                      Cambiar imagen
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase tracking-wider text-neutral-500">Color</label>
                       <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        disabled={uploadingId === item.id}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) void uploadVariantImage(item.id, file)
-                        }}
+                        type="text"
+                        list="variant-colors-list"
+                        value={item.color ?? ''}
+                        onChange={(e) => updateItem(item.id, { color: e.target.value.trim() || null })}
+                        className="w-full border border-neutral-200 px-2 py-1.5 text-sm"
                       />
-                    </label>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase tracking-wider text-neutral-500">Talla</label>
+                      <input
+                        type="text"
+                        list="variant-sizes-list"
+                        value={item.size ?? ''}
+                        onChange={(e) => updateItem(item.id, { size: e.target.value.trim() || null })}
+                        className="w-full border border-neutral-200 px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="self-end p-2 text-neutral-400 hover:text-red-600"
+                      aria-label="Eliminar variante"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {urls.length === 0 ? (
+                    <p className="text-xs text-amber-700">Sube al menos una imagen para esta variante.</p>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeItem(item.id)}
-                  className="self-start p-2 text-neutral-400 hover:text-red-600"
-                  aria-label="Eliminar variante"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           <datalist id="variant-colors-list">

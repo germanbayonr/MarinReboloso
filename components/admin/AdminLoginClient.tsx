@@ -6,7 +6,7 @@ import { Lock, LogIn, Mail, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
-import { ADMIN_PANEL_EMAIL } from '@/lib/admin-config'
+import { ADMIN_PANEL_EMAIL, adminLoginEmailsHint, isAllowedAdminLoginEmail } from '@/lib/admin-config'
 import {
   Dialog,
   DialogContent,
@@ -37,8 +37,8 @@ export default function AdminLoginClient() {
     e.preventDefault()
     setError('')
     const trimmed = email.trim()
-    if (trimmed.toLowerCase() !== ADMIN_PANEL_EMAIL.toLowerCase()) {
-      setError('Solo el correo de administración autorizado puede acceder al panel.')
+    if (!isAllowedAdminLoginEmail(trimmed)) {
+      setError('Solo un correo de administración autorizado puede acceder al panel.')
       return
     }
     setSubmitting(true)
@@ -82,7 +82,8 @@ export default function AdminLoginClient() {
       <div className="w-full max-w-md border border-neutral-200 bg-white p-8 shadow-sm">
         <p className="font-serif text-2xl tracking-wide text-neutral-900">Panel Marebo</p>
         <p className="mt-2 text-sm text-neutral-500">
-          Acceso restringido a <span className="font-medium text-neutral-700">{ADMIN_PANEL_EMAIL}</span>
+          Acceso restringido a{' '}
+          <span className="font-medium text-neutral-700">{adminLoginEmailsHint()}</span>
         </p>
 
         <form onSubmit={(e) => void handleLogin(e)} className="mt-8 space-y-4">

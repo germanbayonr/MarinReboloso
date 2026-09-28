@@ -7,11 +7,12 @@ import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
 import { jwtRoleFromSupabaseKey } from '@/lib/supabase/jwt-role'
 
 export async function getSessionUser() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+  if (!url || !anon) return null
+
   const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const supabase = createServerClient(url, anon, {
       cookies: {
         getAll() {
           return cookieStore.getAll()
@@ -44,6 +45,28 @@ export async function ensureAdminOrRedirect() {
  * Cliente Supabase con **service role** (bypass RLS).
  * Obligatorio en webhooks, admin y cualquier escritura sin sesión de usuario (p. ej. pedidos Stripe).
  */
+export function getServiceSupabaseSafe():
+  | { ok: true; client: ReturnType<typeof getServiceSupabase> }
+  | { ok: false; error: string } {
+  try {
+    return { ok: true, client: getServiceSupabase() }
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'Cliente Supabase (service role) no disponible.'
+    return { ok: false, error }
+  }
+}
+
+export async function withAdminServiceSupabase<T>(
+  run: (client: ReturnType<typeof getServiceSupabase>) => Promise<T>,
+): Promise<T> {
+  await ensureAdminOrRedirect()
+  const sup = getServiceSupabaseSafe()
+  if (!sup.ok) {
+    throw new Error(sup.error)
+  }
+  return run(sup.client)
+}
+
 export function getServiceSupabase() {
   const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
   /** Solo `SUPABASE_SERVICE_ROLE_KEY`: otros nombres suelen estar mal copiados y provocan RLS con clave anon. */

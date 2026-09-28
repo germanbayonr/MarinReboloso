@@ -3,9 +3,9 @@
 import { usePathname } from 'next/navigation'
 import WhatsAppFloatingButton from '@/components/WhatsAppFloatingButton'
 
-/** Visible solo en la portada pública (`/`), no en admin ni en el resto de rutas. */
+/** Botón flotante en tienda pública (no en admin). */
 export default function WhatsAppFloatingButtonGate() {
   const pathname = usePathname()
-  if (pathname !== '/') return null
+  if (pathname?.startsWith('/admin')) return null
   return <WhatsAppFloatingButton />
 }

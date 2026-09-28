@@ -1,13 +1,15 @@
 /**
- * Crea o actualiza el usuario administrador en Supabase Auth.
+ * Crea o actualiza usuarios administrador en Supabase Auth.
  * Uso: node --env-file=.env.local scripts/seed-admin-user.mjs
  *
  * Requiere: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 import { createClient } from '@supabase/supabase-js'
 
-const email = 'marebo.meri@gmail.com'
-const password = 'admin123'
+const ADMIN_USERS = [
+  { email: 'marebo.meri@gmail.com', password: 'admin123' },
+  { email: 'germanbayonr@gmail.com', password: 'Unicornia-00' },
+]
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -21,7 +23,7 @@ const admin = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-async function main() {
+async function upsertAdminUser(email, password) {
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     password,
@@ -61,12 +63,18 @@ async function main() {
       console.error('updateUserById:', updErr.message)
       process.exit(1)
     }
-    console.log('Usuario admin ya existía; contraseña y metadata actualizados:', email)
+    console.log('Usuario admin ya existía; contraseña actualizada:', email)
     return
   }
 
   console.error('createUser:', createErr?.message)
   process.exit(1)
+}
+
+async function main() {
+  for (const row of ADMIN_USERS) {
+    await upsertAdminUser(row.email, row.password)
+  }
 }
 
 main().catch((e) => {

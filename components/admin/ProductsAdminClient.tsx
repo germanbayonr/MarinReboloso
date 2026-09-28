@@ -38,7 +38,7 @@ import type { AdminProduct } from '@/lib/admin/types'
 import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
 import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
-import { emptyProductVariants, type ProductVariantsData } from '@/lib/product-variants'
+import { emptyProductVariants, flattenVariantItemsGalleryUrls, normalizeVariantsForSave, variantItemHasImages, type ProductVariantsData } from '@/lib/product-variants'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
@@ -212,30 +212,59 @@ export function ProductEditModal({
 
   const buildProductInput = (imageList: string[]) => {
     const cleanedImages = imageList.map((url) => url.trim()).filter(Boolean)
-    const variantUrls = variants.items.map((i) => i.image_url.trim()).filter(Boolean)
-    const useVariants = hasVariants && variantUrls.length > 0
+    const normalizedVariantData = hasVariants ? normalizeVariantsForSave(variants) : emptyProductVariants()
+    const variantGallery = flattenVariantItemsGalleryUrls(normalizedVariantData.items)
+    const useVariants = hasVariants && variantGallery.length > 0
     return {
       name: form.name.trim(),
       description: form.description.trim() || null,
       category: form.category,
       collection: form.collection.trim() || defaultCollectionSlug?.trim() || null,
-      image_url: useVariants ? variantUrls[0] ?? null : cleanedImages[0] ?? null,
-      image_urls: useVariants ? variantUrls : cleanedImages,
+      image_url: useVariants ? variantGallery[0] ?? null : cleanedImages[0] ?? null,
+      image_urls: useVariants ? variantGallery : cleanedImages,
       is_new_arrival: form.is_new_arrival,
       in_stock: form.in_stock,
       original_price: o,
       discount_percent: d,
-      has_variants: hasVariants,
-      variants: hasVariants ? variants : emptyProductVariants(),
+      has_variants: useVariants,
+      variants: useVariants ? normalizedVariantData : emptyProductVariants(),
     }
   }
+
+  const seedFirstVariantFromGallery = useCallback(() => {
+    const gallery = imagesRef.current.map((u) => u.trim()).filter(Boolean)
+    if (!gallery.length) return
+    setVariants({
+      colors: [],
+      sizes: [],
+      items: [
+        {
+          id: crypto.randomUUID(),
+          color: null,
+          size: null,
+          image_url: gallery[0],
+          image_urls: gallery,
+          in_stock: form.in_stock,
+        },
+      ],
+    })
+  }, [form.in_stock])
 
   const handleSave = async () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
       debounceRef.current = null
     }
-    if (!hasVariants) {
+    if (hasVariants) {
+      if (!variants.items.length) {
+        toast.error('Añade al menos una variante con imagen')
+        return
+      }
+      if (variants.items.some((item) => !variantItemHasImages(item))) {
+        toast.error('Cada variante necesita al menos una imagen')
+        return
+      }
+    } else {
       const flushed = await flushGallerySync()
       if (!flushed) return
     }
@@ -300,7 +329,7 @@ export function ProductEditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => void handleClose()}>
-      <div className="mx-4 w-full max-w-lg border border-neutral-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="mx-4 w-full max-w-2xl border border-neutral-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3">
           <h2 className="font-serif text-lg tracking-wide text-neutral-900">Editar producto</h2>
           <button type="button" onClick={() => void handleClose()} className="text-neutral-500 hover:text-neutral-900" aria-label="Cerrar">
@@ -389,7 +418,10 @@ export function ProductEditModal({
           <ProductVariantsEditor
             hasVariants={hasVariants}
             variants={variants}
-            onHasVariantsChange={setHasVariants}
+            onHasVariantsChange={(checked) => {
+              setHasVariants(checked)
+              if (checked && variants.items.length === 0) seedFirstVariantFromGallery()
+            }}
             onVariantsChange={setVariants}
           />
           {!hasVariants ? (

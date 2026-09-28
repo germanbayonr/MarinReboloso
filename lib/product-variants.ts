@@ -23,6 +23,51 @@ export function emptyProductVariants(): ProductVariantsData {
   return { colors: [], sizes: [], items: [] }
 }
 
+/** Todas las URLs de una variante (orden: `image_url` primero, luego `image_urls`). */
+export function variantItemImageUrls(item: Pick<ProductVariantItem, 'image_url' | 'image_urls'>): string[] {
+  const primary = String(item.image_url ?? '').trim()
+  const rest = Array.isArray(item.image_urls)
+    ? item.image_urls.map((u) => String(u ?? '').trim()).filter(Boolean)
+    : []
+  const merged = [...(primary ? [primary] : []), ...rest]
+  return [...new Set(merged)]
+}
+
+/** Galería plana en BD: imágenes de la variante 1, luego variante 2, etc. */
+export function flattenVariantItemsGalleryUrls(items: ProductVariantItem[]): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const item of items) {
+    for (const url of variantItemImageUrls(item)) {
+      if (seen.has(url)) continue
+      seen.add(url)
+      out.push(url)
+    }
+  }
+  return out
+}
+
+export function variantItemHasImages(item: ProductVariantItem): boolean {
+  return variantItemImageUrls(item).length > 0
+}
+
+export function normalizeVariantItemForSave(item: ProductVariantItem): ProductVariantItem {
+  const urls = variantItemImageUrls(item)
+  return {
+    ...item,
+    image_url: urls[0] ?? '',
+    image_urls: urls.length > 1 ? urls : urls.length === 1 ? urls : undefined,
+  }
+}
+
+export function normalizeVariantsForSave(data: ProductVariantsData): ProductVariantsData {
+  return {
+    colors: data.colors.map((c) => c.trim()).filter(Boolean),
+    sizes: data.sizes.map((s) => s.trim()).filter(Boolean),
+    items: data.items.map(normalizeVariantItemForSave).filter(variantItemHasImages),
+  }
+}
+
 export function parseProductVariants(raw: unknown): ProductVariantsData {
   if (raw == null || typeof raw !== 'object') return emptyProductVariants()
   const o = raw as Record<string, unknown>
@@ -30,18 +75,24 @@ export function parseProductVariants(raw: unknown): ProductVariantsData {
   const sizes = Array.isArray(o.sizes) ? o.sizes.map((s) => String(s).trim()).filter(Boolean) : []
   const items = Array.isArray(o.items)
     ? o.items
-        .map((item) => {
+        .map((item, index) => {
           if (item == null || typeof item !== 'object') return null
           const row = item as Record<string, unknown>
-          const image_url = String(row.image_url ?? '').trim()
-          if (!image_url) return null
-          return {
-            id: String(row.id ?? `var-${items.length}`),
+          const extra = Array.isArray(row.image_urls)
+            ? row.image_urls.map((u) => String(u ?? '').trim()).filter(Boolean)
+            : []
+          const primary = String(row.image_url ?? '').trim()
+          const urls = [...new Set([...(primary ? [primary] : []), ...extra])]
+          if (!urls.length) return null
+          const parsed: ProductVariantItem = {
+            id: String(row.id ?? `var-${index}`),
             color: row.color != null ? String(row.color).trim() || null : null,
             size: row.size != null ? String(row.size).trim() || null : null,
-            image_url,
+            image_url: urls[0],
             in_stock: row.in_stock !== false,
-          } satisfies ProductVariantItem
+          }
+          if (urls.length > 1) parsed.image_urls = urls
+          return parsed
         })
         .filter((x): x is ProductVariantItem => x != null)
     : []

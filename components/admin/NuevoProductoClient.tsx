@@ -13,7 +13,7 @@ import { buildProductCollectionOptions, PRODUCT_COLLECTION_OPTIONS } from '@/lib
 import { uploadProductImagesToSupabase, validateAdminImageFile } from '@/lib/admin/upload-product-images-client'
 import { computeFinalPrice } from '@/lib/pricing'
 import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
-import { emptyProductVariants, type ProductVariantsData } from '@/lib/product-variants'
+import { emptyProductVariants, flattenVariantItemsGalleryUrls, normalizeVariantsForSave, variantItemHasImages, type ProductVariantsData } from '@/lib/product-variants'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
@@ -155,8 +155,8 @@ export default function NuevoProductoClient() {
     if (isUploadingImages) next.images = 'Espera a que terminen de subirse las imágenes'
     else if (hasVariants) {
       if (!variants.items.length) next.variants = 'Añade al menos una variante con imagen'
-      else if (variants.items.some((item) => !item.image_url.trim())) {
-        next.variants = 'Cada variante necesita su imagen en Supabase'
+      else if (variants.items.some((item) => !variantItemHasImages(item))) {
+        next.variants = 'Cada variante necesita al menos una imagen en Supabase'
       }
     } else if (uploadedUrls.length === 0) next.images = 'Sube al menos una imagen a Supabase'
     setErrors(next)
@@ -170,20 +170,22 @@ export default function NuevoProductoClient() {
     setIsSaving(true)
 
     try {
-      const variantUrls = variants.items.map((i) => i.image_url.trim()).filter(Boolean)
+      const normalizedVariants = hasVariants ? normalizeVariantsForSave(variants) : emptyProductVariants()
+      const variantGallery = flattenVariantItemsGalleryUrls(normalizedVariants.items)
+      const useVariants = hasVariants && variantGallery.length > 0
       const res = await createProduct({
         name: form.name.trim(),
         description: form.description.trim() || null,
         category: form.category,
         collection: form.collection.trim() || null,
-        image_url: hasVariants ? variantUrls[0] ?? null : uploadedUrls[0] ?? null,
-        image_urls: hasVariants ? variantUrls : uploadedUrls,
+        image_url: useVariants ? variantGallery[0] ?? null : uploadedUrls[0] ?? null,
+        image_urls: useVariants ? variantGallery : uploadedUrls,
         is_new_arrival: form.is_new_arrival,
         in_stock: form.in_stock,
         original_price: Number(form.original_price),
         discount_percent: Math.min(100, Math.max(0, Number(form.discount_percent) || 0)),
-        has_variants: hasVariants,
-        variants: hasVariants ? variants : undefined,
+        has_variants: useVariants,
+        variants: useVariants ? normalizedVariants : undefined,
       })
       if (!res.ok) throw new Error(res.error)
       notifySiteCatalogChanged()
@@ -364,7 +366,25 @@ export default function NuevoProductoClient() {
             <ProductVariantsEditor
               hasVariants={hasVariants}
               variants={variants}
-              onHasVariantsChange={setHasVariants}
+              onHasVariantsChange={(checked) => {
+                setHasVariants(checked)
+                if (checked && variants.items.length === 0 && uploadedUrls.length > 0) {
+                  setVariants({
+                    colors: [],
+                    sizes: [],
+                    items: [
+                      {
+                        id: crypto.randomUUID(),
+                        color: null,
+                        size: null,
+                        image_url: uploadedUrls[0],
+                        image_urls: uploadedUrls,
+                        in_stock: form.in_stock,
+                      },
+                    ],
+                  })
+                }
+              }}
               onVariantsChange={setVariants}
             />
             {errors.variants ? <p className="text-xs text-destructive">{errors.variants}</p> : null}

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { User, Mail, Lock, ChevronDown, LogIn, Eye, EyeOff } from 'lucide-react'
 import { useAuth, isAdminUser } from '@/lib/auth-context'
-import { ADMIN_PANEL_EMAIL } from '@/lib/admin-config'
+import { ADMIN_PANEL_EMAIL, adminLoginEmailsHint, isAllowedAdminLoginEmail } from '@/lib/admin-config'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
@@ -43,8 +43,8 @@ export default function AdminAuthDropdown({ adminMode = false }: { adminMode?: b
     setSubmitting(true)
     try {
       const trimmedEmail = emailInput.trim()
-      if (adminMode && trimmedEmail.toLowerCase() !== ADMIN_PANEL_EMAIL.toLowerCase()) {
-        setError('Solo el correo de administración autorizado puede acceder al panel.')
+      if (adminMode && !isAllowedAdminLoginEmail(trimmedEmail)) {
+        setError('Solo un correo de administración autorizado puede acceder al panel.')
         return
       }
 
@@ -174,7 +174,7 @@ export default function AdminAuthDropdown({ adminMode = false }: { adminMode?: b
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     {adminMode
-                      ? `Inicia sesión con ${ADMIN_PANEL_EMAIL} para entrar al panel.`
+                      ? `Inicia sesión con ${adminLoginEmailsHint()} para entrar al panel.`
                       : 'Inicia sesión para guardar tu perfil y seguir tu experiencia en la boutique.'}
                   </p>
                 </div>

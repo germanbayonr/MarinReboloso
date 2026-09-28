@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { STORE_PHONE_DISPLAY, STORE_TEL_HREF } from '@/lib/site-contact'
+import { STORE_PHONE_DISPLAY, STORE_TEL_HREF, STORE_WHATSAPP_URL } from '@/lib/site-contact'
 
 export default function Footer() {
   return (
@@ -74,6 +74,16 @@ export default function Footer() {
             <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>
               <a href={STORE_TEL_HREF} className="hover:text-accent transition-colors">
                 {STORE_PHONE_DISPLAY}
+              </a>
+            </li>
+            <li className="font-sans text-sm text-muted-foreground" suppressHydrationWarning>
+              <a
+                href={STORE_WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-accent transition-colors"
+              >
+                WhatsApp · {STORE_PHONE_DISPLAY}
               </a>
             </li>
             <li className="font-sans text-sm text-muted-foreground mt-1" suppressHydrationWarning>Santa Marta, España</li>
