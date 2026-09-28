@@ -7,7 +7,7 @@ import { archiveStripeProduct } from '@/lib/admin/archive-stripe-product'
 import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
 import { getAllowedCollectionSlugs } from '@/lib/collections'
-import { ensureAdminOrRedirect, getServiceSupabase, withAdminServiceSupabase } from '@/lib/admin/server'
+import { ensureAdminOrRedirect, getServiceSupabase, getServiceSupabaseSafe, withAdminServiceSupabase, assertAdminMutationContext } from '@/lib/admin/server'
 import {
   isLikelyRowLevelSecurityMessage,
   logAdminSupabaseIssue,
@@ -30,19 +30,7 @@ import { checkoutNameFromStripeSession, customerPhoneFromStripeSession } from '@
 import { getMailTransporter } from '@/lib/mail/transporter'
 import { getOrderConfirmationTemplate, getOrderEmailSubject } from '@/lib/mail/templates'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
-
-function revalidateCatalogPaths(collectionSlug?: string | null) {
-  revalidatePath('/admin')
-  revalidatePath('/admin/productos')
-  revalidatePath('/admin/colecciones')
-  revalidatePath('/catalogo')
-  revalidatePath('/api/catalog/snapshot')
-  revalidatePath('/')
-  if (collectionSlug) {
-    revalidatePath(`/coleccion/${collectionSlug}`)
-    revalidatePath(`/admin/colecciones/${collectionSlug}`)
-  }
-}
+import { revalidateCatalogPaths } from '@/lib/admin/revalidate-catalog'
 
 async function normalizeCollectionForProduct(raw: string | null | undefined): Promise<string | null> {
   const allowed = await getAllowedCollectionSlugs()
@@ -412,10 +400,9 @@ export type ProductInput = {
 }
 
 export async function updateProduct(id: string, input: ProductInput) {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false as const, error: sup.error }
-  const sb = sup.client
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false as const, error: ctx.error }
+  const sb = ctx.sb
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = await normalizeCollectionForProduct(input.collection)
   const normalizedVariants =
@@ -483,10 +470,9 @@ export async function syncProductGallery(
     update_stripe_image: boolean
   },
 ) {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false as const, error: sup.error }
-  const sb = sup.client
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false as const, error: ctx.error }
+  const sb = ctx.sb
   const id = String(productId ?? '').trim()
   if (!id) return { ok: false as const, error: 'ID de producto inválido' }
 
@@ -578,10 +564,9 @@ async function deleteOneProductFromStores(
 }
 
 export async function deleteProduct(id: string) {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false as const, error: sup.error }
-  const sb = sup.client
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false as const, error: ctx.error }
+  const sb = ctx.sb
 
   const { data: row, error: fetchErr } = await sb
     .from('products')
@@ -601,13 +586,12 @@ export async function deleteProduct(id: string) {
 }
 
 export async function deleteProducts(ids: string[]) {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false as const, error: ctx.error }
   const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))]
   if (uniqueIds.length === 0) return { ok: false as const, error: 'No hay productos seleccionados' }
 
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false as const, error: sup.error }
-  const sb = sup.client
+  const sb = ctx.sb
 
   const { data: rows, error: fetchErr } = await sb
     .from('products')
@@ -640,12 +624,11 @@ export async function deleteProducts(ids: string[]) {
 }
 
 export async function createProduct(input: ProductInput) {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false as const, error: sup.error }
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false as const, error: ctx.error }
   const secret = stripeSecretKey()
   if (!secret) return { ok: false as const, error: 'Falta STRIPE_SECRET_KEY para crear y enlazar producto en Stripe.' }
-  const sb = sup.client
+  const sb = ctx.sb
   const stripe = new Stripe(secret)
   const price = computeFinalPrice(input.original_price, input.discount_percent)
   const collection = await normalizeCollectionForProduct(input.collection)
@@ -712,9 +695,10 @@ export async function syncProductsWithStripe(): Promise<{
   syncedCount: number
   failedSyncs: StripeSyncFailedItem[]
 }> {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { success: false, syncedCount: 0, failedSyncs: [{ name: 'Sistema', reason: sup.error }] }
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) {
+    return { success: false, syncedCount: 0, failedSyncs: [{ name: 'Sistema', reason: ctx.error }] }
+  }
   const secret = stripeSecretKey()
   if (!secret) {
     return {
@@ -724,7 +708,7 @@ export async function syncProductsWithStripe(): Promise<{
     }
   }
 
-  const sb = sup.client
+  const sb = ctx.sb
   const stripe = new Stripe(secret)
   const failedSyncs: StripeSyncFailedItem[] = []
   let syncedCount = 0
@@ -873,10 +857,9 @@ async function uploadFilesToProductImagesBucket(
 export async function createProductWithImages(
   formData: FormData,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false, error: sup.error }
-  const sb = sup.client
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
 
   const files = formData.getAll('images').filter((x): x is File => x instanceof File && x.size > 0)
   if (files.length === 0) return { ok: false, error: 'Sube al menos una imagen' }
@@ -916,32 +899,12 @@ export async function createProductWithImages(
 }
 
 export async function adminUploadProductImages(formData: FormData): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sup = getServiceSupabaseForAction()
-  if (!sup.ok) return { ok: false, error: sup.error }
-  const sb = sup.client
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
   const files = formData.getAll('images').filter((x): x is File => x instanceof File && x.size > 0)
   if (files.length === 0) return { ok: false, error: 'Selecciona al menos una imagen' }
   return uploadFilesToProductImagesBucket(sb, files)
-}
-
-export async function adminSetProductStock(id: string, in_stock: boolean) {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
-  const { data, error } = await sb.from('products').update({ in_stock }).eq('id', id).select('*').single()
-  if (error) return { ok: false as const, error: error.message }
-  revalidateCatalogPaths()
-  return { ok: true as const, product: mapProductRow((data ?? {}) as Record<string, unknown>) }
-}
-
-/** Visible en la web (listados y ficha). Independiente de `in_stock` (pausa vs. «sin stock»). */
-export async function adminSetProductCatalogVisible(id: string, is_active: boolean) {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
-  const { data, error } = await sb.from('products').update({ is_active }).eq('id', id).select('*').single()
-  if (error) return { ok: false as const, error: error.message }
-  revalidateCatalogPaths()
-  return { ok: true as const, product: mapProductRow((data ?? {}) as Record<string, unknown>) }
 }
 
 export const adminUpdateProduct = updateProduct
@@ -973,10 +936,11 @@ type AdminStripeSyncResult =
   | { ok: false; error: string }
 
 export async function adminSyncOrdersFromStripe(input?: AdminStripeSyncInput): Promise<AdminStripeSyncResult> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
   const secret = stripeSecretKey()
   if (!secret) return { ok: false, error: 'Falta STRIPE_SECRET_KEY para sincronizar pedidos.' }
-  const sb = getServiceSupabase()
+  const sb = ctx.sb
   const stripe = new Stripe(secret)
 
   const daysBackRaw = Number(input?.daysBack ?? 120)
@@ -1132,8 +1096,9 @@ export async function adminSyncOrdersFromStripe(input?: AdminStripeSyncInput): P
 }
 
 export async function adminDeleteOrder(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
   const { error } = await sb.from('orders').delete().eq('id', id)
   if (error) return { ok: false, error: error.message }
   revalidatePath('/admin')
@@ -1157,8 +1122,9 @@ export async function adminUpdateOrderStatus(
   status: OrderStatus,
   payload?: AdminOrderStatusPayload,
 ) {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false as const, error: ctx.error }
+  const sb = ctx.sb
   if (!ORDER_STATUSES.includes(status)) {
     return { ok: false as const, error: 'Estado no válido' }
   }
@@ -1254,9 +1220,10 @@ export async function adminGetCustomers(): Promise<AdminCustomer[]> {
 
 /** Inserta un pedido de prueba en Supabase, revalida el panel y envía el correo de confirmación (120 €). */
 export async function sendTestEmail(): Promise<{ ok: true } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
 
-  const sb = getServiceSupabase()
+  const sb = ctx.sb
   const { data: catalog, error: catErr } = await sb
     .from('products')
     .select('id,name,price,image_url')
@@ -1375,9 +1342,10 @@ export async function sendTestEmail(): Promise<{ ok: true } | { ok: false; error
 
 /** Pedido de prueba: un producto activo aleatorio + correo con imagen real. */
 export async function simulateRealPurchase(): Promise<{ ok: true } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
 
-  const sb = getServiceSupabase()
+  const sb = ctx.sb
   const { data: pool, error: poolErr } = await sb
     .from('products')
     .select('id,name,price,image_url')

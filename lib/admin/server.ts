@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { isAdminPanelEmail } from '@/lib/admin-config'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
 import { jwtRoleFromSupabaseKey } from '@/lib/supabase/jwt-role'
 
@@ -31,6 +32,22 @@ export async function getSessionUser() {
     data: { user },
   } = await supabase.auth.getUser()
   return user
+}
+
+/** Para server actions invocadas desde el cliente: nunca `redirect()` (rompe el toggle/botón). */
+export async function assertAdminMutationContext(): Promise<
+  { ok: true; sb: SupabaseClient } | { ok: false; error: string }
+> {
+  const user = await getSessionUser()
+  if (!isAdminPanelEmail(user?.email)) {
+    return {
+      ok: false,
+      error: 'Sesión admin expirada. Recarga la página e inicia sesión de nuevo en /admin/login.',
+    }
+  }
+  const sup = getServiceSupabaseSafe()
+  if (!sup.ok) return { ok: false, error: sup.error }
+  return { ok: true, sb: sup.client }
 }
 
 export async function ensureAdminOrRedirect() {

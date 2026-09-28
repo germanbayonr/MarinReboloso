@@ -22,13 +22,15 @@ import { Switch } from '@/components/ui/switch'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
   adminSyncProductsWithStripe,
-  adminSetProductCatalogVisible,
-  adminSetProductStock,
   deleteProduct,
   deleteProducts,
   syncProductGallery,
   updateProduct,
 } from '@/app/admin/actions'
+import {
+  adminSetProductCatalogVisible,
+  adminSetProductStock,
+} from '@/app/admin/product-mutations'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
 import { notifySiteCatalogChanged } from '@/lib/catalog-events'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
@@ -592,6 +594,7 @@ export default function ProductsAdminClient({
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>(null)
   const [isDeletingProduct, setIsDeletingProduct] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [pendingProductPatch, setPendingProductPatch] = useState<Set<string>>(() => new Set())
 
   const sortedProducts = useMemo(() => sortProductsByCreatedAtDesc(products), [products])
 
@@ -724,14 +727,27 @@ export default function ProductsAdminClient({
             <div className="flex items-center gap-2">
               <Switch
                 checked={p.in_stock}
+                disabled={pendingProductPatch.has(p.id)}
                 onCheckedChange={async (v) => {
-                  const res = await adminSetProductStock(p.id, v)
-                  if (!res.ok) {
-                    toast.error(res.error)
-                    return
+                  setPendingProductPatch((prev) => new Set(prev).add(p.id))
+                  try {
+                    const res = await adminSetProductStock(p.id, v)
+                    if (!res.ok) {
+                      toast.error(res.error)
+                      return
+                    }
+                    setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
+                    notifySiteCatalogChanged()
+                    toast.success(v ? 'Disponible' : 'Sin stock')
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : 'No se pudo actualizar el stock')
+                  } finally {
+                    setPendingProductPatch((prev) => {
+                      const next = new Set(prev)
+                      next.delete(p.id)
+                      return next
+                    })
                   }
-                  setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
-                  toast.success(v ? 'Disponible' : 'Sin stock')
                 }}
               />
               <span className="text-xs text-neutral-500">{p.in_stock ? 'Disponible' : 'Sin stock'}</span>
@@ -748,14 +764,28 @@ export default function ProductsAdminClient({
             <div className="flex items-center gap-2">
               <Switch
                 checked={p.is_active}
+                disabled={pendingProductPatch.has(`${p.id}:catalog`)}
                 onCheckedChange={async (v) => {
-                  const res = await adminSetProductCatalogVisible(p.id, v)
-                  if (!res.ok) {
-                    toast.error(res.error)
-                    return
+                  const patchKey = `${p.id}:catalog`
+                  setPendingProductPatch((prev) => new Set(prev).add(patchKey))
+                  try {
+                    const res = await adminSetProductCatalogVisible(p.id, v)
+                    if (!res.ok) {
+                      toast.error(res.error)
+                      return
+                    }
+                    setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
+                    notifySiteCatalogChanged()
+                    toast.success(v ? 'Visible en la tienda' : 'En pausa (no aparece en la web)')
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : 'No se pudo cambiar la visibilidad')
+                  } finally {
+                    setPendingProductPatch((prev) => {
+                      const next = new Set(prev)
+                      next.delete(patchKey)
+                      return next
+                    })
                   }
-                  setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
-                  toast.success(v ? 'Visible en la tienda' : 'En pausa (no aparece en la web)')
                 }}
               />
               <span className="text-xs text-neutral-500">{p.is_active ? 'Visible' : 'Pausa'}</span>

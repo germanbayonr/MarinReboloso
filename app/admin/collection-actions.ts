@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
+import { ensureAdminOrRedirect, getServiceSupabase, assertAdminMutationContext } from '@/lib/admin/server'
 import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
 import { slugifyCollectionLabel } from '@/lib/collection-slug'
 import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
@@ -84,7 +84,8 @@ export type CreateCollectionInput = {
 export async function adminCreateCollection(
   input: CreateCollectionInput,
 ): Promise<{ ok: true; collection: CollectionRecord } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
   const label = String(input.label ?? '').trim()
   if (!label) return { ok: false, error: 'El nombre de la colección es obligatorio.' }
 
@@ -94,7 +95,7 @@ export async function adminCreateCollection(
   }
 
   const visibleOnSite = input.visible_on_site !== false
-  const sb = getServiceSupabase()
+  const sb = ctx.sb
   const { data, error } = await sb
     .from('collections')
     .insert({
@@ -148,11 +149,12 @@ function collectionProductSlugs(slug: string): string[] {
 export async function adminDeleteCollection(
   slug: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
   const normalized = String(slug ?? '').toLowerCase().trim()
   if (!normalized) return { ok: false, error: 'Slug inválido.' }
 
-  const sb = getServiceSupabase()
+  const sb = ctx.sb
   const productSlugs = collectionProductSlugs(normalized)
 
   const { data: existingRow } = await sb
@@ -197,7 +199,8 @@ export async function adminUpdateCollection(
   slug: string,
   input: Partial<CreateCollectionInput>,
 ): Promise<{ ok: true; collection: CollectionRecord } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
   const normalized = String(slug ?? '').toLowerCase().trim()
   if (!normalized) return { ok: false, error: 'Slug inválido.' }
 
@@ -221,7 +224,7 @@ export async function adminUpdateCollection(
   }
   if (input.sort_order !== undefined) patch.sort_order = Number(input.sort_order) || 0
 
-  const sb = getServiceSupabase()
+  const sb = ctx.sb
 
   const heroFieldsChanging =
     input.hero_image_left !== undefined ||
@@ -273,7 +276,8 @@ export async function adminUpdateCollection(
 export async function adminUploadCollectionHeroImages(
   formData: FormData,
 ): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
   const files = formData.getAll('images').filter((x): x is File => x instanceof File && x.size > 0)
   if (files.length === 0) return { ok: false, error: 'Selecciona al menos una imagen.' }
   return uploadCollectionImages(files)
@@ -282,7 +286,8 @@ export async function adminUploadCollectionHeroImages(
 export async function adminCreateCollectionWithImages(
   formData: FormData,
 ): Promise<{ ok: true; collection: CollectionRecord } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
 
   const label = String(formData.get('label') ?? '').trim()
   const slugRaw = String(formData.get('slug') ?? '').trim()

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import Stripe from 'stripe'
-import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
+import { ensureAdminOrRedirect, getServiceSupabase, assertAdminMutationContext } from '@/lib/admin/server'
 import {
   PROMOTION_TYPES,
   type CreatePromotionInput,
@@ -49,8 +49,9 @@ export async function getPromotions(): Promise<PromotionRow[]> {
 export async function createPromotion(
   data: CreatePromotionInput,
 ): Promise<{ ok: true; promotion: PromotionRow } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
   const type = data.type
   if (!PROMOTION_TYPES.includes(type)) return { ok: false, error: 'Tipo de promoción no válido.' }
   const code = normalizeCode(data.code)
@@ -103,8 +104,9 @@ export async function syncAllPromotionsToStripe(): Promise<{
   errors?: Array<{ code: string; message: string }>
   error?: string
 }> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
   const { data, error } = await sb
     .from('promotions')
     .select('id,code,discount_percentage,is_active')
@@ -156,8 +158,9 @@ export async function updatePromotion(
   id: string,
   data: CreatePromotionInput,
 ): Promise<{ ok: true; promotion: PromotionRow } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
   const type = data.type
   if (!PROMOTION_TYPES.includes(type)) return { ok: false, error: 'Tipo de promoción no válido.' }
   const code = normalizeCode(data.code)
@@ -206,8 +209,9 @@ export async function togglePromotionActive(
   id: string,
   status: boolean,
 ): Promise<{ ok: true; promotion: PromotionRow } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
   const { data, error } = await sb
     .from('promotions')
     .update({ is_active: status })
@@ -235,8 +239,9 @@ export async function togglePromotionActive(
 }
 
 export async function deletePromotion(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  await ensureAdminOrRedirect()
-  const sb = getServiceSupabase()
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false, error: ctx.error }
+  const sb = ctx.sb
   const { data: existingPromotion, error: fetchError } = await sb
     .from('promotions')
     .select('code')

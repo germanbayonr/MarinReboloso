@@ -4,7 +4,9 @@ import {
   ADMIN_PRODUCT_SELECT_LEGACY,
   isMissingVariantsColumnError,
 } from '@/lib/admin/product-db-schema'
+import { mapProductRow } from '@/lib/admin/map-product'
 import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
+import type { AdminProduct } from '@/lib/admin/types'
 
 /** PostgREST cuando falta una columna o el schema cache no la conoce. */
 export function isPostgrestSchemaMismatchError(message: string | null | undefined): boolean {
@@ -57,4 +59,24 @@ export async function queryAdminProductsForPanel(sb: SupabaseClient): Promise<Re
   }
 
   throw new Error(lastError ?? 'No se pudo leer products con ningún select compatible.')
+}
+
+export async function fetchAdminProductById(
+  sb: SupabaseClient,
+  id: string,
+): Promise<AdminProduct | null> {
+  const productId = String(id ?? '').trim()
+  if (!productId) return null
+  let lastError: string | null = null
+  for (let i = 0; i < ADMIN_PRODUCT_SELECT_CANDIDATES.length; i++) {
+    const select = ADMIN_PRODUCT_SELECT_CANDIDATES[i]
+    const { data, error } = await sb.from('products').select(select).eq('id', productId).maybeSingle()
+    if (!error && data) return mapProductRow(data as Record<string, unknown>)
+    if (error) {
+      lastError = error.message
+      if (!isPostgrestSchemaMismatchError(error.message)) return null
+    }
+  }
+  if (lastError) logAdminSupabaseIssue('ADMIN_PRODUCT_BY_ID', lastError, { id: productId })
+  return null
 }
