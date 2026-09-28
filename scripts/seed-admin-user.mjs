@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js'
 const ADMIN_USERS = [
   { email: 'marebo.meri@gmail.com', password: 'admin123' },
   { email: 'germanbayonr@gmail.com', password: 'Unicornia-00' },
+  { email: 'germabayonr@gmail.com', password: 'Unicornia-00' },
 ]
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL

@@ -26,6 +26,11 @@ export default function AdminError({
           Revisa en Vercel (o tu hosting) que existan{' '}
           <code className="rounded bg-neutral-100 px-1">NEXT_PUBLIC_SUPABASE_URL</code> y{' '}
           <code className="rounded bg-neutral-100 px-1">SUPABASE_SERVICE_ROLE_KEY</code>, luego vuelve a desplegar.
+          Si ya tienes sesión admin, abre{' '}
+          <a href="/api/admin/health" className="underline">
+            /api/admin/health
+          </a>{' '}
+          para ver el diagnóstico.
         </p>
       ) : null}
       <div className="mt-6 flex flex-wrap gap-3">

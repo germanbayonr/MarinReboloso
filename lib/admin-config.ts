@@ -1,21 +1,15 @@
 /** Admin de producción (siempre). */
 export const ADMIN_PANEL_EMAIL = 'marebo.meri@gmail.com'
 
-/** Admins extra solo en desarrollo / preview (no en producción Vercel). */
-export const DEV_ADMIN_PANEL_EMAILS = ['germanbayonr@gmail.com'] as const
-
-export function isDevAdminEnvironment(): boolean {
-  if (process.env.NODE_ENV === 'development') return true
-  if (process.env.NEXT_PUBLIC_DEV_ADMIN === 'true') return true
-  if (process.env.VERCEL_ENV === 'preview') return true
-  return false
-}
+/** Admins adicionales con acceso al panel (incl. producción). */
+export const ADDITIONAL_ADMIN_PANEL_EMAILS = [
+  'germanbayonr@gmail.com',
+  /** Alias habitual si se escribe sin «n» en «german». */
+  'germabayonr@gmail.com',
+] as const
 
 export function getAdminPanelEmails(): readonly string[] {
-  if (isDevAdminEnvironment()) {
-    return [ADMIN_PANEL_EMAIL, ...DEV_ADMIN_PANEL_EMAILS]
-  }
-  return [ADMIN_PANEL_EMAIL]
+  return [ADMIN_PANEL_EMAIL, ...ADDITIONAL_ADMIN_PANEL_EMAILS]
 }
 
 export function isAdminPanelEmail(email: string | null | undefined): boolean {
