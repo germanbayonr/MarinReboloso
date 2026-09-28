@@ -19,7 +19,7 @@ import { mapProductRow } from '@/lib/admin/map-product'
 import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
 import { uploadOptimizedAdminImages } from '@/lib/admin/upload-optimized-admin-images'
 import { insertProductRow, updateProductRow } from '@/lib/admin/product-db-write'
-import { ADMIN_PRODUCT_SELECT, ADMIN_PRODUCT_SELECT_LEGACY, isMissingVariantsColumnError } from '@/lib/admin/product-db-schema'
+import { queryAdminProductsForPanel } from '@/lib/admin/fetch-admin-products'
 import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { TEST_EMAIL_TO } from '@/lib/admin/test-email-config'
@@ -391,22 +391,8 @@ function shippingFieldsFromStripeSession(session: Stripe.Checkout.Session) {
 
 export async function adminGetProducts(): Promise<AdminProduct[]> {
   return withAdminServiceSupabase(async (sb) => {
-    let { data, error } = await sb
-      .from('products')
-      .select(ADMIN_PRODUCT_SELECT)
-      .order('created_at', { ascending: false, nullsFirst: false })
-      .limit(5000)
-    if (error && isMissingVariantsColumnError(error.message)) {
-      const legacy = await sb
-        .from('products')
-        .select(ADMIN_PRODUCT_SELECT_LEGACY)
-        .order('created_at', { ascending: false, nullsFirst: false })
-        .limit(5000)
-      data = legacy.data
-      error = legacy.error
-    }
-    if (error) throw new Error(error.message)
-    return (data ?? []).map((row) => mapProductRow(row as Record<string, unknown>))
+    const rows = await queryAdminProductsForPanel(sb)
+    return rows.map((row) => mapProductRow(row))
   })
 }
 

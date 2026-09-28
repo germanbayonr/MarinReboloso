@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { adminGetProducts } from '@/app/admin/actions'
 import { getSessionUser, getServiceSupabaseSafe } from '@/lib/admin/server'
 import { isAdminPanelEmail } from '@/lib/admin-config'
 import {
@@ -18,6 +19,39 @@ export async function GET() {
 
   const envCheck = checkAdminEnvironment()
   const manifest = migrationManifestForHealth()
+
+  let productsPage: {
+    loadOk: boolean
+    productCount: number
+    payloadBytes: number | null
+    error: string | null
+  } = {
+    loadOk: false,
+    productCount: 0,
+    payloadBytes: null,
+    error: null,
+  }
+
+  try {
+    const products = await adminGetProducts()
+    productsPage = {
+      loadOk: true,
+      productCount: products.length,
+      payloadBytes: Buffer.byteLength(JSON.stringify(products), 'utf8'),
+      error: null,
+    }
+  } catch (e) {
+    productsPage = {
+      loadOk: false,
+      productCount: 0,
+      payloadBytes: null,
+      error: e instanceof Error ? e.message : String(e),
+    }
+    envCheck.ok = false
+    envCheck.issues.push(
+      `La carga de /admin/productos falla (adminGetProducts): ${productsPage.error}`,
+    )
+  }
 
   let database: {
     reachable: boolean
@@ -55,11 +89,16 @@ export async function GET() {
   }
 
   const body = {
-    ok: envCheck.ok && database.reachable && database.migrationProbes.every((p) => p.status === 'ok'),
+    ok:
+      envCheck.ok &&
+      productsPage.loadOk &&
+      database.reachable &&
+      database.migrationProbes.every((p) => p.status === 'ok'),
     checkedAt: new Date().toISOString(),
     adminEmail: user?.email ?? null,
     environment: envCheck.env,
     issues: envCheck.issues,
+    productsPage,
     database,
     migrations: manifest,
     hints: [
