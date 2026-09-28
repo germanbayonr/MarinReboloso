@@ -19,7 +19,7 @@ import { mapProductRow } from '@/lib/admin/map-product'
 import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
 import { uploadOptimizedAdminImages } from '@/lib/admin/upload-optimized-admin-images'
 import { insertProductRow, updateProductRow } from '@/lib/admin/product-db-write'
-import { queryAdminProductsForPanel } from '@/lib/admin/fetch-admin-products'
+import { loadAdminProductsForPanel } from '@/lib/admin/load-admin-products'
 import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { TEST_EMAIL_TO } from '@/lib/admin/test-email-config'
@@ -390,10 +390,7 @@ function shippingFieldsFromStripeSession(session: Stripe.Checkout.Session) {
 }
 
 export async function adminGetProducts(): Promise<AdminProduct[]> {
-  return withAdminServiceSupabase(async (sb) => {
-    const rows = await queryAdminProductsForPanel(sb)
-    return rows.map((row) => mapProductRow(row))
-  })
+  return withAdminServiceSupabase(async (sb) => loadAdminProductsForPanel(sb))
 }
 
 export type ProductInput = {
