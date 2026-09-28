@@ -8,11 +8,10 @@ import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-produ
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
 import { getAllowedCollectionSlugs } from '@/lib/collections'
 import { ensureAdminOrRedirect, getServiceSupabase, getServiceSupabaseSafe, withAdminServiceSupabase, assertAdminMutationContext } from '@/lib/admin/server'
-import {
-  isLikelyRowLevelSecurityMessage,
-  logAdminSupabaseIssue,
-  RLS_BLOCK_USER_MESSAGE,
-} from '@/lib/admin/supabase-admin-log'
+import { productMutationErrorResult } from '@/lib/admin/product-mutation-errors'
+import { runAdminDeleteProduct, runAdminDeleteProducts } from '@/lib/admin/product-delete-server'
+import { runAdminDeleteOrder, runAdminUpdateOrderStatus } from '@/lib/admin/order-status-server'
+import { stripeSecretKey } from '@/lib/admin/stripe-secret-key'
 import { computeFinalPrice } from '@/lib/pricing'
 import { flattenVariantItemsGalleryUrls, normalizeVariantsForSave } from '@/lib/product-variants'
 import { mapProductRow } from '@/lib/admin/map-product'
@@ -21,16 +20,16 @@ import { uploadOptimizedAdminImages } from '@/lib/admin/upload-optimized-admin-i
 import { insertProductRow, updateProductRow } from '@/lib/admin/product-db-write'
 import { loadAdminProductsForPanel } from '@/lib/admin/load-admin-products'
 import { loadAdminOrdersForPanel } from '@/lib/admin/load-admin-orders'
-import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
+import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminOrderStatusPayload, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { TEST_EMAIL_TO } from '@/lib/admin/test-email-config'
-import { notifyCustomerOrderStatusChange } from '@/lib/mail/order-status-mail'
 import { sendMareboMailResult } from '@/lib/mail/send'
 import { checkoutNameFromStripeSession, customerPhoneFromStripeSession } from '@/lib/stripe-session-customer'
 import { getMailTransporter } from '@/lib/mail/transporter'
 import { getOrderConfirmationTemplate, getOrderEmailSubject } from '@/lib/mail/templates'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
 import { revalidateCatalogPaths } from '@/lib/admin/revalidate-catalog'
+import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
 
 async function normalizeCollectionForProduct(raw: string | null | undefined): Promise<string | null> {
   const allowed = await getAllowedCollectionSlugs()
@@ -46,31 +45,6 @@ function getServiceSupabaseForAction():
     const errorMessage = e instanceof Error ? e.message : 'Cliente Supabase (service role) no disponible.'
     return { ok: false, error: errorMessage }
   }
-}
-
-function productMutationErrorResult(
-  operation: 'create' | 'update' | 'delete',
-  rawMessage: string,
-): { ok: false; error: string } {
-  if (isLikelyRowLevelSecurityMessage(rawMessage)) {
-    const code =
-      operation === 'create'
-        ? 'PRODUCT_CREATE_RLS'
-        : operation === 'update'
-          ? 'PRODUCT_UPDATE_RLS'
-          : 'PRODUCT_DELETE_RLS'
-    logAdminSupabaseIssue(code, 'PostgREST devolvió error típico de RLS en products.', {
-      operation,
-      supabaseMessage: rawMessage,
-      hint: 'Con service_role no debería aplicarse RLS; revisar env en runtime, misma URL de proyecto y reinicio de dev server.',
-    })
-    return { ok: false as const, error: `${RLS_BLOCK_USER_MESSAGE}${rawMessage}` }
-  }
-  logAdminSupabaseIssue('PRODUCT_MUTATION_DB', `Error en products (${operation}).`, {
-    operation,
-    supabaseMessage: rawMessage,
-  })
-  return { ok: false as const, error: rawMessage }
 }
 
 /** `image_url` en Supabase puede ser string o array de URLs (JSON). */
@@ -90,16 +64,6 @@ function normalizeProductImageUrl(raw: unknown): string | null {
     return null
   }
   return null
-}
-
-function stripeSecretKey(): string {
-  return (
-    process.env.STRIPE_SECRET_KEY ||
-    process.env.STRIPE_API_KEY ||
-    process.env.STRIPE_SECRET ||
-    process.env.NEXT_STRIPE_SECRET_KEY ||
-    ''
-  ).trim()
 }
 
 interface StripeProductForMatch {
@@ -526,61 +490,11 @@ export async function syncProductGallery(
   return { ok: true as const, product: mapProductRow(mappedRow) }
 }
 
-type ProductDeleteRow = {
-  id: string
-  name?: string | null
-  image_url?: unknown
-  stripe_product_id?: string | null
-}
-
-async function deleteOneProductFromStores(
-  sb: ReturnType<typeof getServiceSupabase>,
-  stripe: Stripe | null,
-  row: ProductDeleteRow,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const stripeProductId = row.stripe_product_id?.trim() ?? ''
-  if (stripeProductId) {
-    if (!stripe) {
-      return { ok: false, error: 'Falta STRIPE_SECRET_KEY para eliminar el producto en Stripe.' }
-    }
-    const archived = await archiveStripeProduct(stripe, stripeProductId)
-    if (!archived.ok) return { ok: false, error: `No se pudo desactivar en Stripe: ${archived.error}` }
-  }
-
-  const imageUrls = allImageUrlsFromDatabase(row.image_url)
-  if (imageUrls.length > 0) {
-    const rm = await removeProductImagesFromSupabaseStorage(sb, imageUrls)
-    if (!rm.ok) {
-      logAdminSupabaseIssue('STORAGE_DELETE_FAILED', 'No se pudieron borrar imágenes en Storage antes de eliminar el producto.', {
-        supabaseMessage: rm.error,
-      })
-      return { ok: false, error: `No se pudieron borrar las imágenes en Storage: ${rm.error}` }
-    }
-  }
-
-  const { error } = await sb.from('products').delete().eq('id', row.id)
-  if (error) return productMutationErrorResult('delete', error.message)
-  return { ok: true }
-}
-
 export async function deleteProduct(id: string) {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false as const, error: ctx.error }
-  const sb = ctx.sb
-
-  const { data: row, error: fetchErr } = await sb
-    .from('products')
-    .select('id, name, image_url, stripe_product_id')
-    .eq('id', id)
-    .maybeSingle()
-  if (fetchErr) return { ok: false as const, error: fetchErr.message }
-  if (!row) return { ok: false as const, error: 'Producto no encontrado' }
-
-  const secret = stripeSecretKey()
-  const stripe = secret ? new Stripe(secret) : null
-  const deleted = await deleteOneProductFromStores(sb, stripe, row as ProductDeleteRow)
-  if (!deleted.ok) return { ok: false as const, error: deleted.error }
-
+  const deleted = await runAdminDeleteProduct(ctx.sb, id)
+  if (!deleted.ok) return deleted
   revalidateCatalogPaths()
   return { ok: true as const }
 }
@@ -588,39 +502,10 @@ export async function deleteProduct(id: string) {
 export async function deleteProducts(ids: string[]) {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false as const, error: ctx.error }
-  const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))]
-  if (uniqueIds.length === 0) return { ok: false as const, error: 'No hay productos seleccionados' }
-
-  const sb = ctx.sb
-
-  const { data: rows, error: fetchErr } = await sb
-    .from('products')
-    .select('id, name, image_url, stripe_product_id')
-    .in('id', uniqueIds)
-  if (fetchErr) return { ok: false as const, error: fetchErr.message }
-
-  const secret = stripeSecretKey()
-  const stripe = secret ? new Stripe(secret) : null
-  const failures: Array<{ id: string; name?: string; error: string }> = []
-  let deletedCount = 0
-
-  const foundIds = new Set<string>()
-  for (const row of (rows ?? []) as ProductDeleteRow[]) {
-    foundIds.add(row.id)
-    const deleted = await deleteOneProductFromStores(sb, stripe, row)
-    if (!deleted.ok) {
-      failures.push({ id: row.id, name: row.name ?? undefined, error: deleted.error })
-      continue
-    }
-    deletedCount++
-  }
-
-  for (const id of uniqueIds) {
-    if (!foundIds.has(id)) failures.push({ id, error: 'Producto no encontrado' })
-  }
-
-  if (deletedCount > 0) revalidateCatalogPaths()
-  return { ok: true as const, deletedCount, failures }
+  const result = await runAdminDeleteProducts(ctx.sb, ids)
+  if (!result.ok) return result
+  if (result.deletedCount > 0) revalidateCatalogPaths()
+  return { ok: true as const, deletedCount: result.deletedCount, failures: result.failures }
 }
 
 export async function createProduct(input: ProductInput) {
@@ -1098,23 +983,11 @@ export async function adminSyncOrdersFromStripe(input?: AdminStripeSyncInput): P
 export async function adminDeleteOrder(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false, error: ctx.error }
-  const sb = ctx.sb
-  const { error } = await sb.from('orders').delete().eq('id', id)
-  if (error) return { ok: false, error: error.message }
-  revalidatePath('/admin')
-  revalidatePath('/admin/pedidos')
-  return { ok: true }
+  return runAdminDeleteOrder(ctx.sb, id)
 }
 
 function shortOrderRef(orderId: string) {
   return orderId.replace(/-/g, '').slice(0, 10).toUpperCase()
-}
-
-/** Datos de envío al pasar a «Enviado» (obligatorio en el modal del admin). */
-export type AdminOrderStatusPayload = {
-  shippingCarrier?: 'correos' | 'packlink'
-  trackingNumber?: string | null
-  packlinkUrl?: string | null
 }
 
 export async function adminUpdateOrderStatus(
@@ -1124,86 +997,7 @@ export async function adminUpdateOrderStatus(
 ) {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false as const, error: ctx.error }
-  const sb = ctx.sb
-  if (!ORDER_STATUSES.includes(status)) {
-    return { ok: false as const, error: 'Estado no válido' }
-  }
-
-  if (status === 'enviado') {
-    const carrier = payload?.shippingCarrier
-    if (carrier !== 'correos' && carrier !== 'packlink') {
-      return { ok: false as const, error: 'Selecciona Correos o Packlink para el envío.' }
-    }
-    if (carrier === 'correos') {
-      const t = payload?.trackingNumber?.trim()
-      if (!t) {
-        return { ok: false as const, error: 'Indica el número de seguimiento de Correos.' }
-      }
-    }
-    if (carrier === 'packlink') {
-      const u = payload?.packlinkUrl?.trim()
-      if (!u) {
-        return { ok: false as const, error: 'Indica el enlace de seguimiento de Packlink.' }
-      }
-      try {
-        new URL(u)
-      } catch {
-        return { ok: false as const, error: 'El enlace de Packlink no es una URL válida.' }
-      }
-    }
-  }
-
-  const { data: row, error: fetchErr } = await sb.from('orders').select('*').eq('id', id).maybeSingle()
-  if (fetchErr) return { ok: false as const, error: fetchErr.message }
-  if (!row) return { ok: false as const, error: 'Pedido no encontrado' }
-
-  const previous = String((row as { status?: string }).status ?? '')
-  if (previous === status) {
-    revalidatePath('/admin/pedidos')
-    return { ok: true as const }
-  }
-
-  const patch: Record<string, unknown> = { status }
-  if (status === 'enviado' && payload?.shippingCarrier) {
-    patch.shipping_carrier = payload.shippingCarrier
-    if (payload.shippingCarrier === 'correos') {
-      patch.tracking_number = payload.trackingNumber?.trim() ?? null
-      patch.packlink_url = null
-    } else {
-      patch.packlink_url = payload.packlinkUrl?.trim() ?? null
-      patch.tracking_number = null
-    }
-  }
-
-  const { error } = await sb.from('orders').update(patch).eq('id', id)
-  if (error) return { ok: false as const, error: error.message }
-  revalidatePath('/admin/pedidos')
-
-  const { data: refreshed, error: refetchErr } = await sb.from('orders').select('*').eq('id', id).maybeSingle()
-  if (refetchErr || !refreshed) {
-    console.warn('[admin] adminUpdateOrderStatus: no se pudo releer el pedido tras UPDATE', refetchErr?.message)
-    return { ok: true as const }
-  }
-
-  const customer_email =
-    typeof refreshed.customer_email === 'string' ? refreshed.customer_email.trim() : ''
-
-  console.log('Intentando enviar correo a:', customer_email || '(vacío)', 'Nuevo estado:', status)
-
-  if (!customer_email || !customer_email.includes('@')) {
-    console.warn('No se puede enviar correo: El pedido no tiene email asociado')
-    return { ok: true as const }
-  }
-
-  const orderForMail = refreshed as AdminOrder
-
-  try {
-    await notifyCustomerOrderStatusChange(orderForMail, status)
-  } catch (error) {
-    console.error('🚨 ERROR NODEMAILER AL CAMBIAR ESTADO:', error)
-  }
-
-  return { ok: true as const }
+  return runAdminUpdateOrderStatus(ctx.sb, id, status, payload)
 }
 
 export async function adminGetCustomers(): Promise<AdminCustomer[]> {

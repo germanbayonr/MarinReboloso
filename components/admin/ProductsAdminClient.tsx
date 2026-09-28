@@ -22,12 +22,12 @@ import { Switch } from '@/components/ui/switch'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
   adminSyncProductsWithStripe,
-  deleteProduct,
-  deleteProducts,
   syncProductGallery,
   updateProduct,
 } from '@/app/admin/actions'
 import {
+  adminDeleteProduct,
+  adminDeleteProducts,
   adminSetProductCatalogVisible,
   adminSetProductStock,
 } from '@/app/admin/product-mutations'
@@ -846,7 +846,7 @@ export default function ProductsAdminClient({
     setIsDeletingProduct(true)
     try {
       if (isBulkDelete) {
-        const res = await deleteProducts(productsPendingDelete.map((p) => p.id))
+        const res = await adminDeleteProducts(productsPendingDelete.map((p) => p.id))
         if (!res.ok) {
           toast.error(res.error)
           return
@@ -869,7 +869,7 @@ export default function ProductsAdminClient({
         toast.success(`${res.deletedCount} producto(s) eliminados de Supabase y Stripe`)
       } else {
         const target = productsPendingDelete[0]
-        const res = await deleteProduct(target.id)
+        const res = await adminDeleteProduct(target.id)
         if (!res.ok) {
           toast.error(res.error)
           return
@@ -884,6 +884,8 @@ export default function ProductsAdminClient({
         toast.success('Producto eliminado de Supabase y Stripe')
       }
       setDeleteConfirm(null)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo eliminar el producto')
     } finally {
       setIsDeletingProduct(false)
     }

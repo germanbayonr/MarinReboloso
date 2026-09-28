@@ -7,13 +7,14 @@ import { toast } from 'sonner'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
   adminDeleteOrder,
-  adminSyncOrdersFromStripe,
   adminUpdateOrderStatus,
+} from '@/app/admin/order-mutations'
+import {
+  adminSyncOrdersFromStripe,
   sendTestEmail,
   simulateRealPurchase,
-  type AdminOrderStatusPayload,
 } from '@/app/admin/actions'
-import { ORDER_STATUSES, type AdminOrder, type OrderStatus } from '@/lib/admin/types'
+import { ORDER_STATUSES, type AdminOrder, type AdminOrderStatusPayload, type OrderStatus } from '@/lib/admin/types'
 import { formatOrderCustomerBlock } from '@/lib/order-customer-display'
 import {
   Dialog,
@@ -160,16 +161,21 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
 
   const applyStatusChange = useCallback(
     async (order: AdminOrder, next: OrderStatus, payload?: AdminOrderStatusPayload) => {
-      const res = await adminUpdateOrderStatus(order.id, next, payload)
-      if (!res.ok) {
-        toast.error(res.error)
+      try {
+        const res = await adminUpdateOrderStatus(order.id, next, payload)
+        if (!res.ok) {
+          toast.error(res.error)
+          return false
+        }
+        setOrders((prev) =>
+          prev.map((x) => (x.id === order.id ? { ...x, status: next, ...mergeShippingFields(payload) } : x)),
+        )
+        toast.success('Estado actualizado. Si había email, se ha enviado el aviso.')
+        return true
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'No se pudo actualizar el estado del pedido')
         return false
       }
-      setOrders((prev) =>
-        prev.map((x) => (x.id === order.id ? { ...x, status: next, ...mergeShippingFields(payload) } : x)),
-      )
-      toast.success('Estado actualizado. Si había email, se ha enviado el aviso.')
-      return true
     },
     [],
   )
@@ -565,6 +571,8 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
                   setOrders((prev) => prev.filter((order) => order.id !== orderToDelete.id))
                   toast.success('Pedido eliminado')
                   setOrderToDelete(null)
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : 'No se pudo eliminar el pedido')
                 } finally {
                   setIsDeletingOrder(false)
                 }

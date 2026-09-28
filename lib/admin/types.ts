@@ -33,6 +33,13 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number]
 
+/** Datos de envío al pasar a «Enviado» (modal del admin). */
+export type AdminOrderStatusPayload = {
+  shippingCarrier?: 'correos' | 'packlink'
+  trackingNumber?: string | null
+  packlinkUrl?: string | null
+}
+
 export type AdminOrder = {
   id: string
   created_at: string
