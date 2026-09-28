@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { adminGetProducts } from '@/app/admin/actions'
+import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
+import { loadAdminProductsForPanel } from '@/lib/admin/load-admin-products'
 import { fetchAllCollectionsAdmin, fetchCollectionBySlugAdmin, toCollectionOptions } from '@/lib/collections'
 import { buildProductCollectionOptions } from '@/lib/admin/product-collections'
 import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
@@ -19,11 +20,13 @@ export default async function ColeccionAdminDetailPage({
 }) {
   const { slug } = await params
   const normalized = String(slug ?? '').toLowerCase().trim()
+  await ensureAdminOrRedirect()
+  const sb = getServiceSupabase()
   const allCollections = await fetchAllCollectionsAdmin()
   const collection = await fetchCollectionBySlugAdmin(normalized)
   if (!collection) notFound()
 
-  const allProducts = await adminGetProducts()
+  const allProducts = await loadAdminProductsForPanel(sb)
   const collectionProducts = sortProductsByCreatedAtDesc(
     allProducts.filter((p) => productMatchesCollectionSlug(p.collection, normalized)),
   )

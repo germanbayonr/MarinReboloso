@@ -1,7 +1,9 @@
-import Image from 'next/image'
 import { Clock, Package, ShoppingCart, TrendingUp } from 'lucide-react'
-import { adminGetOrders, adminGetProducts } from '@/app/admin/actions'
+import { ensureAdminOrRedirect, getServiceSupabase } from '@/lib/admin/server'
+import { loadAdminOrdersForPanel } from '@/lib/admin/load-admin-orders'
+import { loadAdminProductsForPanel } from '@/lib/admin/load-admin-products'
 import { allImageUrlsFromDatabase } from '@/lib/admin/product-image-db'
+import { AdminProductImage } from '@/components/admin/AdminProductImage'
 
 function ProductThumb({ imageUrl, name }: { imageUrl: string | null | undefined; name: string }) {
   const src = typeof imageUrl === 'string' ? imageUrl.trim() : ''
@@ -9,12 +11,11 @@ function ProductThumb({ imageUrl, name }: { imageUrl: string | null | undefined;
     return <div className="h-10 w-10 flex-shrink-0 bg-neutral-100" aria-hidden />
   }
   return (
-    <Image
+    <AdminProductImage
       src={src}
       alt={name}
       width={40}
       height={40}
-      unoptimized
       className="h-10 w-10 flex-shrink-0 bg-secondary object-cover"
     />
   )
@@ -98,7 +99,12 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function AdminDashboardPage() {
-  const [ordersRaw, productsRaw] = await Promise.all([adminGetOrders(), adminGetProducts()])
+  await ensureAdminOrRedirect()
+  const sb = getServiceSupabase()
+  const [ordersRaw, productsRaw] = await Promise.all([
+    loadAdminOrdersForPanel(sb),
+    loadAdminProductsForPanel(sb),
+  ])
 
   const orders: DashboardOrderRow[] = ordersRaw.slice(0, 20).map((row) => {
     const id = String(row.id ?? '')

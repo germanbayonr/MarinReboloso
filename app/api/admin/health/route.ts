@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSessionUser, getServiceSupabaseSafe } from '@/lib/admin/server'
 import { loadAdminProductsForPanel } from '@/lib/admin/load-admin-products'
+import { loadAdminOrdersForPanel } from '@/lib/admin/load-admin-orders'
 import { isAdminPanelEmail } from '@/lib/admin-config'
 import {
   checkAdminEnvironment,
@@ -21,21 +22,23 @@ export async function GET() {
     const envCheck = checkAdminEnvironment()
     const manifest = migrationManifestForHealth()
 
-    let productsPage: {
-      loadOk: boolean
-      productCount: number
-      payloadBytes: number | null
-      error: string | null
-    } = {
+    let productsPage = {
       loadOk: false,
       productCount: 0,
-      payloadBytes: null,
-      error: null,
+      payloadBytes: null as number | null,
+      error: null as string | null,
+    }
+    let ordersPage = {
+      loadOk: false,
+      orderCount: 0,
+      payloadBytes: null as number | null,
+      error: null as string | null,
     }
 
     const sup = getServiceSupabaseSafe()
     if (!sup.ok) {
       productsPage.error = sup.error
+      ordersPage.error = sup.error
       envCheck.ok = false
       envCheck.issues.push(sup.error)
     } else {
@@ -52,6 +55,20 @@ export async function GET() {
         productsPage.error = msg
         envCheck.ok = false
         envCheck.issues.push(`La carga de /admin/productos falla: ${msg}`)
+      }
+      try {
+        const orders = await loadAdminOrdersForPanel(sup.client)
+        ordersPage = {
+          loadOk: true,
+          orderCount: orders.length,
+          payloadBytes: Buffer.byteLength(JSON.stringify(orders), 'utf8'),
+          error: null,
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        ordersPage.error = msg
+        envCheck.ok = false
+        envCheck.issues.push(`La carga de /admin/pedidos falla: ${msg}`)
       }
     }
 
@@ -95,6 +112,7 @@ export async function GET() {
       ok:
         envCheck.ok &&
         productsPage.loadOk &&
+        ordersPage.loadOk &&
         database.reachable &&
         database.migrationProbes.every((p) => p.status === 'ok'),
       checkedAt: new Date().toISOString(),
@@ -102,6 +120,7 @@ export async function GET() {
       environment: envCheck.env,
       issues: envCheck.issues,
       productsPage,
+      ordersPage,
       database,
       migrations: manifest,
       hints: [

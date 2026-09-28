@@ -20,6 +20,7 @@ import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
 import { uploadOptimizedAdminImages } from '@/lib/admin/upload-optimized-admin-images'
 import { insertProductRow, updateProductRow } from '@/lib/admin/product-db-write'
 import { loadAdminProductsForPanel } from '@/lib/admin/load-admin-products'
+import { loadAdminOrdersForPanel } from '@/lib/admin/load-admin-orders'
 import { ORDER_STATUSES, type AdminCustomer, type AdminOrder, type AdminProduct, type OrderStatus } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
 import { TEST_EMAIL_TO } from '@/lib/admin/test-email-config'
@@ -952,11 +953,7 @@ export const adminCreateProductWithImages = createProductWithImages
 export const adminSyncProductsWithStripe = syncProductsWithStripe
 
 export async function adminGetOrders(): Promise<AdminOrder[]> {
-  return withAdminServiceSupabase(async (sb) => {
-    const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false }).limit(5000)
-    if (error) throw new Error(error.message)
-    return (data ?? []) as AdminOrder[]
-  })
+  return withAdminServiceSupabase(async (sb) => loadAdminOrdersForPanel(sb))
 }
 
 type AdminStripeSyncInput = {
