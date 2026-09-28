@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, CheckCircle, Download, Pencil, PlusCircle, Search, Trash2, Upload, X } from 'lucide-react'
@@ -38,6 +37,7 @@ import type { AdminProduct } from '@/lib/admin/types'
 import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
 import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
+import { AdminProductImage } from '@/components/admin/AdminProductImage'
 import { emptyProductVariants, flattenVariantItemsGalleryUrls, normalizeVariantsForSave, variantItemHasImages, type ProductVariantsData } from '@/lib/product-variants'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
@@ -463,12 +463,10 @@ export function ProductEditModal({
               <div className="space-y-2">
                 {images.map((image, index) => (
                   <div key={`${image}-${index}`} className="flex items-center gap-2 border border-neutral-200 px-2 py-1.5">
-                    <Image
+                    <AdminProductImage
                       src={image}
-                      alt=""
                       width={44}
                       height={44}
-                      unoptimized
                       className="h-11 w-11 shrink-0 bg-neutral-100 object-cover"
                     />
                     <div className="min-w-0 flex-1">
@@ -668,12 +666,10 @@ export default function ProductsAdminClient({
           return (
             <div className="flex items-center gap-2">
               {src ? (
-                <Image
+                <AdminProductImage
                   src={src}
-                  alt=""
                   width={36}
                   height={36}
-                  unoptimized
                   className="h-9 w-9 shrink-0 bg-neutral-100 object-cover"
                 />
               ) : (

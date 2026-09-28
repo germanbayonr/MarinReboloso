@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import Image from 'next/image'
 import { Plus, Trash2, Upload, X } from 'lucide-react'
+import { AdminProductImage } from '@/components/admin/AdminProductImage'
 import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
@@ -178,7 +178,7 @@ export default function ProductVariantsEditor({
                   <div className="flex flex-wrap gap-2">
                     {urls.map((url) => (
                       <div key={url} className="relative h-20 w-20 shrink-0 overflow-hidden bg-neutral-100">
-                        <Image src={url} alt="" fill unoptimized className="object-cover" />
+                        <AdminProductImage src={url} className="h-full w-full object-cover" />
                         <button
                           type="button"
                           onClick={() => removeVariantImage(item.id, url)}
