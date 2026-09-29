@@ -1,40 +1,21 @@
 'use server'
 
 import { assertAdminMutationContext } from '@/lib/admin/server'
-import { fetchAdminProductById } from '@/lib/admin/fetch-admin-products'
+import { patchAdminProductRow } from '@/lib/admin/patch-admin-product'
 import { runAdminDeleteProduct, runAdminDeleteProducts } from '@/lib/admin/product-delete-server'
 import { revalidateStorefrontCatalogPaths } from '@/lib/admin/revalidate-catalog'
 
+/** Stock / visibilidad: sin revalidatePath (evita re-render RSC del panel en producción). La UI actualiza estado local. */
 export async function adminSetProductStock(id: string, in_stock: boolean) {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false as const, error: ctx.error }
-  const productId = String(id ?? '').trim()
-  if (!productId) return { ok: false as const, error: 'ID de producto inválido' }
-
-  const { error } = await ctx.sb.from('products').update({ in_stock }).eq('id', productId)
-  if (error) return { ok: false as const, error: error.message }
-
-  const product = await fetchAdminProductById(ctx.sb, productId)
-  if (!product) return { ok: false as const, error: 'Producto actualizado pero no se pudo leer de nuevo' }
-
-  revalidateStorefrontCatalogPaths(product.collection)
-  return { ok: true as const, product }
+  return patchAdminProductRow(ctx.sb, id, { in_stock })
 }
 
 export async function adminSetProductCatalogVisible(id: string, is_active: boolean) {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false as const, error: ctx.error }
-  const productId = String(id ?? '').trim()
-  if (!productId) return { ok: false as const, error: 'ID de producto inválido' }
-
-  const { error } = await ctx.sb.from('products').update({ is_active }).eq('id', productId)
-  if (error) return { ok: false as const, error: error.message }
-
-  const product = await fetchAdminProductById(ctx.sb, productId)
-  if (!product) return { ok: false as const, error: 'Producto actualizado pero no se pudo leer de nuevo' }
-
-  revalidateStorefrontCatalogPaths(product.collection)
-  return { ok: true as const, product }
+  return patchAdminProductRow(ctx.sb, id, { is_active })
 }
 
 export async function adminDeleteProduct(id: string) {
@@ -53,4 +34,12 @@ export async function adminDeleteProducts(ids: string[]) {
   if (!result.ok) return result
   if (result.deletedCount > 0) revalidateStorefrontCatalogPaths()
   return { ok: true as const, deletedCount: result.deletedCount, failures: result.failures }
+}
+
+/** Opcional tras toggle: refresca tienda pública sin tocar rutas /admin. */
+export async function adminRevalidateStorefrontCatalog(collectionSlug?: string | null) {
+  const ctx = await assertAdminMutationContext()
+  if (!ctx.ok) return { ok: false as const, error: ctx.error }
+  revalidateStorefrontCatalogPaths(collectionSlug)
+  return { ok: true as const }
 }

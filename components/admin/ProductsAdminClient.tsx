@@ -28,6 +28,7 @@ import {
 import {
   adminDeleteProduct,
   adminDeleteProducts,
+  adminRevalidateStorefrontCatalog,
   adminSetProductCatalogVisible,
   adminSetProductStock,
 } from '@/app/admin/product-mutations'
@@ -45,6 +46,12 @@ import { emptyProductVariants, flattenVariantItemsGalleryUrls, normalizeVariants
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
 const GALLERY_SYNC_DEBOUNCE_MS = 1500
+
+function scheduleStorefrontRevalidate(collection: string | null | undefined) {
+  void adminRevalidateStorefrontCatalog(collection ?? null).catch(() => {
+    /* la tienda se refrescará en la siguiente visita; el panel no debe bloquearse */
+  })
+}
 
 function galleryListsEqual(a: string[], b: string[]) {
   if (a.length !== b.length) return false
@@ -738,6 +745,7 @@ export default function ProductsAdminClient({
                     }
                     setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
                     notifySiteCatalogChanged()
+                    scheduleStorefrontRevalidate(res.product.collection)
                     toast.success(v ? 'Disponible' : 'Sin stock')
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : 'No se pudo actualizar el stock')
@@ -776,6 +784,7 @@ export default function ProductsAdminClient({
                     }
                     setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
                     notifySiteCatalogChanged()
+                    scheduleStorefrontRevalidate(res.product.collection)
                     toast.success(v ? 'Visible en la tienda' : 'En pausa (no aparece en la web)')
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : 'No se pudo cambiar la visibilidad')
@@ -861,6 +870,7 @@ export default function ProductsAdminClient({
             return next
           })
           notifySiteCatalogChanged()
+          scheduleStorefrontRevalidate(null)
         }
         if (res.failures.length > 0) {
           toast.error(`${res.deletedCount} eliminado(s). ${res.failures.length} error(es).`)
@@ -881,6 +891,7 @@ export default function ProductsAdminClient({
           return next
         })
         notifySiteCatalogChanged()
+        scheduleStorefrontRevalidate(target.collection)
         toast.success('Producto eliminado de Supabase y Stripe')
       }
       setDeleteConfirm(null)

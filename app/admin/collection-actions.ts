@@ -35,12 +35,11 @@ async function uploadCollectionImages(
 }
 
 function revalidateCollectionPaths(slug?: string) {
-  revalidatePath('/admin/colecciones')
-  revalidatePath('/')
-  revalidatePath('/catalogo')
+  revalidatePath('/admin/colecciones', 'page')
+  revalidatePath('/catalogo', 'page')
   if (slug) {
-    revalidatePath(`/coleccion/${slug}`)
-    revalidatePath(`/admin/colecciones/${slug}`)
+    revalidatePath(`/coleccion/${slug}`, 'page')
+    revalidatePath(`/admin/colecciones/${slug}`, 'page')
   }
 }
 
