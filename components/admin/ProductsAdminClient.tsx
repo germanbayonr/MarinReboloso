@@ -38,7 +38,7 @@ import type { AdminProduct } from '@/lib/admin/types'
 import { sortProductsByCreatedAtDesc } from '@/lib/admin/sort-products'
 import { allDisplayImagesForProduct } from '@/lib/product-display-images'
 import ProductVariantsEditor from '@/components/admin/ProductVariantsEditor'
-import { AdminProductImage } from '@/components/admin/AdminProductImage'
+import { AdminProductImage, resolveAdminPanelImageUrl } from '@/components/admin/AdminProductImage'
 import { emptyProductVariants, flattenVariantItemsGalleryUrls, normalizeVariantsForSave, variantItemHasImages, type ProductVariantsData } from '@/lib/product-variants'
 
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
@@ -99,12 +99,13 @@ export function ProductEditModal({
   onClose: () => void
   onSaved: (p: AdminProduct) => void
 }) {
-  const initialImages =
+  const initialImages = (
     product.image_urls && product.image_urls.length > 0
       ? product.image_urls
       : product.image_url
         ? [product.image_url]
         : []
+  ).map((u) => resolveAdminPanelImageUrl(String(u))).filter(Boolean)
   const origBase = product.original_price ?? product.price
   const initialCollection =
     product.collection?.trim() ||
@@ -160,13 +161,13 @@ export function ProductEditModal({
     const added = current.filter((u) => !baseline.includes(u))
 
     try {
-      const product = await syncProductGalleryViaApi(product.id, {
+      const updatedProduct = await syncProductGalleryViaApi(product.id, {
         image_urls: current,
         removed_urls: removed,
         update_stripe_image: removed.length > 0 && added.length > 0,
       })
       syncBaselineRef.current = current
-      onSaved(product)
+      onSaved(updatedProduct)
       setGalleryPending(false)
       return true
     } catch (e) {
@@ -459,7 +460,9 @@ export function ProductEditModal({
               <p className="text-xs text-neutral-500">No hay fotos en la galería.</p>
             ) : (
               <div className="space-y-2">
-                {images.map((image, index) => (
+                {images.map((image, index) => {
+                  const previewUrl = resolveAdminPanelImageUrl(image)
+                  return (
                   <div key={`${image}-${index}`} className="flex items-center gap-2 border border-neutral-200 px-2 py-1.5">
                     <AdminProductImage
                       src={image}
@@ -473,7 +476,7 @@ export function ProductEditModal({
                     </div>
                     <div className="flex items-center gap-1">
                       <a
-                        href={image}
+                        href={previewUrl || image}
                         download
                         target="_blank"
                         rel="noreferrer"
@@ -511,7 +514,8 @@ export function ProductEditModal({
                       </button>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

@@ -19,6 +19,34 @@ export function normalizeProductImageUrl(raw: string): string {
   return trimmed
 }
 
+const PRODUCT_IMAGES_BUCKET = 'product-images'
+
+/**
+ * En el admin, algunas filas antiguas guardan solo el nombre de fichero o la ruta relativa en Storage.
+ * Convierte a URL pública absoluta para `<img>` y descargas.
+ */
+export function resolveAdminPanelImageUrl(raw: string): string {
+  const normalized = normalizeProductImageUrl(raw)
+  if (!normalized) return ''
+  if (/^https?:\/\//i.test(normalized)) return normalized
+
+  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '')
+  if (!base) return normalized
+
+  const path = normalized.replace(/^\/+/, '')
+  if (path.startsWith(`${PRODUCT_IMAGES_BUCKET}/`)) {
+    return `${base}/storage/v1/object/public/${path}`
+  }
+  if (path.startsWith('products/')) {
+    return `${base}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/${path}`
+  }
+  if (/^[a-f0-9-]{36}\.webp$/i.test(path) || path.endsWith('.webp') || path.endsWith('.jpg') || path.endsWith('.png')) {
+    const file = path.includes('/') ? path : `products/${path}`
+    return `${base}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/${file}`
+  }
+  return normalized
+}
+
 export function isSupabaseStorageUrl(url: string): boolean {
   return url.includes('.supabase.co') && url.includes('/storage/')
 }
