@@ -48,10 +48,6 @@ export async function uploadOptimizedAdminImages(
   files: File[],
   folder: AdminImageStorageFolder,
 ): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
-  // #region agent log
-  fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'eda70f'},body:JSON.stringify({sessionId:'eda70f',runId:'pre-fix',hypothesisId:'D',location:'upload-optimized-admin-images.ts:51',message:'upload start',data:{folder,fileCount:files.length,names:files.map((f)=>f.name)},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
   const imageUrls: string[] = []
   const compress =
     folder === 'collections' ? compressCollectionHeroImageBuffer : compressProductImageBuffer
@@ -110,10 +106,6 @@ export async function uploadOptimizedAdminImages(
 
     imageUrls.push(publicUrl)
   }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7707/ingest/e8400cbe-b1e2-4406-94b7-cd688b9093e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'eda70f'},body:JSON.stringify({sessionId:'eda70f',runId:'pre-fix',hypothesisId:'D',location:'upload-optimized-admin-images.ts:110',message:'upload success',data:{folder,urlCount:imageUrls.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   return { ok: true, urls: imageUrls }
 }

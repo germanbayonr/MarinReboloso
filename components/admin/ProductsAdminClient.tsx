@@ -22,13 +22,13 @@ import { Switch } from '@/components/ui/switch'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
   adminSyncProductsWithStripe,
-  syncProductGallery,
-  updateProduct,
 } from '@/app/admin/actions'
 import {
   deleteAdminProductViaApi,
   deleteManyAdminProductsViaApi,
   patchAdminProductViaApi,
+  syncProductGalleryViaApi,
+  updateAdminProductViaApi,
 } from '@/lib/admin/admin-product-api-client'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
 import { notifySiteCatalogChanged } from '@/lib/catalog-events'
@@ -160,20 +160,18 @@ export function ProductEditModal({
     const added = current.filter((u) => !baseline.includes(u))
 
     try {
-      const res = await syncProductGallery(product.id, {
+      const product = await syncProductGalleryViaApi(product.id, {
         image_urls: current,
         removed_urls: removed,
         update_stripe_image: removed.length > 0 && added.length > 0,
       })
-      if (!res.ok) {
-        toast.error(res.error)
-        return false
-      }
       syncBaselineRef.current = current
-      onSaved(res.product)
-      notifySiteCatalogChanged()
+      onSaved(product)
       setGalleryPending(false)
       return true
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo sincronizar la galería')
+      return false
     } finally {
       isSyncingGalleryRef.current = false
       setIsSyncingGallery(false)
@@ -271,17 +269,16 @@ export function ProductEditModal({
     }
 
     const cleanedImages = images.map((url) => url.trim()).filter(Boolean)
-    const res = await updateProduct(product.id, buildProductInput(cleanedImages))
-    if (!res.ok) {
-      toast.error(res.error)
-      return
+    try {
+      const savedProduct = await updateAdminProductViaApi(product.id, buildProductInput(cleanedImages))
+      syncBaselineRef.current = cleanedImages
+      onSaved(savedProduct)
+      setSaved(true)
+      toast.success('Producto actualizado')
+      setTimeout(onClose, 600)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo guardar el producto')
     }
-    syncBaselineRef.current = cleanedImages
-    onSaved(res.product)
-    notifySiteCatalogChanged()
-    setSaved(true)
-    toast.success('Producto actualizado')
-    setTimeout(onClose, 600)
   }
 
   const handleAppendImageUrl = () => {

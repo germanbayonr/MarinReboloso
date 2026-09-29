@@ -68,3 +68,52 @@ export async function deleteManyAdminProductsViaApi(
   }
   return { deletedCount: data.deletedCount, failures: data.failures ?? [] }
 }
+
+export async function syncProductGalleryViaApi(
+  id: string,
+  input: {
+    image_urls: string[]
+    removed_urls: string[]
+    update_stripe_image: boolean
+  },
+): Promise<AdminProduct> {
+  const res = await fetch(`/api/admin/products/${encodeURIComponent(id)}/gallery`, {
+    method: 'PATCH',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(input),
+  })
+  return parseAdminProductResponse(res)
+}
+
+export async function updateAdminProductViaApi(id: string, input: import('@/lib/admin/product-input').AdminProductInput): Promise<AdminProduct> {
+  const res = await fetch(`/api/admin/products/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(input),
+  })
+  return parseAdminProductResponse(res)
+}
+
+export async function uploadAdminProductImagesViaApi(files: File[]): Promise<string[]> {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('images', file, file.name || 'upload.jpg')
+  }
+  const res = await fetch('/api/admin/products/upload-images', {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: formData,
+  })
+  let data: { ok: true; urls: string[] } | { ok: false; error?: string }
+  try {
+    data = (await res.json()) as typeof data
+  } catch {
+    throw new Error(`Respuesta inválida (${res.status})`)
+  }
+  if (!res.ok || !data.ok || !Array.isArray(data.urls)) {
+    throw new Error(('error' in data && data.error) || `Error ${res.status}`)
+  }
+  return data.urls
+}
