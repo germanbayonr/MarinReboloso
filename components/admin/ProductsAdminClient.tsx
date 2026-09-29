@@ -26,12 +26,10 @@ import {
   updateProduct,
 } from '@/app/admin/actions'
 import {
-  adminDeleteProduct,
-  adminDeleteProducts,
-  adminRevalidateStorefrontCatalog,
-  adminSetProductCatalogVisible,
-  adminSetProductStock,
-} from '@/app/admin/product-mutations'
+  deleteAdminProductViaApi,
+  deleteManyAdminProductsViaApi,
+  patchAdminProductViaApi,
+} from '@/lib/admin/admin-product-api-client'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
 import { notifySiteCatalogChanged } from '@/lib/catalog-events'
 import { computeFinalPrice, hasActiveDiscount } from '@/lib/pricing'
@@ -46,12 +44,6 @@ import { emptyProductVariants, flattenVariantItemsGalleryUrls, normalizeVariants
 const CATEGORIES = ['pendientes', 'mantones', 'accesorios', 'peinecillos', 'broches', 'pulseras', 'collares', 'bolsos']
 
 const GALLERY_SYNC_DEBOUNCE_MS = 1500
-
-function scheduleStorefrontRevalidate(collection: string | null | undefined) {
-  void adminRevalidateStorefrontCatalog(collection ?? null).catch(() => {
-    /* la tienda se refrescará en la siguiente visita; el panel no debe bloquearse */
-  })
-}
 
 function galleryListsEqual(a: string[], b: string[]) {
   if (a.length !== b.length) return false
@@ -738,14 +730,8 @@ export default function ProductsAdminClient({
                 onCheckedChange={async (v) => {
                   setPendingProductPatch((prev) => new Set(prev).add(p.id))
                   try {
-                    const res = await adminSetProductStock(p.id, v)
-                    if (!res.ok) {
-                      toast.error(res.error)
-                      return
-                    }
-                    setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
-                    notifySiteCatalogChanged()
-                    scheduleStorefrontRevalidate(res.product.collection)
+                    const product = await patchAdminProductViaApi(p.id, { in_stock: v })
+                    setProducts((prev) => prev.map((x) => (x.id === p.id ? product : x)))
                     toast.success(v ? 'Disponible' : 'Sin stock')
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : 'No se pudo actualizar el stock')
@@ -777,14 +763,8 @@ export default function ProductsAdminClient({
                   const patchKey = `${p.id}:catalog`
                   setPendingProductPatch((prev) => new Set(prev).add(patchKey))
                   try {
-                    const res = await adminSetProductCatalogVisible(p.id, v)
-                    if (!res.ok) {
-                      toast.error(res.error)
-                      return
-                    }
-                    setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product : x)))
-                    notifySiteCatalogChanged()
-                    scheduleStorefrontRevalidate(res.product.collection)
+                    const product = await patchAdminProductViaApi(p.id, { is_active: v })
+                    setProducts((prev) => prev.map((x) => (x.id === p.id ? product : x)))
                     toast.success(v ? 'Visible en la tienda' : 'En pausa (no aparece en la web)')
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : 'No se pudo cambiar la visibilidad')
@@ -855,11 +835,7 @@ export default function ProductsAdminClient({
     setIsDeletingProduct(true)
     try {
       if (isBulkDelete) {
-        const res = await adminDeleteProducts(productsPendingDelete.map((p) => p.id))
-        if (!res.ok) {
-          toast.error(res.error)
-          return
-        }
+        const res = await deleteManyAdminProductsViaApi(productsPendingDelete.map((p) => p.id))
         const failedIds = new Set(res.failures.map((f) => f.id))
         const deletedIds = productsPendingDelete.map((p) => p.id).filter((id) => !failedIds.has(id))
         if (deletedIds.length > 0) {
@@ -869,8 +845,6 @@ export default function ProductsAdminClient({
             deletedIds.forEach((id) => next.delete(id))
             return next
           })
-          notifySiteCatalogChanged()
-          scheduleStorefrontRevalidate(null)
         }
         if (res.failures.length > 0) {
           toast.error(`${res.deletedCount} eliminado(s). ${res.failures.length} error(es).`)
@@ -879,19 +853,13 @@ export default function ProductsAdminClient({
         toast.success(`${res.deletedCount} producto(s) eliminados de Supabase y Stripe`)
       } else {
         const target = productsPendingDelete[0]
-        const res = await adminDeleteProduct(target.id)
-        if (!res.ok) {
-          toast.error(res.error)
-          return
-        }
+        await deleteAdminProductViaApi(target.id)
         setProducts((prev) => prev.filter((x) => x.id !== target.id))
         setSelectedIds((prev) => {
           const next = new Set(prev)
           next.delete(target.id)
           return next
         })
-        notifySiteCatalogChanged()
-        scheduleStorefrontRevalidate(target.collection)
         toast.success('Producto eliminado de Supabase y Stripe')
       }
       setDeleteConfirm(null)

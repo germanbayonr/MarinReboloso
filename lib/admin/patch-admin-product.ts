@@ -27,7 +27,11 @@ export async function patchAdminProductRow(
   for (const select of PATCH_SELECT_CANDIDATES) {
     const { data, error } = await sb.from('products').update(patch).eq('id', id).select(select).maybeSingle()
     if (!error && data) {
-      return { ok: true, product: mapProductRow(data as Record<string, unknown>) }
+      try {
+        return { ok: true, product: mapProductRow(data as Record<string, unknown>) }
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : 'No se pudo interpretar el producto' }
+      }
     }
     if (error) {
       lastError = error.message
