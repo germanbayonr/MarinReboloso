@@ -3,6 +3,42 @@ import { imageUrlsFromProductRow } from '@/lib/home-page-images'
 export type ProductImageVariant = 'grid' | 'detail' | 'thumb'
 
 const SUPABASE_PUBLIC_MARKER = '/storage/v1/object/public/'
+const PRODUCT_IMAGES_PUBLIC_PREFIX = `${SUPABASE_PUBLIC_MARKER}product-images/`
+
+function bunnyCdnHost(): string {
+  return (process.env.NEXT_PUBLIC_BUNNY_CDN_HOST ?? 'marebo.b-cdn.net').replace(/^https?:\/\//i, '').replace(/\/$/, '')
+}
+
+/** URL de entrega en tienda: opcionalmente sirve ficheros de Storage vía Bunny (menos egress Supabase). */
+export function deliveryProductImageUrl(raw: string): string {
+  const normalized = normalizeProductImageUrl(raw)
+  if (!normalized) return ''
+  if (/^https?:\/\//i.test(normalized) && isBunnyCdnUrl(normalized)) return normalized
+
+  const useBunny = process.env.NEXT_PUBLIC_USE_BUNNY_FOR_PRODUCT_IMAGES === 'true'
+  if (!useBunny) return normalized
+
+  const host = bunnyCdnHost()
+  if (!host) return normalized
+
+  let storagePath = ''
+  const idx = normalized.indexOf(PRODUCT_IMAGES_PUBLIC_PREFIX)
+  if (idx >= 0) {
+    storagePath = normalized.slice(idx + PRODUCT_IMAGES_PUBLIC_PREFIX.length)
+  } else if (!/^https?:\/\//i.test(normalized)) {
+    storagePath = normalized.replace(/^\/+/, '')
+    if (!storagePath.startsWith('products/')) {
+      storagePath = storagePath.includes('/') ? storagePath : `products/${storagePath}`
+    }
+  }
+
+  if (storagePath) {
+    const segments = storagePath.split('/').map((seg) => encodeURIComponent(seg))
+    return `https://${host}/${segments.join('/')}`
+  }
+
+  return normalized
+}
 
 /** Normaliza URL sin romper rutas codificadas (%20, acentos, etc.). */
 export function normalizeProductImageUrl(raw: string): string {
@@ -28,23 +64,22 @@ const PRODUCT_IMAGES_BUCKET = 'product-images'
 export function resolveAdminPanelImageUrl(raw: string): string {
   const normalized = normalizeProductImageUrl(raw)
   if (!normalized) return ''
-  if (/^https?:\/\//i.test(normalized)) return normalized
+  if (/^https?:\/\//i.test(normalized)) return deliveryProductImageUrl(normalized)
 
   const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '')
   if (!base) return normalized
 
   const path = normalized.replace(/^\/+/, '')
+  let absolute = normalized
   if (path.startsWith(`${PRODUCT_IMAGES_BUCKET}/`)) {
-    return `${base}/storage/v1/object/public/${path}`
-  }
-  if (path.startsWith('products/')) {
-    return `${base}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/${path}`
-  }
-  if (/^[a-f0-9-]{36}\.webp$/i.test(path) || path.endsWith('.webp') || path.endsWith('.jpg') || path.endsWith('.png')) {
+    absolute = `${base}/storage/v1/object/public/${path}`
+  } else if (path.startsWith('products/')) {
+    absolute = `${base}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/${path}`
+  } else if (/^[a-f0-9-]{36}\.webp$/i.test(path) || path.endsWith('.webp') || path.endsWith('.jpg') || path.endsWith('.png')) {
     const file = path.includes('/') ? path : `products/${path}`
-    return `${base}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/${file}`
+    absolute = `${base}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/${file}`
   }
-  return normalized
+  return deliveryProductImageUrl(absolute)
 }
 
 export function isSupabaseStorageUrl(url: string): boolean {
@@ -60,7 +95,7 @@ export function isBunnyCdnUrl(url: string): boolean {
  * No usamos transformaciones on-the-fly de Supabase para no duplicar egress.
  */
 export function productImageUrl(raw: string, _variant: ProductImageVariant = 'grid'): string {
-  return normalizeProductImageUrl(raw)
+  return deliveryProductImageUrl(raw)
 }
 
 export function productImageUrlsFromRow(

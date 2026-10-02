@@ -21,13 +21,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import AdminDataTable from '@/components/admin/AdminDataTable'
 import {
-  adminSyncProductsWithStripe,
-} from '@/app/admin/actions'
-import {
   deleteAdminProductViaApi,
   deleteManyAdminProductsViaApi,
   patchAdminProductViaApi,
   syncProductGalleryViaApi,
+  syncProductsWithStripeViaApi,
   updateAdminProductViaApi,
 } from '@/lib/admin/admin-product-api-client'
 import { uploadProductImagesToSupabase } from '@/lib/admin/upload-product-images-client'
@@ -917,7 +915,8 @@ export default function ProductsAdminClient({
               setIsSyncingWithStripe(true)
               setSyncFailures([])
               try {
-                const result = await adminSyncProductsWithStripe()
+                const result = await syncProductsWithStripeViaApi()
+                notifySiteCatalogChanged()
                 if (!result.success && result.failedSyncs.length === 0) {
                   toast.error('No se pudo completar la sincronización con Stripe')
                   return

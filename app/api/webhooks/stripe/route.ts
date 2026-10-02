@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { revalidatePath } from 'next/cache'
 import { getServiceSupabase } from '@/lib/admin/server'
 import type { AdminOrder } from '@/lib/admin/types'
 import { buildOrderLinesForEmail } from '@/lib/mail/build-order-email-lines'
@@ -507,8 +506,6 @@ export async function POST(req: Request) {
     orderId: inserted.id,
     customerEmail: customer_email || null,
   })
-  revalidatePath('/admin')
-  revalidatePath('/admin/pedidos')
 
   const { data: orderRow, error: readErr } = await supabase.from('orders').select('*').eq('id', inserted.id).maybeSingle()
 

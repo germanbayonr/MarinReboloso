@@ -7,7 +7,7 @@ import { CheckCircle, Image as ImageIcon, UploadCloud, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
-import { createProduct } from '@/app/admin/actions'
+import { createAdminProductViaApi } from '@/lib/admin/admin-product-api-client'
 import { notifySiteCatalogChanged } from '@/lib/catalog-events'
 import { buildProductCollectionOptions, PRODUCT_COLLECTION_OPTIONS } from '@/lib/admin/product-collections'
 import { uploadProductImagesToSupabase, validateAdminImageFile } from '@/lib/admin/upload-product-images-client'
@@ -173,7 +173,7 @@ export default function NuevoProductoClient() {
       const normalizedVariants = hasVariants ? normalizeVariantsForSave(variants) : emptyProductVariants()
       const variantGallery = flattenVariantItemsGalleryUrls(normalizedVariants.items)
       const useVariants = hasVariants && variantGallery.length > 0
-      const res = await createProduct({
+      await createAdminProductViaApi({
         name: form.name.trim(),
         description: form.description.trim() || null,
         category: form.category,
@@ -187,7 +187,6 @@ export default function NuevoProductoClient() {
         has_variants: useVariants,
         variants: useVariants ? normalizedVariants : undefined,
       })
-      if (!res.ok) throw new Error(res.error)
       notifySiteCatalogChanged()
       setSaved(true)
       const redirectTo = coleccionFromUrl

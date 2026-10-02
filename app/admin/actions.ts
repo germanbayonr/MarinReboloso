@@ -1,7 +1,6 @@
 'use server'
 
 import Stripe from 'stripe'
-import { revalidatePath } from 'next/cache'
 import { allImageUrlsFromDatabase, imageUrlFirstFromDatabase, imageUrlsForDatabaseColumn } from '@/lib/admin/product-image-db'
 import { archiveStripeProduct } from '@/lib/admin/archive-stripe-product'
 import { removeProductImagesFromSupabaseStorage } from '@/lib/admin/remove-product-storage-images'
@@ -28,7 +27,10 @@ import { checkoutNameFromStripeSession, customerPhoneFromStripeSession } from '@
 import { getMailTransporter } from '@/lib/mail/transporter'
 import { getOrderConfirmationTemplate, getOrderEmailSubject } from '@/lib/mail/templates'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
-import { revalidateCatalogPaths } from '@/lib/admin/revalidate-catalog'
+import { revalidateCatalogPaths, revalidateStorefrontCatalogPaths } from '@/lib/admin/revalidate-catalog'
+import { runCreateProduct } from '@/lib/admin/create-product-server'
+import { runSyncProductsWithStripe, type StripeSyncFailedItem } from '@/lib/admin/stripe-products-sync-server'
+import { runSyncOrdersFromStripe } from '@/lib/admin/stripe-orders-sync-server'
 import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
 
 async function normalizeCollectionForProduct(raw: string | null | undefined): Promise<string | null> {
@@ -76,11 +78,6 @@ interface StripeProductForMatch {
 interface StripeLinkResult {
   stripeProductId: string
   stripePriceId: string
-}
-
-interface StripeSyncFailedItem {
-  name: string
-  reason: string
 }
 
 function normalizeProductNameForMatch(raw: string): string {
@@ -511,68 +508,10 @@ export async function deleteProducts(ids: string[]) {
 export async function createProduct(input: ProductInput) {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false as const, error: ctx.error }
-  const secret = stripeSecretKey()
-  if (!secret) return { ok: false as const, error: 'Falta STRIPE_SECRET_KEY para crear y enlazar producto en Stripe.' }
-  const sb = ctx.sb
-  const stripe = new Stripe(secret)
-  const price = computeFinalPrice(input.original_price, input.discount_percent)
-  const collection = await normalizeCollectionForProduct(input.collection)
-  const normalizedVariants =
-    input.has_variants && input.variants
-      ? normalizeVariantsForSave(input.variants)
-      : { colors: [], sizes: [], items: [] }
-  const hasVariants = Boolean(input.has_variants && normalizedVariants.items.length)
-  const variantImages = hasVariants ? flattenVariantItemsGalleryUrls(normalizedVariants.items) : []
-  const imageInput = hasVariants && variantImages.length
-    ? { image_url: variantImages[0], image_urls: variantImages }
-    : input
-  const primaryImageUrl =
-    imageUrlsForDatabaseColumn(imageInput).find((imageUrl) => typeof imageUrl === 'string' && imageUrl.trim()) ?? null
-
-  let stripeLink: StripeLinkResult
-  try {
-    const stripeProducts = await listAllActiveStripeProducts(stripe)
-    stripeLink = await findOrCreateStripeProductLink({
-      stripe,
-      stripeProducts,
-      name: input.name.trim(),
-      description: input.description,
-      imageUrl: primaryImageUrl,
-      amountEur: price,
-    })
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido al sincronizar con Stripe.'
-    return { ok: false as const, error: errorMessage }
-  }
-
-  const insertPayload = {
-    name: input.name,
-    description: input.description,
-    category: input.category,
-    collection,
-    image_url: imageUrlsForDatabaseColumn(imageInput),
-    is_new_arrival: input.is_new_arrival,
-    in_stock: input.in_stock,
-    is_active: true,
-    original_price: input.original_price,
-    discount_percent: input.discount_percent,
-    price,
-    stripe_product_id: stripeLink.stripeProductId,
-    stripe_price_id: stripeLink.stripePriceId,
-    has_variants: hasVariants,
-    variants: hasVariants ? normalizedVariants : { colors: [], sizes: [], items: [] },
-  }
-  const { data, error, id: insertedId } = await insertProductRow(sb, insertPayload)
-  if (error) return productMutationErrorResult('create', error.message)
-  const newId = insertedId ?? String((data as { id?: string })?.id ?? '')
-  if (newId) {
-    const row = (data ?? {}) as Record<string, unknown>
-    if (row.is_active === false) {
-      await sb.from('products').update({ is_active: true }).eq('id', newId)
-    }
-  }
-  revalidateCatalogPaths(collection)
-  return { ok: true as const, id: newId }
+  const result = await runCreateProduct(ctx.sb, input)
+  if (!result.ok) return result
+  revalidateStorefrontCatalogPaths(input.collection)
+  return { ok: true as const, id: result.id }
 }
 
 export async function syncProductsWithStripe(): Promise<{
@@ -584,142 +523,9 @@ export async function syncProductsWithStripe(): Promise<{
   if (!ctx.ok) {
     return { success: false, syncedCount: 0, failedSyncs: [{ name: 'Sistema', reason: ctx.error }] }
   }
-  const secret = stripeSecretKey()
-  if (!secret) {
-    return {
-      success: false,
-      syncedCount: 0,
-      failedSyncs: [{ name: 'Sistema', reason: 'Falta STRIPE_SECRET_KEY para sincronizar productos.' }],
-    }
-  }
-
-  const sb = ctx.sb
-  const stripe = new Stripe(secret)
-  const failedSyncs: StripeSyncFailedItem[] = []
-  let syncedCount = 0
-
-  const { data: unsyncedProducts, error: unsyncedProductsError } = await sb
-    .from('products')
-    .select('id,name,description,image_url,price,stripe_product_id,stripe_price_id')
-    .or('stripe_product_id.is.null,stripe_price_id.is.null')
-    .order('name', { ascending: true })
-
-  if (unsyncedProductsError) {
-    return {
-      success: false,
-      syncedCount: 0,
-      failedSyncs: [{ name: 'Sistema', reason: unsyncedProductsError.message }],
-    }
-  }
-
-  const stripeProducts = await listAllActiveStripeProducts(stripe)
-
-  for (const product of unsyncedProducts ?? []) {
-    const productName = typeof product.name === 'string' ? product.name.trim() : ''
-    if (!productName) {
-      failedSyncs.push({ name: '(sin nombre)', reason: 'Nombre vacío en Supabase.' })
-      continue
-    }
-
-    try {
-      const amountEur = Number(product.price)
-      const imageUrl = normalizeProductImageUrl(product.image_url)
-      const description = normalizeNullableText(product.description)
-
-      const ensuredPriceId = await ensureStripePriceForProduct({
-        stripe,
-        supabase: sb,
-        product: {
-          id: String(product.id),
-          name: productName,
-          price: amountEur,
-          description,
-          stripe_product_id: (product.stripe_product_id as string) ?? null,
-          stripe_price_id: (product.stripe_price_id as string) ?? null,
-          image_url: product.image_url,
-        },
-      })
-
-      if (!ensuredPriceId) throw new Error('No se pudo crear/enlazar precio en Stripe.')
-
-      syncedCount += 1
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : 'Error de API'
-      failedSyncs.push({ name: productName, reason })
-    }
-  }
-
-  const { data: linkedProducts, error: linkedProductsError } = await sb
-    .from('products')
-    .select('id,name,price,description,image_url,stripe_product_id,stripe_price_id')
-    .not('stripe_product_id', 'is', null)
-    .not('stripe_price_id', 'is', null)
-
-  if (linkedProductsError) {
-    failedSyncs.push({
-      name: 'Sistema',
-      reason: `No se pudo validar precios puntuales en productos ya enlazados: ${linkedProductsError.message}`,
-    })
-  } else {
-    for (const linkedProduct of linkedProducts ?? []) {
-      try {
-        const productName = String(linkedProduct.name ?? '').trim() || '(sin nombre)'
-        const amountEur = Number(linkedProduct.price)
-        const stripeProductId = String(linkedProduct.stripe_product_id ?? '').trim()
-        const stripePriceId = String(linkedProduct.stripe_price_id ?? '').trim()
-        if (!stripeProductId || !stripePriceId) continue
-
-        const currentSupabaseDescription = normalizeNullableText(linkedProduct.description)
-        const stripeProduct = await stripe.products.retrieve(stripeProductId)
-        const stripeDescription = normalizeNullableText(stripeProduct.description)
-
-        const ensuredPriceId = await ensureStripePriceForProduct({
-          stripe,
-          supabase: sb,
-          product: {
-            id: String(linkedProduct.id),
-            name: productName,
-            price: amountEur,
-            description: currentSupabaseDescription,
-            stripe_product_id: stripeProductId,
-            stripe_price_id: stripePriceId,
-            image_url: (linkedProduct as { image_url?: unknown }).image_url,
-          },
-        })
-
-        if (!ensuredPriceId) continue
-
-        const shouldUpdateDescription = !currentSupabaseDescription && !!stripeDescription
-        const shouldUpdatePriceId = ensuredPriceId !== stripePriceId
-        if (!shouldUpdateDescription && !shouldUpdatePriceId) continue
-
-        const { error: updateLinkedError } = await sb
-          .from('products')
-          .update({
-            stripe_price_id: ensuredPriceId,
-            description: shouldUpdateDescription ? stripeDescription : currentSupabaseDescription,
-          })
-          .eq('id', String(linkedProduct.id))
-
-        if (updateLinkedError) throw new Error(updateLinkedError.message)
-        syncedCount += 1
-      } catch (error) {
-        const productName = String(linkedProduct.name ?? '(sin nombre)').trim() || '(sin nombre)'
-        const reason =
-          error instanceof Error
-            ? `No se pudo sincronizar precio Stripe: ${error.message}`
-            : 'No se pudo sincronizar precio Stripe'
-        failedSyncs.push({ name: productName, reason })
-      }
-    }
-  }
-
-  revalidateCatalogPaths()
-  return {
-    success: failedSyncs.length === 0,
-    syncedCount,
-    failedSyncs,
-  }
+  const result = await runSyncProductsWithStripe(ctx.sb)
+  if (result.syncedCount > 0) revalidateStorefrontCatalogPaths()
+  return result
 }
 
 function parseFormBoolean(value: FormDataEntryValue | null): boolean {
@@ -823,161 +629,7 @@ type AdminStripeSyncResult =
 export async function adminSyncOrdersFromStripe(input?: AdminStripeSyncInput): Promise<AdminStripeSyncResult> {
   const ctx = await assertAdminMutationContext()
   if (!ctx.ok) return { ok: false, error: ctx.error }
-  const secret = stripeSecretKey()
-  if (!secret) return { ok: false, error: 'Falta STRIPE_SECRET_KEY para sincronizar pedidos.' }
-  const sb = ctx.sb
-  const stripe = new Stripe(secret)
-
-  const daysBackRaw = Number(input?.daysBack ?? 120)
-  const daysBack = Number.isFinite(daysBackRaw) ? Math.min(3650, Math.max(1, Math.floor(daysBackRaw))) : 120
-  const gte = Math.floor(Date.now() / 1000) - daysBack * 24 * 60 * 60
-
-  const sessions: Stripe.Checkout.Session[] = []
-  let startingAfter: string | undefined
-
-  while (true) {
-    const page = await stripe.checkout.sessions.list({
-      limit: 100,
-      created: { gte },
-      starting_after: startingAfter,
-    })
-    sessions.push(...page.data)
-    if (!page.has_more) break
-    startingAfter = page.data[page.data.length - 1]?.id
-    if (!startingAfter) break
-  }
-
-  const eligible = sessions.filter((s) => {
-    if (s.mode !== 'payment') return false
-    if (s.status !== 'complete') return false
-    return s.payment_status === 'paid' || s.payment_status === 'no_payment_required'
-  })
-  const sessionIds = eligible.map((s) => s.id)
-
-  const existingSessionIds = new Set<string>()
-  for (let i = 0; i < sessionIds.length; i += 200) {
-    const chunk = sessionIds.slice(i, i + 200)
-    if (chunk.length === 0) continue
-    const { data, error } = await sb.from('orders').select('stripe_session_id').in('stripe_session_id', chunk)
-    if (error) return { ok: false, error: error.message }
-    for (const row of data ?? []) {
-      const value = typeof row.stripe_session_id === 'string' ? row.stripe_session_id.trim() : ''
-      if (value) existingSessionIds.add(value)
-    }
-  }
-
-  const missingSessionIds = sessionIds.filter((id) => !existingSessionIds.has(id))
-  const insertedIds: string[] = []
-  let skippedNoLineItems = 0
-
-  for (const sessionId of missingSessionIds) {
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['line_items', 'line_items.data.price.product'],
-    })
-    const lineItems = session.line_items?.data ?? []
-    if (lineItems.length === 0) {
-      skippedNoLineItems += 1
-      continue
-    }
-
-    const summaryParts: string[] = []
-    const itemsJson: Array<Record<string, unknown>> = []
-
-    for (const li of lineItems) {
-      const qty = typeof li.quantity === 'number' && li.quantity > 0 ? li.quantity : 1
-      const lineCents =
-        typeof li.amount_total === 'number'
-          ? li.amount_total
-          : typeof li.amount_subtotal === 'number'
-            ? li.amount_subtotal
-            : 0
-      const lineTotal = lineCents / 100
-      const priceObj =
-        li.price && typeof li.price === 'object' && 'id' in li.price ? (li.price as Stripe.Price) : null
-      const rawProduct = priceObj?.product
-      const product =
-        rawProduct && typeof rawProduct === 'object' && 'name' in rawProduct ? (rawProduct as Stripe.Product) : null
-      const description = li.description?.trim() || product?.name?.trim() || 'Producto'
-      const image = typeof product?.images?.[0] === 'string' ? product.images[0].trim() : null
-      const unit = typeof priceObj?.unit_amount === 'number' ? priceObj.unit_amount / 100 : lineTotal / Math.max(1, qty)
-
-      itemsJson.push({
-        name: description,
-        quantity: qty,
-        line_total: Number.isFinite(lineTotal) ? lineTotal : unit * qty,
-        image_url: image,
-        price: Number.isFinite(unit) ? unit : 0,
-        stripe_price_id: priceObj?.id ?? null,
-      })
-      summaryParts.push(`${qty}× ${description}`)
-    }
-
-    const shipping = shippingFieldsFromStripeSession(session)
-    const shippingName = shippingBlockFromStripeSession(session)?.name?.trim() || null
-    const customerName =
-      shippingName || checkoutNameFromStripeSession(session) || session.customer_details?.name?.trim() || null
-    const customerEmail = (session.customer_details?.email || session.customer_email || '').trim() || null
-    const customerPhone = customerPhoneFromStripeSession(session)
-    const totalAmount = typeof session.amount_total === 'number' ? session.amount_total / 100 : null
-    const shippingCents =
-      session.shipping_cost && typeof session.shipping_cost.amount_total === 'number'
-        ? session.shipping_cost.amount_total
-        : null
-
-    const payload: Record<string, unknown> = {
-      stripe_session_id: session.id,
-      customer_email: customerEmail,
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      total_amount: totalAmount,
-      currency: (session.currency || 'eur').toLowerCase(),
-      status: 'pendiente',
-      line_summary: summaryParts.join(' · '),
-      items_json: itemsJson,
-      emails_sent: false,
-      ...shipping,
-    }
-    if (shippingCents != null) payload.shipping_cents = shippingCents
-
-    const { data, error } = await sb.from('orders').insert(payload).select('*').maybeSingle()
-    if (error) {
-      const msg = String(error.message ?? '')
-      if (
-        msg.includes("Could not find the 'emails_sent' column") ||
-        msg.includes("Could not find the 'shipping_cents' column")
-      ) {
-        const fallbackPayload = { ...payload }
-        delete fallbackPayload.emails_sent
-        delete fallbackPayload.shipping_cents
-        const fallback = await sb.from('orders').insert(fallbackPayload).select('*').maybeSingle()
-        if (fallback.error) return { ok: false, error: fallback.error.message }
-        if (fallback.data?.id) insertedIds.push(String(fallback.data.id))
-        continue
-      }
-      return { ok: false, error: error.message }
-    }
-    if (data?.id) insertedIds.push(String(data.id))
-  }
-
-  let importedOrders: AdminOrder[] = []
-  if (insertedIds.length > 0) {
-    const { data, error } = await sb.from('orders').select('*').in('id', insertedIds)
-    if (error) return { ok: false, error: error.message }
-    importedOrders = (data ?? []) as AdminOrder[]
-  }
-
-  revalidatePath('/admin')
-  revalidatePath('/admin/pedidos')
-
-  return {
-    ok: true,
-    scannedSessions: sessions.length,
-    eligibleSessions: eligible.length,
-    existingSessions: existingSessionIds.size,
-    importedCount: insertedIds.length,
-    skippedNoLineItems,
-    importedOrders,
-  }
+  return runSyncOrdersFromStripe(ctx.sb, input)
 }
 
 export async function adminDeleteOrder(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -1070,9 +722,6 @@ export async function sendTestEmail(): Promise<{ ok: true } | { ok: false; error
 
   const orderId = String(inserted?.id ?? '')
   const orderRef = orderId ? shortOrderRef(orderId) : 'TEST'
-
-  revalidatePath('/admin')
-  revalidatePath('/admin/pedidos')
 
   const { data: orderRow, error: readErr } = await sb.from('orders').select('*').eq('id', orderId).maybeSingle()
   if (readErr || !orderRow) {
@@ -1223,9 +872,6 @@ export async function simulateRealPurchase(): Promise<{ ok: true } | { ok: false
     subject: `[TEST] ${getOrderEmailSubject('En preparación', 'Cliente de Prueba')}`,
     html,
   })
-
-  revalidatePath('/admin')
-  revalidatePath('/admin/pedidos')
 
   if (!mail.ok) {
     console.error('[admin] simulateRealPurchase mail:', mail.error)

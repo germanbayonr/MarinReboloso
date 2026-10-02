@@ -9,11 +9,8 @@ import {
   adminDeleteOrder,
   adminUpdateOrderStatus,
 } from '@/app/admin/order-mutations'
-import {
-  adminSyncOrdersFromStripe,
-  sendTestEmail,
-  simulateRealPurchase,
-} from '@/app/admin/actions'
+import { sendTestEmail, simulateRealPurchase } from '@/app/admin/actions'
+import { syncOrdersFromStripeViaApi } from '@/lib/admin/admin-orders-api-client'
 import { ORDER_STATUSES, type AdminOrder, type AdminOrderStatusPayload, type OrderStatus } from '@/lib/admin/types'
 import { formatOrderCustomerBlock } from '@/lib/order-customer-display'
 import {
@@ -370,7 +367,7 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
             onClick={async () => {
               setIsSyncingStripe(true)
               try {
-                const res = await adminSyncOrdersFromStripe({ daysBack: 365 })
+                const res = await syncOrdersFromStripeViaApi({ daysBack: 365 })
                 if (!res.ok) {
                   toast.error(res.error)
                   return

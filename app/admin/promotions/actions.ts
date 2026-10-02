@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePromotionSurfaces } from '@/lib/admin/revalidate-promotions'
 import Stripe from 'stripe'
 import { ensureAdminOrRedirect, getServiceSupabase, assertAdminMutationContext } from '@/lib/admin/server'
 import {
@@ -91,9 +91,7 @@ export async function createPromotion(
     const message = stripeError instanceof Error ? stripeError.message : 'Error al sincronizar promoción en Stripe.'
     return { ok: false, error: message }
   }
-  revalidatePath('/admin/promotions')
-  revalidatePath('/checkout')
-  revalidatePath('/')
+  revalidatePromotionSurfaces()
   return { ok: true, promotion: inserted as PromotionRow }
 }
 
@@ -147,9 +145,7 @@ export async function syncAllPromotionsToStripe(): Promise<{
     }
   }
 
-  revalidatePath('/admin/promotions')
-  revalidatePath('/checkout')
-  revalidatePath('/')
+  revalidatePromotionSurfaces()
 
   return { ok: true, synced, failed, errors }
 }
@@ -199,9 +195,7 @@ export async function updatePromotion(
     const message = stripeError instanceof Error ? stripeError.message : 'Error al sincronizar promoción en Stripe.'
     return { ok: false, error: message }
   }
-  revalidatePath('/admin/promotions')
-  revalidatePath('/checkout')
-  revalidatePath('/')
+  revalidatePromotionSurfaces()
   return { ok: true, promotion: updated as PromotionRow }
 }
 
@@ -232,9 +226,7 @@ export async function togglePromotionActive(
     const message = stripeError instanceof Error ? stripeError.message : 'Error al sincronizar activación en Stripe.'
     return { ok: false, error: message }
   }
-  revalidatePath('/admin/promotions')
-  revalidatePath('/checkout')
-  revalidatePath('/')
+  revalidatePromotionSurfaces()
   return { ok: true, promotion: data as PromotionRow }
 }
 
@@ -260,9 +252,7 @@ export async function deletePromotion(id: string): Promise<{ ok: true } | { ok: 
     const message = stripeError instanceof Error ? stripeError.message : 'Error al desactivar promoción en Stripe.'
     return { ok: false, error: message }
   }
-  revalidatePath('/admin/promotions')
-  revalidatePath('/checkout')
-  revalidatePath('/')
+  revalidatePromotionSurfaces()
   return { ok: true }
 }
 

@@ -14,13 +14,10 @@ export function revalidateStorefrontCatalogPaths(collectionSlug?: string | null)
   }
 }
 
+/**
+ * @deprecated El panel admin actualiza estado en el cliente; no revalidar rutas /admin tras mutaciones.
+ * Usa `revalidateStorefrontCatalogPaths` desde API routes o tras cambios que afecten solo la tienda.
+ */
 export function revalidateCatalogPaths(collectionSlug?: string | null) {
   revalidateStorefrontCatalogPaths(collectionSlug)
-  revalidatePath('/admin', 'page')
-  revalidatePath('/admin/productos', 'page')
-  revalidatePath('/admin/colecciones', 'page')
-  if (collectionSlug) {
-    const slug = String(collectionSlug).toLowerCase().trim()
-    if (slug) revalidatePath(`/admin/colecciones/${slug}`, 'page')
-  }
 }
