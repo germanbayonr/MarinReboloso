@@ -9,34 +9,44 @@ function bunnyCdnHost(): string {
   return (process.env.NEXT_PUBLIC_BUNNY_CDN_HOST ?? 'marebo.b-cdn.net').replace(/^https?:\/\//i, '').replace(/\/$/, '')
 }
 
-/** URL de entrega en tienda: opcionalmente sirve ficheros de Storage vía Bunny (menos egress Supabase). */
+/**
+ * URL de entrega en tienda.
+ *
+ * Marebo tiene dos familias de URLs en BD (conviven a propósito):
+ * - Bunny legado: `https://marebo.b-cdn.net/Colecciones/...` y `/PRODUCTOS/...`
+ * - Subidas admin: Supabase Storage `.../product-images/products/<uuid>.webp`
+ *
+ * No reescribir Supabase → Bunny salvo que el pull zone de Bunny tenga ESPEJO 1:1 del bucket
+ * (`NEXT_PUBLIC_BUNNY_MIRROR_SUPABASE_STORAGE=true`). Si no, las imágenes del admin devuelven 404 en CDN.
+ */
 export function deliveryProductImageUrl(raw: string): string {
   const normalized = normalizeProductImageUrl(raw)
   if (!normalized) return ''
-  if (/^https?:\/\//i.test(normalized) && isBunnyCdnUrl(normalized)) return normalized
+  if (isBunnyCdnUrl(normalized)) return normalized
+  if (isSupabaseStorageUrl(normalized)) {
+    const mirror = process.env.NEXT_PUBLIC_BUNNY_MIRROR_SUPABASE_STORAGE === 'true'
+    const useBunny = process.env.NEXT_PUBLIC_USE_BUNNY_FOR_PRODUCT_IMAGES === 'true'
+    if (!mirror || !useBunny) return normalized
 
-  const useBunny = process.env.NEXT_PUBLIC_USE_BUNNY_FOR_PRODUCT_IMAGES === 'true'
-  if (!useBunny) return normalized
+    const host = bunnyCdnHost()
+    if (!host) return normalized
 
-  const host = bunnyCdnHost()
-  if (!host) return normalized
-
-  let storagePath = ''
-  const idx = normalized.indexOf(PRODUCT_IMAGES_PUBLIC_PREFIX)
-  if (idx >= 0) {
-    storagePath = normalized.slice(idx + PRODUCT_IMAGES_PUBLIC_PREFIX.length)
-  } else if (!/^https?:\/\//i.test(normalized)) {
-    storagePath = normalized.replace(/^\/+/, '')
-    if (!storagePath.startsWith('products/')) {
-      storagePath = storagePath.includes('/') ? storagePath : `products/${storagePath}`
-    }
-  }
-
-  if (storagePath) {
+    const idx = normalized.indexOf(PRODUCT_IMAGES_PUBLIC_PREFIX)
+    if (idx < 0) return normalized
+    const storagePath = normalized.slice(idx + PRODUCT_IMAGES_PUBLIC_PREFIX.length)
+    if (!storagePath) return normalized
     const segments = storagePath.split('/').map((seg) => encodeURIComponent(seg))
     return `https://${host}/${segments.join('/')}`
   }
+  if (/^https?:\/\//i.test(normalized)) return normalized
 
+  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '')
+  if (!base) return normalized
+  const path = normalized.replace(/^\/+/, '')
+  if (path.startsWith('products/') || path.endsWith('.webp')) {
+    const file = path.startsWith('products/') ? path : `products/${path}`
+    return `${base}/storage/v1/object/public/product-images/${file}`
+  }
   return normalized
 }
 

@@ -1,11 +1,100 @@
--- Marebo · Limpieza de datos (ejecutar en Supabase SQL Editor, proyecto Marebo)
--- 1) Revisa siempre con los SELECT de auditoría.
--- 2) Haz backup o export CSV antes de DELETE/UPDATE masivos.
--- 3) Sustituye :supabase_project_url por tu URL, p. ej. https://nwpjxibuaxclzogatfcl.supabase.co
+-- =============================================================================
+-- Marebo · Supabase proyecto: nwpjxibuaxclzogatfcl
+-- URL base Storage: https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/
+-- Bunny catálogo legado: https://marebo.b-cdn.net/Colecciones/... y .../PRODUCTOS/...
+-- Tabla: public.products · columna: image_url (text[] — array de URLs)
+-- Total productos (mar 2026): ~340
+-- =============================================================================
+-- CÓMO USAR (sin saber programación):
+-- 1. Entra en https://supabase.com → tu proyecto Marebo
+-- 2. Menú izquierdo: SQL → New query
+-- 3. Copia SOLO un bloque SELECT, pulsa Run
+-- 4. Los UPDATE/DELETE van comentados: descomenta solo cuando el SELECT te convenza
+-- =============================================================================
 
--- ---------------------------------------------------------------------------
--- A) AUDITORÍA: productos duplicados por nombre (misma colección)
--- ---------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
+-- 1) Cuántas URLs hay de cada tipo (resumen)
+-- -----------------------------------------------------------------------------
+WITH urls AS (
+  SELECT p.id, p.name, trim(u.url) AS url
+  FROM public.products p
+  CROSS JOIN LATERAL unnest(p.image_url::text[]) AS u(url)
+  WHERE p.image_url IS NOT NULL
+)
+SELECT
+  CASE
+    WHEN url ILIKE '%marebo.b-cdn.net%' THEN 'bunny'
+    WHEN url ILIKE '%supabase.co/storage/%product-images%' THEN 'supabase_storage'
+    WHEN url !~* '^https?://' THEN 'ruta_relativa_rota'
+    ELSE 'otra_http'
+  END AS tipo,
+  count(*) AS num_urls
+FROM urls
+GROUP BY 1
+ORDER BY num_urls DESC;
+
+-- Resultado esperado (aprox.): bunny ~146, supabase_storage ~512, rutas rotas 0
+
+
+-- -----------------------------------------------------------------------------
+-- 2) Productos con galería MIXTA (Bunny + Supabase) — revisar en admin
+-- Ejemplos REALES de tu BD:
+-- -----------------------------------------------------------------------------
+WITH urls AS (
+  SELECT
+    p.id,
+    p.name,
+    p.collection,
+    trim(u.url) AS url
+  FROM public.products p
+  CROSS JOIN LATERAL unnest(p.image_url::text[]) AS u(url)
+),
+flags AS (
+  SELECT
+    id,
+    name,
+    collection,
+    bool_or(url ILIKE '%marebo.b-cdn.net%') AS has_bunny,
+    bool_or(url ILIKE '%supabase.co/storage/%product-images%') AS has_supabase,
+    array_agg(url ORDER BY url) AS all_urls
+  FROM urls
+  GROUP BY id, name, collection
+)
+SELECT id, name, collection, all_urls
+FROM flags
+WHERE has_bunny AND has_supabase
+ORDER BY name
+LIMIT 30;
+
+-- Nombres que verás (entre otros):
+-- · Aura Turquesa (id 915a3068-9e5d-4b23-9fe4-56f0f6dc8d07)
+-- · Bolso Carmesí Borde
+-- · Collar Esfera Salmón
+-- · Pendiente Aura Carmín
+-- · Pendiente Imperial
+
+
+-- -----------------------------------------------------------------------------
+-- 3) Ejemplos concretos para abrir en el navegador (copiar/pegar URL)
+-- -----------------------------------------------------------------------------
+SELECT name, image_url
+FROM public.products
+WHERE name IN (
+  'Aura Turquesa',
+  'Aros mini rojos',
+  'Bolso Agua Borde',
+  'Pendiente Imperial'
+);
+
+-- URLs reales de muestra:
+-- Bunny:  https://marebo.b-cdn.net/Colecciones/MAREBO/Aura%20Turquesa%20copia.PNG
+-- Supabase: https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/products/d44ae8a4-c5d0-4dcb-aca8-05f4a0838ffe.webp
+-- Supabase: https://nwpjxibuaxclzogatfcl.supabase.co/storage/v1/object/public/product-images/products/eeea7650-c399-4f4d-a031-eedeed36c3e0.webp
+
+
+-- -----------------------------------------------------------------------------
+-- 4) Productos duplicados por nombre + colección (mar 2026: 0 grupos)
+-- -----------------------------------------------------------------------------
 SELECT
   lower(trim(name)) AS name_key,
   lower(coalesce(collection, '')) AS collection_key,
@@ -13,126 +102,54 @@ SELECT
   array_agg(id ORDER BY created_at DESC NULLS LAST) AS product_ids
 FROM public.products
 GROUP BY 1, 2
-HAVING count(*) > 1
-ORDER BY cnt DESC, name_key;
+HAVING count(*) > 1;
 
--- ---------------------------------------------------------------------------
--- B) AUDITORÍA: pedidos duplicados por stripe_session_id
--- ---------------------------------------------------------------------------
+
+-- -----------------------------------------------------------------------------
+-- 5) Pedidos duplicados por stripe_session_id (mar 2026: 0)
+-- -----------------------------------------------------------------------------
 SELECT stripe_session_id, count(*) AS cnt, array_agg(id) AS order_ids
 FROM public.orders
 WHERE stripe_session_id IS NOT NULL AND trim(stripe_session_id) <> ''
 GROUP BY stripe_session_id
 HAVING count(*) > 1;
 
--- ---------------------------------------------------------------------------
--- C) AUDITORÍA: URLs de imagen rotas o solo nombre de fichero en image_url (text[])
--- ---------------------------------------------------------------------------
-SELECT id, name, image_url
-FROM public.products
-WHERE image_url IS NOT NULL
-  AND EXISTS (
-    SELECT 1
-    FROM unnest(
-      CASE
-        WHEN pg_typeof(image_url) = 'text[]'::regtype THEN image_url::text[]
-        ELSE ARRAY[image_url::text]
-      END
-    ) AS u(url)
-    WHERE url IS NOT NULL
-      AND trim(url) <> ''
-      AND url !~* '^https?://'
-  )
-LIMIT 200;
 
--- ---------------------------------------------------------------------------
--- D) NORMALIZAR image_url: rutas relativas / UUID.webp → URL pública Supabase Storage
--- (Ajusta el dominio si cambia de proyecto)
--- ---------------------------------------------------------------------------
--- WITH params AS (
---   SELECT 'https://nwpjxibuaxclzogatfcl.supabase.co'::text AS base
--- ),
--- expanded AS (
---   SELECT
---     p.id,
---     u.ord,
---     trim(u.url) AS raw_url
+-- -----------------------------------------------------------------------------
+-- 6) OPCIONAL: poner la imagen Supabase WebP primero en la galería (solo mixtos)
+--    No borra Bunny; solo reordena para que la miniatura principal sea la del admin.
+-- -----------------------------------------------------------------------------
+-- WITH mixed AS (
+--   SELECT p.id, p.image_url::text[] AS urls
 --   FROM public.products p
---   CROSS JOIN LATERAL unnest(p.image_url::text[]) WITH ORDINALITY AS u(url, ord)
---   WHERE p.image_url IS NOT NULL
+--   WHERE EXISTS (
+--     SELECT 1 FROM unnest(p.image_url::text[]) u(u)
+--     WHERE u.u ILIKE '%marebo.b-cdn.net%'
+--   )
+--   AND EXISTS (
+--     SELECT 1 FROM unnest(p.image_url::text[]) u(u)
+--     WHERE u.u ILIKE '%supabase.co/storage/%product-images%'
+--   )
 -- ),
--- fixed AS (
---   SELECT
---     id,
---     ord,
---     CASE
---       WHEN raw_url ~* '^https?://' THEN raw_url
---       WHEN raw_url ~ '^products/' THEN (SELECT base FROM params) || '/storage/v1/object/public/product-images/' || raw_url
---       WHEN raw_url ~ '^product-images/' THEN (SELECT base FROM params) || '/storage/v1/object/public/' || raw_url
---       WHEN raw_url ~* '\.(webp|jpg|jpeg|png)$' THEN (SELECT base FROM params) || '/storage/v1/object/public/product-images/products/' || raw_url
---       ELSE raw_url
---     END AS new_url
---   FROM expanded
--- ),
--- aggregated AS (
---   SELECT id, array_agg(new_url ORDER BY ord) AS new_image_url
---   FROM fixed
---   GROUP BY id
--- )
--- UPDATE public.products p
--- SET image_url = a.new_image_url
--- FROM aggregated a
--- WHERE p.id = a.id
---   AND p.image_url IS DISTINCT FROM a.new_image_url;
-
--- ---------------------------------------------------------------------------
--- E) DEDUPLICAR URLs dentro del array image_url (mismo producto)
--- ---------------------------------------------------------------------------
--- UPDATE public.products p
--- SET image_url = sub.deduped
--- FROM (
+-- reordered AS (
 --   SELECT
 --     id,
 --     (
---       SELECT array_agg(DISTINCT trim(x) ORDER BY trim(x))
---       FROM unnest(image_url::text[]) AS x
---       WHERE trim(x) <> ''
---     ) AS deduped
---   FROM public.products
---   WHERE image_url IS NOT NULL
--- ) sub
--- WHERE p.id = sub.id
---   AND sub.deduped IS NOT NULL
---   AND p.image_url IS DISTINCT FROM sub.deduped;
+--       SELECT array_agg(u ORDER BY
+--         CASE WHEN u ILIKE '%supabase.co/storage/%product-images%/products/%.webp' THEN 0 ELSE 1 END,
+--         u
+--       )
+--       FROM unnest(urls) AS u
+--     ) AS new_urls
+--   FROM mixed
+-- )
+-- UPDATE public.products p
+-- SET image_url = r.new_urls
+-- FROM reordered r
+-- WHERE p.id = r.id;
 
--- ---------------------------------------------------------------------------
--- F) BORRAR pedidos duplicados (conserva el más reciente por stripe_session_id)
--- ---------------------------------------------------------------------------
--- DELETE FROM public.orders o
--- USING (
---   SELECT id,
---          row_number() OVER (
---            PARTITION BY stripe_session_id
---            ORDER BY created_at DESC NULLS LAST, id DESC
---          ) AS rn
---   FROM public.orders
---   WHERE stripe_session_id IS NOT NULL AND trim(stripe_session_id) <> ''
--- ) d
--- WHERE o.id = d.id
---   AND d.rn > 1;
 
--- ---------------------------------------------------------------------------
--- G) BORRAR productos duplicados por nombre+colección (conserva el más reciente)
--- CUIDADO: revisa manualmente la lista del SELECT (A) antes de ejecutar.
--- ---------------------------------------------------------------------------
--- DELETE FROM public.products p
--- USING (
---   SELECT id,
---          row_number() OVER (
---            PARTITION BY lower(trim(name)), lower(coalesce(collection, ''))
---            ORDER BY created_at DESC NULLS LAST, id DESC
---          ) AS rn
---   FROM public.products
--- ) d
--- WHERE p.id = d.id
---   AND d.rn > 1;
+-- -----------------------------------------------------------------------------
+-- 7) NO recomendado ahora: unificar todo a Bunny
+--    Solo si configuras en Bunny un origen que sirva el bucket product-images de Supabase.
+-- -----------------------------------------------------------------------------

@@ -7,7 +7,10 @@ export async function runAdminUpdateOrderStatus(
   id: string,
   status: OrderStatus,
   payload?: AdminOrderStatusPayload,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; email: 'sent' | 'skipped' | 'none' | 'failed'; emailError?: string }
+  | { ok: false; error: string }
+> {
   const orderId = String(id ?? '').trim()
   if (!orderId) return { ok: false, error: 'ID de pedido inválido' }
 
@@ -41,7 +44,7 @@ export async function runAdminUpdateOrderStatus(
 
   const previous = String((row as { status?: string }).status ?? '')
   if (previous === status) {
-    return { ok: true }
+    return { ok: true, email: 'skipped' }
   }
 
   const patch: Record<string, unknown> = { status }
@@ -62,23 +65,28 @@ export async function runAdminUpdateOrderStatus(
   const { data: refreshed, error: refetchErr } = await sb.from('orders').select('*').eq('id', orderId).maybeSingle()
   if (refetchErr || !refreshed) {
     console.warn('[admin] runAdminUpdateOrderStatus: no se pudo releer el pedido tras UPDATE', refetchErr?.message)
-    return { ok: true }
+    return { ok: true, email: 'none' }
   }
 
   const customer_email =
     typeof refreshed.customer_email === 'string' ? refreshed.customer_email.trim() : ''
 
   if (!customer_email || !customer_email.includes('@')) {
-    return { ok: true }
+    return { ok: true, email: 'none' }
   }
 
-  try {
-    await notifyCustomerOrderStatusChange(refreshed as AdminOrder, status)
-  } catch (error) {
-    console.error('[admin] runAdminUpdateOrderStatus: correo no enviado', error)
+  const mailResult = await notifyCustomerOrderStatusChange(refreshed as AdminOrder, status)
+  if (!mailResult.ok) {
+    return {
+      ok: true,
+      email: 'failed',
+      emailError: mailResult.error,
+    }
   }
-
-  return { ok: true }
+  if ('skipped' in mailResult && mailResult.skipped) {
+    return { ok: true, email: 'skipped' }
+  }
+  return { ok: true, email: 'sent' }
 }
 
 export async function runAdminDeleteOrder(

@@ -1,5 +1,5 @@
 import type { AdminOrder } from '@/lib/admin/types'
-import { getServiceSupabase } from '@/lib/admin/server'
+import { getServiceSupabaseSafe } from '@/lib/admin/server'
 import type { OrderConfirmationLine } from '@/lib/mail/templates'
 
 type ParsedLine = {
@@ -92,7 +92,12 @@ async function enrichLinesWithProducts(parsed: ParsedLine[]): Promise<ParsedLine
   )
   if (ids.length === 0) return parsed
 
-  const sb = getServiceSupabase()
+  const sup = getServiceSupabaseSafe()
+  if (!sup.ok) {
+    console.warn('[mail] enrichLinesWithProducts: Supabase no disponible, se usan datos del pedido.')
+    return parsed
+  }
+  const sb = sup.client
   const { data: rows, error } = await sb
     .from('products')
     .select('id,name,price,image_url')

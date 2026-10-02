@@ -9,7 +9,7 @@ import {
   getShippingTemplate,
 } from '@/lib/mail/templates'
 import { getPublicSiteBaseUrl } from '@/lib/mail/site-url'
-import { sendMareboMail } from '@/lib/mail/send'
+import { sendMareboMailResult } from '@/lib/mail/send'
 
 function shortRef(orderId: string) {
   return orderId.replace(/-/g, '').slice(0, 10).toUpperCase()
@@ -37,9 +37,14 @@ function orderExtra(order: AdminOrder) {
   }
 }
 
-export async function notifyCustomerOrderStatusChange(order: AdminOrder, newStatus: OrderStatus) {
+export async function notifyCustomerOrderStatusChange(
+  order: AdminOrder,
+  newStatus: OrderStatus,
+): Promise<{ ok: true } | { ok: false; error: string } | { ok: true; skipped: true }> {
   const to = order.customer_email?.trim()
-  if (!to || !to.includes('@')) return
+  if (!to || !to.includes('@')) {
+    return { ok: false, error: 'El pedido no tiene email de cliente válido.' }
+  }
 
   const ref = shortRef(order.id)
   const extra = orderExtra(order)
@@ -61,15 +66,14 @@ export async function notifyCustomerOrderStatusChange(order: AdminOrder, newStat
           totalCents,
           currency,
         })
-        await sendMareboMail({
+        return sendMareboMailResult({
           to,
           subject: getOrderEmailSubject('En preparación', name),
           html,
         })
-        return
       }
       case 'preparando': {
-        return
+        return { ok: true, skipped: true }
       }
       case 'enviado': {
         const { lines, subtotalCents, shippingCents, totalCents, currency } = await buildOrderLinesForEmail(order)
@@ -87,12 +91,11 @@ export async function notifyCustomerOrderStatusChange(order: AdminOrder, newStat
           totalCents,
           currency,
         })
-        await sendMareboMail({
+        return sendMareboMailResult({
           to,
           subject: getOrderEmailSubject('En camino', name),
           html,
         })
-        return
       }
       case 'entregado': {
         const { lines, subtotalCents, shippingCents, totalCents, currency } = await buildOrderLinesForEmail(order)
@@ -107,35 +110,34 @@ export async function notifyCustomerOrderStatusChange(order: AdminOrder, newStat
           totalCents,
           currency,
         })
-        await sendMareboMail({
+        return sendMareboMailResult({
           to,
           subject: getOrderEmailSubject('Entregado', name),
           html,
         })
-        return
       }
       case 'cancelado': {
         const html = getCancelledOrderTemplate({ orderRef: ref, orderId: order.id, siteUrl })
-        await sendMareboMail({
+        return sendMareboMailResult({
           to,
           subject: getOrderEmailSubject('Cancelado', name),
           html,
         })
-        return
       }
       case 'reembolsado': {
         const html = getRefundedOrderTemplate({ orderRef: ref, orderId: order.id, siteUrl })
-        await sendMareboMail({
+        return sendMareboMailResult({
           to,
           subject: getOrderEmailSubject('Reembolso', name),
           html,
         })
-        return
       }
       default:
-        return
+        return { ok: true, skipped: true }
     }
   } catch (e) {
     console.error('[mail] notifyCustomerOrderStatusChange:', e)
+    const message = e instanceof Error ? e.message : 'Error al enviar correo'
+    return { ok: false, error: message }
   }
 }

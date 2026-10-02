@@ -5,10 +5,8 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { FlaskConical, Mail, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import AdminDataTable from '@/components/admin/AdminDataTable'
-import {
-  adminDeleteOrder,
-  adminUpdateOrderStatus,
-} from '@/app/admin/order-mutations'
+import { adminDeleteOrder } from '@/app/admin/order-mutations'
+import { updateOrderStatusViaApi } from '@/lib/admin/admin-orders-api-client'
 import { sendTestEmail, simulateRealPurchase } from '@/app/admin/actions'
 import { syncOrdersFromStripeViaApi } from '@/lib/admin/admin-orders-api-client'
 import { ORDER_STATUSES, type AdminOrder, type AdminOrderStatusPayload, type OrderStatus } from '@/lib/admin/types'
@@ -159,7 +157,7 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
   const applyStatusChange = useCallback(
     async (order: AdminOrder, next: OrderStatus, payload?: AdminOrderStatusPayload) => {
       try {
-        const res = await adminUpdateOrderStatus(order.id, next, payload)
+        const res = await updateOrderStatusViaApi(order.id, next, payload)
         if (!res.ok) {
           toast.error(res.error)
           return false
@@ -167,7 +165,17 @@ export default function OrdersAdminClient({ initialOrders }: { initialOrders: Ad
         setOrders((prev) =>
           prev.map((x) => (x.id === order.id ? { ...x, status: next, ...mergeShippingFields(payload) } : x)),
         )
-        toast.success('Estado actualizado. Si había email, se ha enviado el aviso.')
+        if (res.email === 'sent') {
+          toast.success('Estado actualizado y correo enviado al cliente.')
+        } else if (res.email === 'failed') {
+          toast.error(res.emailError ?? 'Estado guardado, pero falló el envío del correo (revisa SMTP en Vercel).')
+        } else if (res.email === 'none') {
+          toast.warning('Estado actualizado. El pedido no tiene email de cliente.')
+        } else if (next === 'preparando') {
+          toast.success('Estado actualizado (Preparando no envía correo automático).')
+        } else {
+          toast.success('Estado actualizado.')
+        }
         return true
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'No se pudo actualizar el estado del pedido')

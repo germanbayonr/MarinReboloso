@@ -5,9 +5,6 @@ import nodemailer from 'nodemailer'
  * Tras editar `.env.local`, reinicia `next dev` para que Next cargue los cambios.
  */
 function resolveSmtpAuth(): { user: string; pass: string } {
-  console.log('Cargando SMTP User:', process.env.SMTP_USER ? 'OK' : 'FALTA')
-  console.log('Cargando SMTP Password:', process.env.SMTP_PASSWORD ? 'OK' : 'FALTA')
-
   const user = String(
     process.env.SMTP_USER || process.env.EMAIL_USER || '',
   ).trim()
