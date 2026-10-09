@@ -2,6 +2,7 @@ import NavbarWithCollections from '@/components/NavbarWithCollections'
 import HomeCollectionsPortada from '@/components/HomeCollectionsPortada'
 import NovedadesCarousel from '@/components/NovedadesCarousel'
 import SocialProof from '@/components/SocialProof'
+import PublicFundingNotice from '@/components/PublicFundingNotice'
 import Footer from '@/components/Footer'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,7 @@ export default function Home() {
       <HomeCollectionsPortada />
       <NovedadesCarousel />
       <SocialProof />
+      <PublicFundingNotice />
       <Footer />
     </main>
   )

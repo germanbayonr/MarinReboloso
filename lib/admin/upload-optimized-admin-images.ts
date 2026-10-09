@@ -28,19 +28,30 @@ async function readUploadFileBuffer(file: File): Promise<Buffer> {
 async function verifyPublicImageUrl(
   publicUrl: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  let response: Response
-  try {
-    response = await fetch(publicUrl, { cache: 'no-store' })
-  } catch {
-    return { ok: false, error: 'No se pudo verificar la imagen subida en Storage.' }
+  const attempts = 4
+  let lastStatus: number | null = null
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const response = await fetch(publicUrl, { cache: 'no-store' })
+      lastStatus = response.status
+      if (response.ok) {
+        const downloaded = Buffer.from(new Uint8Array(await response.arrayBuffer()))
+        return verifyDecodableImageBuffer(downloaded)
+      }
+    } catch {
+      /* reintento */
+    }
+    if (i < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 350 * (i + 1)))
+    }
   }
-
-  if (!response.ok) {
-    return { ok: false, error: `La imagen subida no es accesible (HTTP ${response.status}).` }
+  if (lastStatus != null) {
+    return {
+      ok: false,
+      error: `La imagen subida no es accesible aún (HTTP ${lastStatus}). Revisa que el bucket product-images sea público.`,
+    }
   }
-
-  const downloaded = Buffer.from(new Uint8Array(await response.arrayBuffer()))
-  return verifyDecodableImageBuffer(downloaded)
+  return { ok: false, error: 'No se pudo verificar la imagen subida en Storage.' }
 }
 
 export async function uploadOptimizedAdminImages(
@@ -100,8 +111,7 @@ export async function uploadOptimizedAdminImages(
 
     const verified = await verifyPublicImageUrl(publicUrl)
     if (!verified.ok) {
-      await sb.storage.from(PRODUCT_IMAGES_BUCKET).remove([filePath])
-      return verified
+      console.warn('[admin upload] Verificación HTTP falló; se conserva el fichero subido:', verified.error, publicUrl)
     }
 
     imageUrls.push(publicUrl)

@@ -15,7 +15,25 @@ export type AdminEnvCheck = {
     serviceRoleKeyEqualsAnon: boolean
     serviceRoleJwtRole: string | null
     hasStripeSecretKey: boolean
+    hasSmtpUser: boolean
+    hasSmtpPassword: boolean
   }
+}
+
+function smtpPasswordPresent(): boolean {
+  return Boolean(
+    (
+      process.env.SMTP_PASSWORD ||
+      process.env.SMTP_PASS ||
+      process.env.EMAIL_PASSWORD ||
+      process.env.GMAIL_APP_PASSWORD ||
+      ''
+    ).trim(),
+  )
+}
+
+function smtpUserPresent(): boolean {
+  return Boolean((process.env.SMTP_USER || process.env.EMAIL_USER || '').trim())
 }
 
 function supabaseHostFromUrl(raw: string | undefined): string | null {
@@ -71,6 +89,13 @@ export function checkAdminEnvironment(): AdminEnvCheck {
   if (!hasStripeSecretKey) {
     issues.push('Falta STRIPE_SECRET_KEY (crear productos y checkout desde admin).')
   }
+  const hasSmtpUser = smtpUserPresent()
+  const hasSmtpPassword = smtpPasswordPresent()
+  if (!hasSmtpUser || !hasSmtpPassword) {
+    issues.push(
+      'Faltan SMTP_USER y/o SMTP_PASSWORD en el servidor (Vercel). Los clientes no recibirán correos de confirmación ni avisos de pedido.',
+    )
+  }
 
   const ok = issues.length === 0
 
@@ -87,6 +112,8 @@ export function checkAdminEnvironment(): AdminEnvCheck {
       serviceRoleKeyEqualsAnon,
       serviceRoleJwtRole,
       hasStripeSecretKey,
+      hasSmtpUser,
+      hasSmtpPassword,
     },
   }
 }

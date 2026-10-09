@@ -4,6 +4,8 @@ import { jsonError, jsonOk, requireAdminApiContext } from '@/lib/admin/require-a
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+/** Compresión sharp + varias imágenes en Vercel */
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {

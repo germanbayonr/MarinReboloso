@@ -162,7 +162,14 @@ export async function uploadAdminProductImagesViaApi(files: File[]): Promise<str
     throw new Error(`Respuesta inválida (${res.status})`)
   }
   if (!res.ok || !data.ok || !Array.isArray(data.urls)) {
-    throw new Error(('error' in data && data.error) || `Error ${res.status}`)
+    const base = ('error' in data && data.error) || `Error ${res.status}`
+    if (res.status === 401) {
+      throw new Error('Sesión admin expirada. Recarga /admin/login e inténtalo de nuevo.')
+    }
+    if (res.status === 413) {
+      throw new Error('Imagen demasiado grande para el servidor. Usa fotos bajo 10 MB o sube de una en una.')
+    }
+    throw new Error(base)
   }
   return data.urls
 }
