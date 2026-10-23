@@ -40,6 +40,16 @@ export default async function ColeccionPage({ params }: { params: Promise<{ slug
       />
 
       <div className="py-14 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {error ? (
+          <p className="mb-6 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+            No se pudieron cargar los productos de esta colección. {error}
+          </p>
+        ) : null}
+        {fromFallback ? (
+          <p className="mb-6 border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            Catálogo temporal sin conexión a la base de datos. Los precios de 25€ no son los precios reales de la tienda.
+          </p>
+        ) : null}
         <CollectionProductsClient products={products} />
       </div>
 

@@ -156,3 +156,18 @@ export function isSupabaseQuotaOrUnavailableError(message: string | null | undef
     m.includes('service for this project')
   )
 }
+
+/** El host del proyecto no resuelve (borrado) o la red no llega a Supabase. No es un fallo de precio ni de upload. */
+export function isSupabaseProjectUnreachableError(message: string | null | undefined): boolean {
+  if (!message) return false
+  const m = message.toLowerCase()
+  return (
+    m.includes('enotfound') ||
+    m.includes('nxdomain') ||
+    m.includes('getaddrinfo') ||
+    m.includes('fetch failed') ||
+    m.includes('failed to fetch') ||
+    m.includes('networkerror') ||
+    m.includes('econnrefused')
+  )
+}

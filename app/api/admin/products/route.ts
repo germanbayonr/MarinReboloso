@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (!result.ok) return jsonError(result.error, 400)
 
     revalidateStorefrontCatalogPaths(input.collection)
-    return jsonOk({ id: result.id }, 201)
+    return jsonOk({ id: result.id, stripeWarning: result.stripeWarning }, 201)
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Error interno al crear producto'
     return NextResponse.json({ ok: false, error: message }, { status: 500, headers: { 'Cache-Control': 'no-store' } })

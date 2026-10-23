@@ -8,6 +8,10 @@ import {
   migrationManifestForHealth,
   probeDatabaseMigrations,
 } from '@/lib/admin/health-check'
+import {
+  isSupabaseProjectUnreachableError,
+  isSupabaseQuotaOrUnavailableError,
+} from '@/lib/master-catalog-products'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -54,6 +58,16 @@ export async function GET() {
         const msg = e instanceof Error ? e.message : String(e)
         productsPage.error = msg
         envCheck.ok = false
+        if (isSupabaseQuotaOrUnavailableError(msg)) {
+          envCheck.issues.unshift(
+            'Supabase está RESTRINGIDO (cuota de egress superada). Hasta restaurar el plan, la tienda puede mostrar precios ficticios (25€), no se pueden subir imágenes y el panel fallará. Dashboard Supabase → Billing / Usage.',
+          )
+        }
+        if (isSupabaseProjectUnreachableError(msg)) {
+          envCheck.issues.unshift(
+            'El proyecto Supabase configurado (NEXT_PUBLIC_SUPABASE_URL) no existe o no resuelve en DNS. Pagar el plan Pro no recrea un proyecto borrado. Abre el dashboard, copia la URL del proyecto que sigue vivo y actualízala en Vercel y en .env.local. El ref antiguo nwpjxibuaxclzogatfcl ya no tiene DNS.',
+          )
+        }
         envCheck.issues.push(`La carga de /admin/productos falla: ${msg}`)
       }
       try {

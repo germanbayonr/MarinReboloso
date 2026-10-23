@@ -126,14 +126,14 @@ export async function syncProductsWithStripeViaApi(): Promise<{
 
 export async function createAdminProductViaApi(
   input: import('@/lib/admin/product-input').AdminProductInput,
-): Promise<string> {
+): Promise<{ id: string; stripeWarning: string | null }> {
   const res = await fetch('/api/admin/products', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(input),
   })
-  let data: { ok: true; id: string } | { ok: false; error?: string }
+  let data: { ok: true; id: string; stripeWarning?: string | null } | { ok: false; error?: string }
   try {
     data = (await res.json()) as typeof data
   } catch {
@@ -142,7 +142,7 @@ export async function createAdminProductViaApi(
   if (!res.ok || !data.ok || !('id' in data) || !data.id) {
     throw new Error(('error' in data && data.error) || `Error ${res.status}`)
   }
-  return data.id
+  return { id: data.id, stripeWarning: data.stripeWarning ?? null }
 }
 
 export async function uploadAdminProductImagesViaApi(files: File[]): Promise<string[]> {

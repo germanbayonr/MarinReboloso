@@ -8,9 +8,12 @@ export const revalidate = 0
 export async function GET() {
   try {
     const snapshot = await buildSiteCatalogSnapshot()
+    const cacheControl = snapshot.fromFallback
+      ? 'private, no-store, max-age=0'
+      : 'public, s-maxage=300, stale-while-revalidate=600'
     return NextResponse.json(snapshot, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': cacheControl,
       },
     })
   } catch (err) {

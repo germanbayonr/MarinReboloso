@@ -56,8 +56,12 @@ export const fetchActiveProducts = cache(async (): Promise<ProductsFetchResult> 
     return { products, fromFallback: false, error: null }
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Error desconocido'
-    console.warn('[products] Excepción al cargar, usando catálogo maestro:', message)
-    return { products: getMasterCatalogProducts(), fromFallback: true, error: message }
+    if (isSupabaseQuotaOrUnavailableError(message)) {
+      console.warn('[products] Supabase no disponible, usando catálogo maestro local:', message)
+      return { products: getMasterCatalogProducts(), fromFallback: true, error: message }
+    }
+    console.error('[products] No se usa catálogo maestro (precios ficticios):', message)
+    return { products: [], fromFallback: false, error: message }
   }
 })
 
@@ -100,27 +104,21 @@ export async function fetchProductsForCollectionSlugData(collectionSlug: string)
       .map((row) => mapProductRow(row as Record<string, unknown>))
       .filter((p) => productMatchesCollectionSlug(p.collection, normalized))
 
-    if (products.length === 0) {
-      const fallbackForCollection = getMasterCatalogProducts().filter((p) =>
-        productMatchesCollectionSlug(p.collection, normalized),
-      )
-      if (fallbackForCollection.length > 0) {
-        return { products: fallbackForCollection, fromFallback: true, error: null, collectionSlug: normalized }
-      }
-    }
-
     return { products, fromFallback: false, error: null, collectionSlug: normalized }
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Error desconocido'
-    const fallbackForCollection = getMasterCatalogProducts().filter((p) =>
-      productMatchesCollectionSlug(p.collection, normalized),
-    )
-    return {
-      products: fallbackForCollection.length > 0 ? fallbackForCollection : [],
-      fromFallback: fallbackForCollection.length > 0,
-      error: message,
-      collectionSlug: normalized,
+    if (isSupabaseQuotaOrUnavailableError(message)) {
+      const fallbackForCollection = getMasterCatalogProducts().filter((p) =>
+        productMatchesCollectionSlug(p.collection, normalized),
+      )
+      return {
+        products: fallbackForCollection,
+        fromFallback: true,
+        error: message,
+        collectionSlug: normalized,
+      }
     }
+    return { products: [], fromFallback: false, error: message, collectionSlug: normalized }
   }
 }
 
@@ -170,17 +168,13 @@ export async function fetchProductRowById(
       return { product: fallback, fromFallback: true, error: error.message }
     }
     if (error) return { product: null, fromFallback: false, error: error.message }
-    if (!data) {
-      const { findMasterCatalogProductById, findMasterCatalogProductByNameSlug } = await import(
-        '@/lib/master-catalog-products'
-      )
-      const fallback =
-        findMasterCatalogProductById(trimmed) ?? findMasterCatalogProductByNameSlug(trimmed)
-      return { product: fallback, fromFallback: !!fallback, error: null }
-    }
+    if (!data) return { product: null, fromFallback: false, error: null }
     return { product: mapProductRow(data as Record<string, unknown>), fromFallback: false, error: null }
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Error desconocido'
+    if (!isSupabaseQuotaOrUnavailableError(message)) {
+      return { product: null, fromFallback: false, error: message }
+    }
     const { findMasterCatalogProductById, findMasterCatalogProductByNameSlug } = await import(
       '@/lib/master-catalog-products'
     )

@@ -77,9 +77,14 @@ export async function buildSiteCatalogSnapshot(): Promise<SiteCatalogSnapshot> {
         .eq('visible_on_site', true)
       collectionHeroUrls = imageUrlsFromCollections(collections ?? [])
     }
-  } catch {
-    products = getMasterCatalogProducts()
-    fromFallback = true
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    if (isSupabaseQuotaOrUnavailableError(message)) {
+      products = getMasterCatalogProducts()
+      fromFallback = true
+    } else {
+      throw e instanceof Error ? e : new Error(message)
+    }
   }
 
   const productImageUrls = products.flatMap((p) =>

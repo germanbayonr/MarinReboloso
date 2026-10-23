@@ -173,7 +173,7 @@ export default function NuevoProductoClient() {
       const normalizedVariants = hasVariants ? normalizeVariantsForSave(variants) : emptyProductVariants()
       const variantGallery = flattenVariantItemsGalleryUrls(normalizedVariants.items)
       const useVariants = hasVariants && variantGallery.length > 0
-      await createAdminProductViaApi({
+      const created = await createAdminProductViaApi({
         name: form.name.trim(),
         description: form.description.trim() || null,
         category: form.category,
@@ -189,6 +189,7 @@ export default function NuevoProductoClient() {
       })
       notifySiteCatalogChanged()
       setSaved(true)
+      if (created.stripeWarning) toast.warning(created.stripeWarning)
       const redirectTo = coleccionFromUrl
         ? `/admin/colecciones/${encodeURIComponent(coleccionFromUrl)}`
         : '/admin/productos'

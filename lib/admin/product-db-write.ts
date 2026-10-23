@@ -1,5 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isMissingVariantsColumnError, stripVariantFields } from '@/lib/admin/product-db-schema'
+import {
+  ADMIN_PRODUCT_SELECT,
+  ADMIN_PRODUCT_SELECT_LEGACY,
+  isMissingVariantsColumnError,
+  stripVariantFields,
+} from '@/lib/admin/product-db-schema'
 
 type WriteResult = { data: Record<string, unknown> | null; error: { message: string } | null }
 
@@ -8,13 +13,13 @@ export async function updateProductRow(
   id: string,
   payload: Record<string, unknown>,
 ): Promise<WriteResult> {
-  let result = await sb.from('products').update(payload).eq('id', id).select('*').single()
+  let result = await sb.from('products').update(payload).eq('id', id).select(ADMIN_PRODUCT_SELECT).single()
   if (result.error && isMissingVariantsColumnError(result.error.message)) {
     result = await sb
       .from('products')
       .update(stripVariantFields(payload))
       .eq('id', id)
-      .select('*')
+      .select(ADMIN_PRODUCT_SELECT_LEGACY)
       .single()
   }
   return {
@@ -38,10 +43,20 @@ export async function insertProductRow(
   if (!id) {
     return { data: null, error: { message: 'Insert OK pero sin id devuelto' } }
   }
-  const full = await sb.from('products').select('*').eq('id', id).single()
+  let full = await sb.from('products').select(ADMIN_PRODUCT_SELECT).eq('id', id).single()
+  if (full.error && isMissingVariantsColumnError(full.error.message)) {
+    full = await sb.from('products').select(ADMIN_PRODUCT_SELECT_LEGACY).eq('id', id).single()
+  }
+  if (full.error) {
+    return {
+      data: null,
+      error: null,
+      id,
+    }
+  }
   return {
     data: (full.data as Record<string, unknown> | null) ?? null,
-    error: full.error,
+    error: null,
     id,
   }
 }

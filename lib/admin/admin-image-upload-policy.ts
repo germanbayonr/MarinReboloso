@@ -23,7 +23,15 @@ export function adminImageCompressFailedError(fileName?: string): string {
 export function validateAdminImageFile(
   file: File,
 ): { ok: true } | { ok: false; error: string } {
-  if (!file.type.startsWith('image/')) {
+  const type = file.type.toLowerCase()
+  const name = file.name.toLowerCase()
+  if (type === 'image/heic' || type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif')) {
+    return {
+      ok: false,
+      error: 'Las fotos HEIC del iPhone no se pueden subir. En el iPhone: Ajustes → Cámara → Formatos → Más compatible, o exporta la foto como JPG.',
+    }
+  }
+  if (!type.startsWith('image/')) {
     return { ok: false, error: adminImageInvalidTypeError(file.name) }
   }
   if (file.size > ADMIN_IMAGE_MAX_UPLOAD_BYTES) {
