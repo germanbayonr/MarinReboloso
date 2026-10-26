@@ -2,7 +2,6 @@ import Stripe from 'stripe'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fetchAdminProductById } from '@/lib/admin/fetch-admin-products'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
-import { getAllowedCollectionSlugs } from '@/lib/collections'
 import {
   imageUrlFirstFromDatabase,
   imageUrlsForDatabaseColumn,
@@ -18,9 +17,8 @@ import { flattenVariantItemsGalleryUrls, normalizeVariantsForSave } from '@/lib/
 import { ensureStripePriceForProduct } from '@/lib/stripe-ensure-product-price'
 import type { AdminProduct } from '@/lib/admin/types'
 
-async function normalizeCollectionForProduct(raw: string | null | undefined): Promise<string | null> {
-  const allowed = await getAllowedCollectionSlugs()
-  return normalizeProductCollectionInput(raw, allowed)
+function normalizeCollectionForProduct(raw: string | null | undefined): string | null {
+  return normalizeProductCollectionInput(raw)
 }
 
 export async function runSyncProductGallery(

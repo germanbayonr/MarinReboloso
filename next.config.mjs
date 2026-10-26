@@ -5,6 +5,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['sharp'],
   experimental: {
     serverActions: {
       /** Varias imágenes WebP en FormData (createProductWithImages). */

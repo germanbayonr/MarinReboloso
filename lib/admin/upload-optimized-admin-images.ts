@@ -1,15 +1,10 @@
 import { randomUUID } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-  compressCollectionHeroImageBuffer,
-  compressProductImageBuffer,
-} from '@/lib/admin/compress-product-image-server'
-import {
   adminImageCompressFailedError,
   validateAdminImageBufferSize,
   validateAdminImageFile,
 } from '@/lib/admin/admin-image-upload-policy'
-import { verifyDecodableImageBuffer } from '@/lib/admin/verify-image-buffer'
 import { STORAGE_IMMUTABLE_CACHE_CONTROL } from '@/lib/image-delivery'
 import {
   isLikelyRowLevelSecurityMessage,
@@ -25,33 +20,64 @@ async function readUploadFileBuffer(file: File): Promise<Buffer> {
   return Buffer.from(new Uint8Array(arrayBuffer))
 }
 
-async function verifyPublicImageUrl(
-  publicUrl: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const attempts = 4
-  let lastStatus: number | null = null
-  for (let i = 0; i < attempts; i += 1) {
-    try {
-      const response = await fetch(publicUrl, { cache: 'no-store' })
-      lastStatus = response.status
-      if (response.ok) {
-        const downloaded = Buffer.from(new Uint8Array(await response.arrayBuffer()))
-        return verifyDecodableImageBuffer(downloaded)
-      }
-    } catch {
-      /* reintento */
-    }
-    if (i < attempts - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 350 * (i + 1)))
-    }
+function sniffImage(buffer: Buffer): { contentType: string; extension: string } | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { contentType: 'image/jpeg', extension: 'jpg' }
   }
-  if (lastStatus != null) {
+  if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return { contentType: 'image/png', extension: 'png' }
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return { contentType: 'image/webp', extension: 'webp' }
+  }
+  return null
+}
+
+async function prepareImageBuffer(
+  rawBuffer: Buffer,
+  folder: AdminImageStorageFolder,
+  fileName: string,
+): Promise<{ buffer: Buffer; contentType: string; extension: string } | { error: string }> {
+  try {
+    const [{ compressCollectionHeroImageBuffer, compressProductImageBuffer }, { verifyDecodableImageBuffer }] =
+      await Promise.all([
+        import('@/lib/admin/compress-product-image-server'),
+        import('@/lib/admin/verify-image-buffer'),
+      ])
+    const integrity = await verifyDecodableImageBuffer(rawBuffer)
+    if (!integrity.ok) return { error: integrity.error }
+    const compress = folder === 'collections' ? compressCollectionHeroImageBuffer : compressProductImageBuffer
+    const buffer = await compress(rawBuffer)
+    return { buffer, contentType: 'image/webp', extension: 'webp' }
+  } catch (error) {
+    const sniffed = sniffImage(rawBuffer)
+    if (sniffed) {
+      console.warn(
+        '[admin upload] Sharp no pudo optimizar; se sube el archivo original:',
+        error instanceof Error ? error.message : error,
+      )
+      return { buffer: rawBuffer, ...sniffed }
+    }
+    const message = error instanceof Error ? error.message : adminImageCompressFailedError(fileName)
+    return { error: message }
+  }
+}
+
+async function verifyPublicImageUrl(publicUrl: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const response = await fetch(publicUrl, { method: 'HEAD', cache: 'no-store' })
+    if (response.ok) return { ok: true }
     return {
       ok: false,
-      error: `La imagen subida no es accesible aún (HTTP ${lastStatus}). Revisa que el bucket product-images sea público.`,
+      error: `La imagen subida no es accesible aún (HTTP ${response.status}). Revisa que el bucket product-images sea público.`,
     }
+  } catch {
+    return { ok: false, error: 'No se pudo verificar la imagen subida en Storage.' }
   }
-  return { ok: false, error: 'No se pudo verificar la imagen subida en Storage.' }
 }
 
 export async function uploadOptimizedAdminImages(
@@ -60,8 +86,6 @@ export async function uploadOptimizedAdminImages(
   folder: AdminImageStorageFolder,
 ): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
   const imageUrls: string[] = []
-  const compress =
-    folder === 'collections' ? compressCollectionHeroImageBuffer : compressProductImageBuffer
 
   for (const file of files) {
     const fileCheck = validateAdminImageFile(file)
@@ -71,25 +95,17 @@ export async function uploadOptimizedAdminImages(
     const sizeCheck = validateAdminImageBufferSize(rawBuffer, file.name)
     if (!sizeCheck.ok) return sizeCheck
 
-    const rawIntegrity = await verifyDecodableImageBuffer(rawBuffer)
-    if (!rawIntegrity.ok) return rawIntegrity
+    const prepared = await prepareImageBuffer(rawBuffer, folder, file.name)
+    if ('error' in prepared) return { ok: false, error: prepared.error }
 
-    let buffer: Buffer
-    try {
-      buffer = await compress(rawBuffer)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : adminImageCompressFailedError(file.name)
-      return { ok: false, error: message }
-    }
-
-    const fileName = `${randomUUID()}.webp`
+    const fileName = `${randomUUID()}.${prepared.extension}`
     const filePath = `${folder}/${fileName}`
 
     const { error: uploadError } = await sb.storage.from(PRODUCT_IMAGES_BUCKET).upload(
       filePath,
-      new Uint8Array(buffer),
+      new Uint8Array(prepared.buffer),
       {
-        contentType: 'image/webp',
+        contentType: prepared.contentType,
         cacheControl: STORAGE_IMMUTABLE_CACHE_CONTROL,
         upsert: false,
       },

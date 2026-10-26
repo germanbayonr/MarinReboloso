@@ -132,6 +132,10 @@ export async function adminCreateCollection(
     const { error: assignErr } = await sb.from('products').update({ collection: slug }).in('id', productIds)
     if (assignErr) {
       logAdminSupabaseIssue('COLLECTION_ASSIGN_PRODUCTS', assignErr.message, { slug, count: productIds.length })
+      return {
+        ok: false,
+        error: `La colección «${label}» ya está creada, pero no se pudieron enlazar los productos: ${assignErr.message}`,
+      }
     }
   }
 

@@ -37,6 +37,8 @@ export function isProductCollectionSlug(s: string, allowedSlugs?: Set<string>): 
   return (PRODUCT_COLLECTION_SLUGS as readonly string[]).includes(t)
 }
 
+const COLLECTION_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
 export function normalizeProductCollectionInput(
   raw: string | null | undefined,
   allowedSlugs?: Set<string>,
@@ -44,6 +46,9 @@ export function normalizeProductCollectionInput(
   if (raw == null) return null
   const t = String(raw).trim().toLowerCase()
   if (!t) return null
+  // Una colección nueva tiene un slug válido aunque el listado de respaldo
+  // (solo las 5 históricas) no la conozca. Antes se guardaba el producto con collection = null.
+  if (COLLECTION_SLUG_PATTERN.test(t)) return t
   if (allowedSlugs) return allowedSlugs.has(t) ? t : null
   return isProductCollectionSlug(t) ? t : null
 }

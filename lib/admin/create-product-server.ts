@@ -5,7 +5,6 @@ import { insertProductRow, updateProductRow } from '@/lib/admin/product-db-write
 import type { AdminProductInput } from '@/lib/admin/product-input'
 import { productMutationErrorResult } from '@/lib/admin/product-mutation-errors'
 import { normalizeProductCollectionInput } from '@/lib/admin/product-collections'
-import { getAllowedCollectionSlugs } from '@/lib/collections'
 import { findOrCreateStripeProductLink, listAllActiveStripeProducts } from '@/lib/admin/stripe-product-link'
 import { logAdminSupabaseIssue } from '@/lib/admin/supabase-admin-log'
 import { stripeSecretKey } from '@/lib/admin/stripe-secret-key'
@@ -13,9 +12,8 @@ import { computeFinalPrice } from '@/lib/pricing'
 import { flattenVariantItemsGalleryUrls, normalizeVariantsForSave } from '@/lib/product-variants'
 import { deliveryProductImageUrl } from '@/lib/image-delivery'
 
-async function normalizeCollectionForProduct(raw: string | null | undefined): Promise<string | null> {
-  const allowed = await getAllowedCollectionSlugs()
-  return normalizeProductCollectionInput(raw, allowed)
+function normalizeCollectionForProduct(raw: string | null | undefined): string | null {
+  return normalizeProductCollectionInput(raw)
 }
 
 export async function runCreateProduct(
